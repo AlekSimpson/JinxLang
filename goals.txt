@@ -1,0 +1,5 @@
+Will allow for low level control when needed
+    (exact bye management like C has with pointers and such)
+Will have support for functional and declartive programming paradigms
+Have a clean syntax that can makes OOP and functional programming easy to write and read 
+More approachable than C, allows for easy scripting like python and julia 
