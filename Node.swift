@@ -37,6 +37,15 @@ struct VariableNode: AbstractNode {
     var token: Token
     var error: Error? 
 
+    init() {
+        self.token = Token()
+        self.error = nil 
+    }
+
+    init(token: Token) {
+        self.token = token 
+    }
+
     var description: String {
         return "VariableName(\(token))"
     }
@@ -44,7 +53,7 @@ struct VariableNode: AbstractNode {
 
 struct BinOpNode: AbstractNode {
     let lhs: AbstractNode
-    let op: AbstractNode 
+    let op: AbstractNode
     let rhs: AbstractNode
     var error: Error?
 
@@ -59,6 +68,9 @@ struct BinOpNode: AbstractNode {
     }
 
     init(_ error: Error) {
-        self.error = error 
+        self.error = error
+        self.lhs = VariableNode()
+        self.op = VariableNode()
+        self.rhs = VariableNode()
     }
 }

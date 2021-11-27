@@ -114,6 +114,15 @@ struct VariableNode: AbstractNode {
     var token: Token
     var error: Error? 
 
+    init() {
+        self.token = Token()
+        self.error = nil 
+    }
+
+    init(token: Token) {
+        self.token = token 
+    }
+
     var description: String {
         return "VariableName(\(token))"
     }
@@ -121,7 +130,7 @@ struct VariableNode: AbstractNode {
 
 struct BinOpNode: AbstractNode {
     let lhs: AbstractNode
-    let op: AbstractNode 
+    let op: AbstractNode
     let rhs: AbstractNode
     var error: Error?
 
@@ -136,7 +145,10 @@ struct BinOpNode: AbstractNode {
     }
 
     init(_ error: Error) {
-        self.error = error 
+        self.error = error
+        self.lhs = VariableNode()
+        self.op = VariableNode()
+        self.rhs = VariableNode()
     }
 }/* PARSER */
 
@@ -144,13 +156,6 @@ class Parser {
     var tokens: [Token]
     var token_idx: Int = -1
     var curr_token: Token 
-
-    let operatorPrecedence: [String: Int] = [
-        "PLUS" : 20,
-        "MINUS" : 20,
-        "MUL" : 40,
-        "DIV" : 40
-    ]
 
     init(tokens: [Token]) {
         self.tokens = tokens 
@@ -160,27 +165,74 @@ class Parser {
 
     func advance() {
         self.token_idx += 1
-        if self.token_idx < self.tokens.count {
+        if self.token_idx < (self.tokens.count - 1) {
             self.curr_token = self.tokens[self.token_idx]
         }
     }
 
     func parse() -> AbstractNode {
-        if self.token_idx == self.tokens.count { return }
+        let result = self.expr()
+        return result
+    }
 
-        let left = NumberNode(token: self.curr_token)
-        self.advance() 
-        var op: AbstractNode
+    func factor() -> AbstractNode {
+        let tok = self.curr_token
+        var returnVal: AbstractNode = VariableNode()
 
-        if self.curr_token.type == .OPERATOR {
-            op = VariableNode(token: self.curr_token)
+        if tok.type == .FACTOR {
             self.advance()
-        }else {
-            return BinOpNode(Error(error_name: "InvalidSyntax", details: "Expected an operator"))
+            returnVal = NumberNode(token: self.curr_token)
         }
 
-        return BinOpNode(lhs: left, op: op, rhs: parse())
+        return returnVal
     }
+
+    func term() -> AbstractNode {
+        return self.bin_op(func: factor, ops: [TT_MUL, TT_DIV])
+    }
+
+    func expr() -> AbstractNode {
+        return self.bin_op(func: term, ops: [TT_PLUS, TT_MINUS])
+    }
+
+    func bin_op(func function: () -> AbstractNode, ops: [String]) -> AbstractNode {
+        let left: AbstractNode = function()
+        var term: AbstractNode = VariableNode()
+
+        while self.curr_token.type_name == ops[0] || self.curr_token.type_name == ops[1] {
+            let op_tok = VariableNode(token: self.curr_token)
+            self.advance()
+            let right:AbstractNode = function()
+            term = BinOpNode(lhs: left, op: op_tok, rhs: right)
+        }
+
+        return term
+    }
+
+
+
+
+
+    // func parse() -> AbstractNode {
+
+    // }
+
+    // func parse() -> AbstractNode {
+    //     let left = NumberNode(token: self.curr_token)
+    //     if self.token_idx == (self.tokens.count - 1) { return left }
+
+    //     self.advance() 
+    //     var op: AbstractNode
+
+    //     if self.curr_token.type == .OPERATOR {
+    //         op = VariableNode(token: self.curr_token)
+    //         self.advance()
+    //     }else {
+    //         return BinOpNode(Error(error_name: "InvalidSyntax", details: "Expected an operator"))
+    //     }
+
+    //     return BinOpNode(lhs: left, op: op, rhs: parse())
+    // }
 }
 /* TOKENS */
 
@@ -226,11 +278,7 @@ class Token {
     func as_string() -> String {
         return ("\(self.type) : \(self.value ?? "")")
     }
-}/* CONSTANTS */
-
-//let CHAR_SET = CharacterSet(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"])
-
-/* RUN */
+}/* RUN */
 
 func run(text: String, fn: String) -> AbstractNode {
     let lexer = Lexer(text_: text, fn: fn)
