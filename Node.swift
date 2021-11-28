@@ -22,20 +22,28 @@ class LinePosition {
 protocol AbstractNode {
     var error: Error? { get set }
     var description: String { get }
+
+    func as_string() -> String 
 }
 
 struct NumberNode: AbstractNode {
     var token: Token
     var error: Error?
-
     var description: String {
-        return "NumberNode(\(token))"
+        return "NumberNode(\(token.type_name))"
+    }
+
+    func as_string() -> String {
+        return token.as_string()
     }
 }
 
 struct VariableNode: AbstractNode {
     var token: Token
     var error: Error? 
+    var description: String {
+        return "VariableName(\(token.type_name))"
+    }
 
     init() {
         self.token = Token()
@@ -45,9 +53,9 @@ struct VariableNode: AbstractNode {
     init(token: Token) {
         self.token = token 
     }
-
-    var description: String {
-        return "VariableName(\(token))"
+    
+    func as_string() -> String {
+        return token.as_string()
     }
 }
 
@@ -56,9 +64,8 @@ struct BinOpNode: AbstractNode {
     let op: AbstractNode
     let rhs: AbstractNode
     var error: Error?
-
     var description: String {
-        return "BinOpNode(\(lhs), \(op), \(rhs))"
+        return "\(lhs.as_string()), \(op.as_string()), \(rhs.as_string())"
     }
 
     init(lhs: AbstractNode, op: AbstractNode, rhs: AbstractNode) {
@@ -72,5 +79,16 @@ struct BinOpNode: AbstractNode {
         self.lhs = VariableNode()
         self.op = VariableNode()
         self.rhs = VariableNode()
+    }
+
+    init() {
+        self.error = Error(error_name: "", details: "")
+        self.lhs = VariableNode()
+        self.op = VariableNode()
+        self.rhs = VariableNode()
+    }
+
+    func as_string() -> String {
+        return self.description
     }
 }

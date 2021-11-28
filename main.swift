@@ -99,20 +99,28 @@ class LinePosition {
 protocol AbstractNode {
     var error: Error? { get set }
     var description: String { get }
+
+    func as_string() -> String 
 }
 
 struct NumberNode: AbstractNode {
     var token: Token
     var error: Error?
-
     var description: String {
-        return "NumberNode(\(token))"
+        return "NumberNode(\(token.type_name))"
+    }
+
+    func as_string() -> String {
+        return token.as_string()
     }
 }
 
 struct VariableNode: AbstractNode {
     var token: Token
     var error: Error? 
+    var description: String {
+        return "VariableName(\(token.type_name))"
+    }
 
     init() {
         self.token = Token()
@@ -122,9 +130,9 @@ struct VariableNode: AbstractNode {
     init(token: Token) {
         self.token = token 
     }
-
-    var description: String {
-        return "VariableName(\(token))"
+    
+    func as_string() -> String {
+        return token.as_string()
     }
 }
 
@@ -133,9 +141,8 @@ struct BinOpNode: AbstractNode {
     let op: AbstractNode
     let rhs: AbstractNode
     var error: Error?
-
     var description: String {
-        return "BinOpNode(\(lhs), \(op), \(rhs))"
+        return "\(lhs.as_string()), \(op.as_string()), \(rhs.as_string())"
     }
 
     init(lhs: AbstractNode, op: AbstractNode, rhs: AbstractNode) {
@@ -150,6 +157,17 @@ struct BinOpNode: AbstractNode {
         self.op = VariableNode()
         self.rhs = VariableNode()
     }
+
+    init() {
+        self.error = Error(error_name: "", details: "")
+        self.lhs = VariableNode()
+        self.op = VariableNode()
+        self.rhs = VariableNode()
+    }
+
+    func as_string() -> String {
+        return self.description
+    }
 }/* PARSER */
 
 class Parser {
@@ -160,19 +178,17 @@ class Parser {
     init(tokens: [Token]) {
         self.tokens = tokens 
         self.curr_token = self.tokens[self.token_idx]
-        // print("token count: \(self.tokens.count)")
     }
 
     func advance() {
         self.token_idx += 1
-        // print("advancing \(self.token_idx)")
+        // print(self.token_idx)
         if self.token_idx < self.tokens.count {
             self.curr_token = self.tokens[self.token_idx]
         }
     }
 
     func parse() -> AbstractNode {
-        print(self.token_idx)
         let result = self.expr()
         return result
     }
@@ -194,22 +210,20 @@ class Parser {
     }
 
     func expr() -> AbstractNode {
-        print(self.token_idx)
-        return self.bin_op(func: factor, ops: [TT_PLUS, TT_MINUS])
+        return self.bin_op(func: term, ops: [TT_PLUS, TT_MINUS])
     }
 
     func bin_op(func function: () -> AbstractNode, ops: [String]) -> AbstractNode {
-        let left: AbstractNode = function()
-        var term: AbstractNode = VariableNode()
+        var left: AbstractNode = function()
 
         while self.curr_token.type_name == ops[0] || self.curr_token.type_name == ops[1] {
             let op_tok = VariableNode(token: self.curr_token)
             self.advance()
             let right:AbstractNode = function()
-            term = BinOpNode(lhs: left, op: op_tok, rhs: right)
+            left = BinOpNode(lhs: left, op: op_tok, rhs: right)
         }
 
-        return term
+        return left
     }
 }
 /* TOKENS */
