@@ -3,7 +3,6 @@
 func run(text: String, fn: String) -> AbstractNode {
     let lexer = Lexer(text_: text, fn: fn)
     let (tokens, error) = lexer.make_tokens()
-
     if let err = error { return BinOpNode(err) }
 
     // Generate AST 

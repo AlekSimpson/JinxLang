@@ -154,23 +154,25 @@ struct BinOpNode: AbstractNode {
 
 class Parser {
     var tokens: [Token]
-    var token_idx: Int = -1
+    var token_idx: Int = 0
     var curr_token: Token 
 
     init(tokens: [Token]) {
         self.tokens = tokens 
         self.curr_token = self.tokens[self.token_idx]
-        self.advance()
+        // print("token count: \(self.tokens.count)")
     }
 
     func advance() {
         self.token_idx += 1
-        if self.token_idx < (self.tokens.count - 1) {
+        // print("advancing \(self.token_idx)")
+        if self.token_idx < self.tokens.count {
             self.curr_token = self.tokens[self.token_idx]
         }
     }
 
     func parse() -> AbstractNode {
+        print(self.token_idx)
         let result = self.expr()
         return result
     }
@@ -180,8 +182,8 @@ class Parser {
         var returnVal: AbstractNode = VariableNode()
 
         if tok.type == .FACTOR {
-            self.advance()
             returnVal = NumberNode(token: self.curr_token)
+            self.advance()
         }
 
         return returnVal
@@ -192,7 +194,8 @@ class Parser {
     }
 
     func expr() -> AbstractNode {
-        return self.bin_op(func: term, ops: [TT_PLUS, TT_MINUS])
+        print(self.token_idx)
+        return self.bin_op(func: factor, ops: [TT_PLUS, TT_MINUS])
     }
 
     func bin_op(func function: () -> AbstractNode, ops: [String]) -> AbstractNode {
@@ -208,31 +211,6 @@ class Parser {
 
         return term
     }
-
-
-
-
-
-    // func parse() -> AbstractNode {
-
-    // }
-
-    // func parse() -> AbstractNode {
-    //     let left = NumberNode(token: self.curr_token)
-    //     if self.token_idx == (self.tokens.count - 1) { return left }
-
-    //     self.advance() 
-    //     var op: AbstractNode
-
-    //     if self.curr_token.type == .OPERATOR {
-    //         op = VariableNode(token: self.curr_token)
-    //         self.advance()
-    //     }else {
-    //         return BinOpNode(Error(error_name: "InvalidSyntax", details: "Expected an operator"))
-    //     }
-
-    //     return BinOpNode(lhs: left, op: op, rhs: parse())
-    // }
 }
 /* TOKENS */
 
@@ -283,7 +261,6 @@ class Token {
 func run(text: String, fn: String) -> AbstractNode {
     let lexer = Lexer(text_: text, fn: fn)
     let (tokens, error) = lexer.make_tokens()
-
     if let err = error { return BinOpNode(err) }
 
     // Generate AST 
