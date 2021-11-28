@@ -15,6 +15,10 @@ class LinePosition {
         self.idx += 1
         self.col += 1
     }
+
+    func copy() {
+        return LinePosition(idx: self.idx, ln: self.ln, col: self.col)
+    }
 }
 
 /* NODE */

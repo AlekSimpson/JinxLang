@@ -56,3 +56,24 @@ class Parser {
         return left
     }
 }
+
+class ParserResult { 
+    var error: Bool?
+    var node: AbstractNode? 
+
+    init() {
+        self.error = nil 
+        self.token = nil 
+    }
+
+    func register(res:ParserResult){
+        if res === ParserResult {
+            if res.error { self.error = res.error }
+            return res.node 
+        }
+
+        return res 
+    }
+    func success(){}
+    func failure(){}
+}
