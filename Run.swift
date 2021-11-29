@@ -1,15 +1,17 @@
 /* RUN */
 
-func run(text: String, fn: String) -> AbstractNode {
+func run(text: String, fn: String) -> (AbstractNode?, Error?) {
     let lexer = Lexer(text_: text, fn: fn)
     let (tokens, error) = lexer.make_tokens()
-    if let err = error { return BinOpNode(err) }
+    if error != nil { 
+        return (nil, error)
+    }
 
     // Generate AST 
     let parser = Parser(tokens: tokens)
-    let ast = parser.parse()
+    let (node, parse_error) = parser.parse()
 
-    return ast 
+    return (node, parse_error) 
 }
 
 while true {
@@ -17,12 +19,12 @@ while true {
     let text:String = readLine() ?? ""
     if text == "stop" { break }
 
-    let result = run(text: text, fn: "file.aqua")
+    let (node, error) = run(text: text, fn: "file.aqua")
 
-    if let err = result.error {
-        print(err.as_string())
+    if error != nil {
+        print(error!.as_string())
         break 
     }
 
-    print(result.description)
+    print(node!.description)
 }

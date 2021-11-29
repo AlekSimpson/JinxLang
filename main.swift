@@ -20,6 +20,12 @@ class IllegalCharError: Error {
     init(details: String) {
         super.init(error_name: "Illegal Character", details: details)
     }
+}
+
+class InvalidSyntaxError: Error {
+    init(details: String) {
+        super.init(error_name: "Illegal Character", details: details)
+    }
 }/* LEXER */
 
 class Lexer {
@@ -72,7 +78,7 @@ class Lexer {
                     return ([], IllegalCharError(details: "'\(item)'"))
             }
         }
-
+        tokens.append(Token(type_: .EOF, type_name: TT_EOF, value_: TT_EOF))
         return (tokens, nil)
     }
 }/* POSITION */
@@ -92,12 +98,15 @@ class LinePosition {
         self.idx += 1
         self.col += 1
     }
+
+    // func copy() {
+    //     return LinePosition(idx: self.idx, ln: self.ln, col: self.col)
+    // }
 }
 
 /* NODE */
 
 protocol AbstractNode {
-    var error: Error? { get set }
     var description: String { get }
 
     func as_string() -> String 
@@ -105,7 +114,6 @@ protocol AbstractNode {
 
 struct NumberNode: AbstractNode {
     var token: Token
-    var error: Error?
     var description: String {
         return "NumberNode(\(token.type_name))"
     }
@@ -117,14 +125,12 @@ struct NumberNode: AbstractNode {
 
 struct VariableNode: AbstractNode {
     var token: Token
-    var error: Error? 
     var description: String {
         return "VariableName(\(token.type_name))"
     }
 
     init() {
         self.token = Token()
-        self.error = nil 
     }
 
     init(token: Token) {
@@ -140,7 +146,6 @@ struct BinOpNode: AbstractNode {
     let lhs: AbstractNode
     let op: AbstractNode
     let rhs: AbstractNode
-    var error: Error?
     var description: String {
         return "\(lhs.as_string()), \(op.as_string()), \(rhs.as_string())"
     }
@@ -151,15 +156,7 @@ struct BinOpNode: AbstractNode {
         self.rhs = rhs 
     }
 
-    init(_ error: Error) {
-        self.error = error
-        self.lhs = VariableNode()
-        self.op = VariableNode()
-        self.rhs = VariableNode()
-    }
-
     init() {
-        self.error = Error(error_name: "", details: "")
         self.lhs = VariableNode()
         self.op = VariableNode()
         self.rhs = VariableNode()
@@ -167,6 +164,23 @@ struct BinOpNode: AbstractNode {
 
     func as_string() -> String {
         return self.description
+    }
+}
+
+class UnaryOpNode: AbstractNode {
+    var op_tok: Token 
+    var node: AbstractNode
+    var description: String {
+        return "\(op_tok.as_string())\(node.as_string())"
+    }
+
+    init(op_tok: Token, node: AbstractNode){
+        self.op_tok = op_tok
+        self.node = node 
+    }
+
+    func as_string() -> String {
+        return self.description 
     }
 }/* PARSER */
 
@@ -180,65 +194,147 @@ class Parser {
         self.curr_token = self.tokens[self.token_idx]
     }
 
-    func advance() {
+    func advance() -> Token {
         self.token_idx += 1
         // print(self.token_idx)
         if self.token_idx < self.tokens.count {
             self.curr_token = self.tokens[self.token_idx]
         }
+        return self.curr_token
     }
 
-    func parse() -> AbstractNode {
-        let result = self.expr()
-        return result
+    func parse() -> (AbstractNode?, Error?) {
+        let (node_result, parse_result) = self.expr()
+
+        if let _ = parse_result.error {
+            if self.curr_token.type != .EOF {
+                return (nil, parse_result.failure(InvalidSyntaxError(details: "Expected an operator")))
+            }
+            return (nil, parse_result.error)
+        }
+
+        return (node_result, nil)
     }
 
-    func factor() -> AbstractNode {
+    func factor() -> (AbstractNode?, ParserResult) {
+        let res = ParserResult()
         let tok = self.curr_token
-        var returnVal: AbstractNode = VariableNode()
+        var returnVal: (AbstractNode?, ParserResult) = (nil, res)
 
-        if tok.type == .FACTOR {
-            returnVal = NumberNode(token: self.curr_token)
-            self.advance()
+        if tok.type_name == "PLUS" || tok.type_name == "MINUS" {
+            _ = res.register(self.advance())
+            let recurrsion = self.factor()
+            if let ftr = recurrsion.0 {
+                _ = res.register(ftr)
+                returnVal = (res.success( UnaryOpNode(op_tok: tok, node: ftr) ), res)
+            }
+
+            if let err = recurrsion.1.error {
+                _ = res.failure(err)
+                returnVal = (nil, res)
+            }
+        }else if tok.type == .FACTOR {
+            let val = NumberNode(token: self.curr_token)
+            _ = res.register(self.advance())
+            returnVal = (res.success(val), res)
+        }else if tok.type_name == "LPAREN" {
+            _ = res.register(self.advance())
+            let recurrsion = self.expr()
+            if let epr = recurrsion.0 {
+                _ = res.register(epr)
+                if self.curr_token.type_name == "RPAREN" {
+                    _ = res.register(self.advance())
+                    returnVal = (res.success( epr ), res)
+                }else {
+                    _ = res.failure(InvalidSyntaxError(details: "Expected ')'"))
+                    returnVal = (nil, res)
+                }
+            }
+
+            if let err = recurrsion.1.error {
+                _ = res.failure(err)
+                returnVal = (nil, res)
+            }
+        }else {
+            _ = res.failure(InvalidSyntaxError(details: "Expected int or float"))
+            returnVal = (nil, res)
         }
 
         return returnVal
     }
 
-    func term() -> AbstractNode {
+    func term() -> (AbstractNode?, ParserResult) {
         return self.bin_op(func: factor, ops: [TT_MUL, TT_DIV])
     }
 
-    func expr() -> AbstractNode {
+    func expr() -> (AbstractNode?, ParserResult) {
         return self.bin_op(func: term, ops: [TT_PLUS, TT_MINUS])
     }
 
-    func bin_op(func function: () -> AbstractNode, ops: [String]) -> AbstractNode {
-        var left: AbstractNode = function()
+    func bin_op(func function: () -> (AbstractNode?, ParserResult), ops: [String]) -> (AbstractNode?, ParserResult) {
+        let res = ParserResult()
+
+        var (left, parse_result) = function()
+        _ = res.register(parse_result)
+        if res.error != nil { return (nil, res) }
 
         while self.curr_token.type_name == ops[0] || self.curr_token.type_name == ops[1] {
             let op_tok = VariableNode(token: self.curr_token)
-            self.advance()
-            let right:AbstractNode = function()
-            left = BinOpNode(lhs: left, op: op_tok, rhs: right)
+            _ = res.register(self.advance())
+
+            let (right, parse_result_) = function()
+            _ = res.register(parse_result_)
+            if res.error != nil { return (nil, res) }
+
+            left = BinOpNode(lhs: left!, op: op_tok, rhs: right!)
         }
 
-        return left
+        return (res.success(left ?? VariableNode()), res)
     }
 }
-/* TOKENS */
+
+class ParserResult { 
+    var error: Error?
+    var node: AbstractNode? 
+
+    init() {
+        self.error = nil 
+        self.node = nil 
+    }
+
+    ///////////////////////////////////////////
+
+    func register(_ res: ParserResult) -> AbstractNode {
+        if res.error != nil { self.error = res.error }
+        return res.node ?? VariableNode()
+    }
+
+    func register(_ _node: AbstractNode) -> AbstractNode {
+        return _node
+    }
+
+    func register(_ _token: Token ) -> Token {
+        return _token 
+    }
+
+    ///////////////////////////////////////////
+
+    func success(_ node: AbstractNode) -> AbstractNode {
+        self.node = node
+        return node 
+    }
+
+    func failure(_ error: Error) -> Error {
+        self.error = error 
+        return self.error!
+    }
+}/* TOKENS */
 
 enum TT {
     case FACTOR 
     case OPERATOR
     case GROUP
-}
-
-struct TokenType {
-    // This is is Metatype, (ex: factor, operator, etc)
-    var type: TT 
-    // This is the name of the type (ex: int, add, minus, etc)
-    var name: String 
+    case EOF
 }
 
 let TT_INT = "INT"
@@ -249,22 +345,28 @@ let TT_MUL = "MUL"
 let TT_DIV = "DIV"
 let TT_LPAREN = "LPAREN"
 let TT_RPAREN = "RPAREN"
+let TT_EOF = "EOF"
 
 class Token {
+    // This is is Metatype, (ex: factor, operator, etc)
     var type: TT 
+    // This is the name of the type (ex: int, add, minus, etc)
     var type_name: String 
     var value: Any?
+    var pos: LinePosition?
 
     init() {
         self.type = .FACTOR 
         self.type_name = ""
         self.value = ""
+        self.pos = nil
     }
 
-    init(type_: TT, type_name: String, value_: Any?=nil) {
+    init(type_: TT, type_name: String, value_: Any?=nil, pos: LinePosition?=nil) {
         self.type = type_
         self.type_name = type_name
         self.value = value_
+        self.pos = pos
     }
 
     func as_string() -> String {
@@ -272,16 +374,18 @@ class Token {
     }
 }/* RUN */
 
-func run(text: String, fn: String) -> AbstractNode {
+func run(text: String, fn: String) -> (AbstractNode?, Error?) {
     let lexer = Lexer(text_: text, fn: fn)
     let (tokens, error) = lexer.make_tokens()
-    if let err = error { return BinOpNode(err) }
+    if error != nil { 
+        return (nil, error)
+    }
 
     // Generate AST 
     let parser = Parser(tokens: tokens)
-    let ast = parser.parse()
+    let (node, parse_error) = parser.parse()
 
-    return ast 
+    return (node, parse_error) 
 }
 
 while true {
@@ -289,12 +393,12 @@ while true {
     let text:String = readLine() ?? ""
     if text == "stop" { break }
 
-    let result = run(text: text, fn: "file.aqua")
+    let (node, error) = run(text: text, fn: "file.aqua")
 
-    if let err = result.error {
-        print(err.as_string())
+    if error != nil {
+        print(error!.as_string())
         break 
     }
 
-    print(result.description)
+    print(node!.description)
 }

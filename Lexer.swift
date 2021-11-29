@@ -50,7 +50,7 @@ class Lexer {
                     return ([], IllegalCharError(details: "'\(item)'"))
             }
         }
-
+        tokens.append(Token(type_: .EOF, type_name: TT_EOF, value_: TT_EOF))
         return (tokens, nil)
     }
 }

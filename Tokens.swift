@@ -4,13 +4,7 @@ enum TT {
     case FACTOR 
     case OPERATOR
     case GROUP
-}
-
-struct TokenType {
-    // This is is Metatype, (ex: factor, operator, etc)
-    var type: TT 
-    // This is the name of the type (ex: int, add, minus, etc)
-    var name: String 
+    case EOF
 }
 
 let TT_INT = "INT"
@@ -21,9 +15,12 @@ let TT_MUL = "MUL"
 let TT_DIV = "DIV"
 let TT_LPAREN = "LPAREN"
 let TT_RPAREN = "RPAREN"
+let TT_EOF = "EOF"
 
 class Token {
+    // This is is Metatype, (ex: factor, operator, etc)
     var type: TT 
+    // This is the name of the type (ex: int, add, minus, etc)
     var type_name: String 
     var value: Any?
     var pos: LinePosition?

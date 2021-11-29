@@ -21,3 +21,9 @@ class IllegalCharError: Error {
         super.init(error_name: "Illegal Character", details: details)
     }
 }
+
+class InvalidSyntaxError: Error {
+    init(details: String) {
+        super.init(error_name: "Illegal Character", details: details)
+    }
+}

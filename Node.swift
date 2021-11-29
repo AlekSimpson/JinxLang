@@ -16,15 +16,14 @@ class LinePosition {
         self.col += 1
     }
 
-    func copy() {
-        return LinePosition(idx: self.idx, ln: self.ln, col: self.col)
-    }
+    // func copy() {
+    //     return LinePosition(idx: self.idx, ln: self.ln, col: self.col)
+    // }
 }
 
 /* NODE */
 
 protocol AbstractNode {
-    var error: Error? { get set }
     var description: String { get }
 
     func as_string() -> String 
@@ -32,7 +31,6 @@ protocol AbstractNode {
 
 struct NumberNode: AbstractNode {
     var token: Token
-    var error: Error?
     var description: String {
         return "NumberNode(\(token.type_name))"
     }
@@ -44,14 +42,12 @@ struct NumberNode: AbstractNode {
 
 struct VariableNode: AbstractNode {
     var token: Token
-    var error: Error? 
     var description: String {
         return "VariableName(\(token.type_name))"
     }
 
     init() {
         self.token = Token()
-        self.error = nil 
     }
 
     init(token: Token) {
@@ -67,7 +63,6 @@ struct BinOpNode: AbstractNode {
     let lhs: AbstractNode
     let op: AbstractNode
     let rhs: AbstractNode
-    var error: Error?
     var description: String {
         return "\(lhs.as_string()), \(op.as_string()), \(rhs.as_string())"
     }
@@ -78,15 +73,7 @@ struct BinOpNode: AbstractNode {
         self.rhs = rhs 
     }
 
-    init(_ error: Error) {
-        self.error = error
-        self.lhs = VariableNode()
-        self.op = VariableNode()
-        self.rhs = VariableNode()
-    }
-
     init() {
-        self.error = Error(error_name: "", details: "")
         self.lhs = VariableNode()
         self.op = VariableNode()
         self.rhs = VariableNode()
@@ -94,5 +81,22 @@ struct BinOpNode: AbstractNode {
 
     func as_string() -> String {
         return self.description
+    }
+}
+
+class UnaryOpNode: AbstractNode {
+    var op_tok: Token 
+    var node: AbstractNode
+    var description: String {
+        return "\(op_tok.as_string()) \(node.as_string())"
+    }
+
+    init(op_tok: Token, node: AbstractNode){
+        self.op_tok = op_tok
+        self.node = node 
+    }
+
+    func as_string() -> String {
+        return self.description 
     }
 }
