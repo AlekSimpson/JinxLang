@@ -25,6 +25,7 @@ class LinePosition {
 
 protocol AbstractNode {
     var description: String { get }
+    var classType: Int { get }
 
     func as_string() -> String 
 }
@@ -33,6 +34,9 @@ struct NumberNode: AbstractNode {
     var token: Token
     var description: String {
         return "NumberNode(\(token.type_name))"
+    }
+    var classType: Int {
+        return 1
     }
 
     func as_string() -> String {
@@ -44,6 +48,9 @@ struct VariableNode: AbstractNode {
     var token: Token
     var description: String {
         return "VariableName(\(token.type_name))"
+    }
+    var classType: Int {
+        return 2
     }
 
     init() {
@@ -65,6 +72,9 @@ struct BinOpNode: AbstractNode {
     let rhs: AbstractNode
     var description: String {
         return "(\(lhs.as_string()), \(op.as_string()), \(rhs.as_string()))"
+    }
+    var classType: Int {
+        return 0
     }
 
     init(lhs: AbstractNode, op: AbstractNode, rhs: AbstractNode) {
@@ -89,6 +99,9 @@ class UnaryOpNode: AbstractNode {
     var node: AbstractNode
     var description: String {
         return "\(op_tok.as_string()) \(node.as_string())"
+    }
+    var classType: Int {
+        return 3
     }
 
     init(op_tok: Token, node: AbstractNode){

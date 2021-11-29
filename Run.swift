@@ -26,5 +26,9 @@ while true {
         break 
     }
 
-    print(node!.description)
+    // Run program
+    let interpreter = Interpreter()
+    interpreter.visit(node: node!)
+
+    // print(node!.description)
 }

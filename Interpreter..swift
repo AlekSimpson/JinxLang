@@ -1,5 +1,0 @@
-/* INTERPRETER */
-
-class Interpreter {
-    
-}
