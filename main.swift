@@ -147,7 +147,7 @@ struct BinOpNode: AbstractNode {
     let op: AbstractNode
     let rhs: AbstractNode
     var description: String {
-        return "\(lhs.as_string()), \(op.as_string()), \(rhs.as_string())"
+        return "(\(lhs.as_string()), \(op.as_string()), \(rhs.as_string()))"
     }
 
     init(lhs: AbstractNode, op: AbstractNode, rhs: AbstractNode) {
@@ -171,7 +171,7 @@ class UnaryOpNode: AbstractNode {
     var op_tok: Token 
     var node: AbstractNode
     var description: String {
-        return "\(op_tok.as_string())\(node.as_string())"
+        return "\(op_tok.as_string()) \(node.as_string())"
     }
 
     init(op_tok: Token, node: AbstractNode){

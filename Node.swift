@@ -64,7 +64,7 @@ struct BinOpNode: AbstractNode {
     let op: AbstractNode
     let rhs: AbstractNode
     var description: String {
-        return "\(lhs.as_string()), \(op.as_string()), \(rhs.as_string())"
+        return "(\(lhs.as_string()), \(op.as_string()), \(rhs.as_string()))"
     }
 
     init(lhs: AbstractNode, op: AbstractNode, rhs: AbstractNode) {
