@@ -1,6 +1,6 @@
 /* RUN */
 
-func run(text: String, fn: String) -> (AbstractNode?, Error?) {
+func run(text: String, fn: String) -> (Number?, Error?) {
     let lexer = Lexer(text_: text, fn: fn)
     let (tokens, error) = lexer.make_tokens()
     if error != nil { 
@@ -11,7 +11,11 @@ func run(text: String, fn: String) -> (AbstractNode?, Error?) {
     let parser = Parser(tokens: tokens)
     let (node, parse_error) = parser.parse()
 
-    return (node, parse_error) 
+    // Run program
+    let interpreter = Interpreter()
+    let result = interpreter.visit(node: node!)
+
+    return (result, parse_error) 
 }
 
 while true {
@@ -19,16 +23,14 @@ while true {
     let text:String = readLine() ?? ""
     if text == "stop" { break }
 
-    let (node, error) = run(text: text, fn: "file.aqua")
+    let (result, error) = run(text: text, fn: "file.aqua")
 
     if error != nil {
         print(error!.as_string())
         break 
     }
 
-    // Run program
-    let interpreter = Interpreter()
-    interpreter.visit(node: node!)
+    print(result!.print_self())
 
     // print(node!.description)
 }

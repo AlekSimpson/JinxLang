@@ -341,49 +341,121 @@ class ParserResult {
         self.error = error 
         return self.error!
     }
-}/* INTERPRETER */
+}/* NUMBERS */
+
+// This class is for storing numbers
+class Number {
+    var value: Int 
+    var pos_start: Int? 
+    var pos_end: Int? 
+
+    init(_ value: Int) {
+        self.value = value 
+        self.set_pos()
+    }
+
+    func set_pos(start: Int?=nil, end: Int?=nil) {
+        self.pos_start = start
+        self.pos_end = end 
+    }
+
+    func added(to other: Number) -> Number {
+        // if type(of: other) === Number {
+            return Number(self.value + other.value)
+        // }
+    }
+
+    func subtracted(from other: Number) -> Number {
+        // if type(of: other) === Number {
+            return Number(self.value - other.value)
+        // }
+    }
+
+    func multiplied(by other: Number) -> Number {
+        // if type(of: other) === Number {
+            return Number(self.value * other.value)
+        // }
+    }
+
+    func divided(by other: Number) -> Number {
+        // if type(of: other) === Number {
+            return Number(self.value / other.value)
+        // }
+    }
+
+    func print_self() -> String {
+        return "\(self.value)"
+    }
+}
+
+/* INTERPRETER */
 
 class Interpreter {
     init(){}
 
-    func visit(node: AbstractNode) {
+    func visit(node: AbstractNode) -> Number {
         let func_index = node.classType
+        var result: Number = Number(0)
 
         switch func_index {
             case 0:
-                visit_binop(node: node as! BinOpNode)
+                result = visit_binop(node: node as! BinOpNode)
             case 1: 
-                visit_number(node: node as! NumberNode)
-            case 2: 
-                visit_variable(node: node as! VariableNode)
+                result = visit_number(node: node as! NumberNode)
+            // case 2: 
+            //     result = visit_variable(node: node as! VariableNode)
             case 3: 
-                visit_unary(node: node as! UnaryOpNode)
+                result = visit_unary(node: node as! UnaryOpNode)
             default:
                 print("no visit method found")
         }
+
+        return result
     }
 
-    // bin op
-    func visit_binop(node: BinOpNode) {
-        print("found bin op node")
-        self.visit(node: node.lhs)
-        self.visit(node: node.rhs)
+    // Bin Op Node 
+    func visit_binop(node: BinOpNode) -> Number {
+        var result: Number = Number(0)
+        let left = self.visit(node: node.lhs)
+        let right = self.visit(node: node.rhs)
+
+        let op_node = node.op as! VariableNode
+
+        switch op_node.token.type_name {
+            case TT_PLUS: 
+                result = left.added(to: right)
+            case TT_MINUS:
+                result = left.subtracted(from: right)
+            case TT_MUL:
+                result = left.multiplied(by: right)
+            case TT_DIV: 
+                result = left.divided(by: right)
+            default: 
+                result = Number(0)
+        }
+
+        return result 
     }
 
-    // visit number
-    func visit_number(node: NumberNode) {
-        print("found number node")
+    // Visit Number
+    func visit_number(node: NumberNode) -> Number {
+        return Number(node.token.value as! Int)
     }
 
-    // variable node 
-    func visit_variable(node: VariableNode) {
-        print("found variable node")
-    }
+    // Variable Node 
+    // func visit_variable(node: VariableNode) {
+    //     print("found variable node")
+    // }
 
-    // unary node
-    func visit_unary(node: UnaryOpNode) {
-        print("found unary node")
-        self.visit(node: node.node)
+    // Unary Node 
+    func visit_unary(node: UnaryOpNode) -> Number{
+        var number = self.visit(node: node.node)
+
+        if node.op_tok.type_name == TT_MINUS {
+            number = number.multiplied(by: Number(-1))
+        }
+
+        return number
     }
 }
 
@@ -433,7 +505,7 @@ class Token {
     }
 }/* RUN */
 
-func run(text: String, fn: String) -> (AbstractNode?, Error?) {
+func run(text: String, fn: String) -> (Number?, Error?) {
     let lexer = Lexer(text_: text, fn: fn)
     let (tokens, error) = lexer.make_tokens()
     if error != nil { 
@@ -444,7 +516,11 @@ func run(text: String, fn: String) -> (AbstractNode?, Error?) {
     let parser = Parser(tokens: tokens)
     let (node, parse_error) = parser.parse()
 
-    return (node, parse_error) 
+    // Run program
+    let interpreter = Interpreter()
+    let result = interpreter.visit(node: node!)
+
+    return (result, parse_error) 
 }
 
 while true {
@@ -452,16 +528,14 @@ while true {
     let text:String = readLine() ?? ""
     if text == "stop" { break }
 
-    let (node, error) = run(text: text, fn: "file.aqua")
+    let (result, error) = run(text: text, fn: "file.aqua")
 
     if error != nil {
         print(error!.as_string())
         break 
     }
 
-    // Run program
-    let interpreter = Interpreter()
-    interpreter.visit(node: node!)
+    print(result!.print_self())
 
     // print(node!.description)
 }
