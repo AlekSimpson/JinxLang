@@ -109,6 +109,8 @@ class Parser {
     }
 }
 
+/* Parse Result */
+
 class ParserResult { 
     var error: Error?
     var node: AbstractNode? 

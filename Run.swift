@@ -11,11 +11,15 @@ func run(text: String, fn: String) -> (Number?, Error?) {
     let parser = Parser(tokens: tokens)
     let (node, parse_error) = parser.parse()
 
+    if let err = parse_error {
+        return (nil, error)
+    }
+
     // Run program
     let interpreter = Interpreter()
     let result = interpreter.visit(node: node!)
 
-    return (result, parse_error) 
+    return (result.value, result.error) 
 }
 
 while true {
@@ -31,6 +35,4 @@ while true {
     }
 
     print(result!.print_self())
-
-    // print(node!.description)
 }
