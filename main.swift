@@ -380,6 +380,8 @@ class Number {
     }
 
     func divided(by other: Number) -> (Number?, Error?) {
+        print(other.value)
+        print("GETTING HERE")
         if other.value == 0 { return (nil, RuntimeError(details: "cannot divide by zero")) }
         return (Number(self.value / other.value), nil)
     }
@@ -392,18 +394,19 @@ class Number {
 /* INTERPRETER */
 
 class Interpreter {
-    init(){}
-
     func visit(node: AbstractNode) -> RuntimeResult {
         let func_index = node.classType
         var result = RuntimeResult()
 
         switch func_index {
             case 0:
+                print("--0")
                 result = visit_binop(node: node as! BinOpNode)
             case 1: 
+                print("--1")
                 result = visit_number(node: node as! NumberNode)
             case 3: 
+                print("--3")
                 result = visit_unary(node: node as! UnaryOpNode)
             default:
                 print("no visit method found")
@@ -425,7 +428,7 @@ class Interpreter {
         if rt.error != nil { return rt }
 
         let op_node = node.op as! VariableNode
-
+        print(op_node.token.type_name)
         switch op_node.token.type_name {
             case TT_PLUS: 
                 (result, error) = left.value!.added(to: right.value!)
@@ -434,6 +437,7 @@ class Interpreter {
             case TT_MUL:
                 (result, error) = left.value!.multiplied(by: right.value!)
             case TT_DIV: 
+                print("GETTING HERE")
                 (result, error) = left.value!.divided(by: right.value!)
             default: 
                 (result, error) = (Number(0), nil)
@@ -448,9 +452,8 @@ class Interpreter {
 
     // Visit Number
     func visit_number(node: NumberNode) -> RuntimeResult {
-        return RuntimeResult().success(
-            Number(node.token.value as! Int)
-        )
+        let rt = RuntimeResult()
+        return rt.success(Number(node.token.value as! Int))
     }
 
     // Unary Node 
@@ -491,9 +494,10 @@ class RuntimeResult {
         self.value = nil 
         self.error = nil 
     }
-
+    
     func register(_ result: RuntimeResult) -> RuntimeResult {
         if result.error != nil { self.error = result.error }
+        self.value = result.value 
         return self 
     } 
 
@@ -562,6 +566,10 @@ func run(text: String, fn: String) -> (Number?, Error?) {
     // Generate AST 
     let parser = Parser(tokens: tokens)
     let (node, parse_error) = parser.parse()
+
+    if let err = parse_error {
+        return (nil, err)
+    }
 
     // Run program
     let interpreter = Interpreter()

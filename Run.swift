@@ -12,7 +12,7 @@ func run(text: String, fn: String) -> (Number?, Error?) {
     let (node, parse_error) = parser.parse()
 
     if let err = parse_error {
-        return (nil, error)
+        return (nil, err)
     }
 
     // Run program
