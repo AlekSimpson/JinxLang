@@ -12,7 +12,7 @@ func run(text: String, fn: String) -> (Number?, Error?) {
     let (node, parse_error) = parser.parse()
 
     if let err = parse_error {
-        return (nil, error)
+        return (nil, err)
     }
 
     // Run program
@@ -29,8 +29,8 @@ while true {
 
     let (result, error) = run(text: text, fn: "file.aqua")
 
-    if error != nil {
-        print(error!.as_string())
+    if let err = error {
+        print(err.as_string())
         break 
     }
 

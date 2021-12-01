@@ -30,6 +30,7 @@ class Number {
 
     func divided(by other: Number) -> (Number?, Error?) {
         if other.value == 0 { return (nil, RuntimeError(details: "cannot divide by zero")) }
+
         return (Number(self.value / other.value), nil)
     }
 
@@ -50,9 +51,9 @@ class Interpreter {
         switch func_index {
             case 0:
                 result = visit_binop(node: node as! BinOpNode)
-            case 1: 
+            case 1:
                 result = visit_number(node: node as! NumberNode)
-            case 3: 
+            case 3:
                 result = visit_unary(node: node as! UnaryOpNode)
             default:
                 print("no visit method found")
@@ -66,37 +67,49 @@ class Interpreter {
         let rt = RuntimeResult()
         var result: Number? = nil
         var error: Error? = nil 
-        
-        let left = rt.register(self.visit(node: node.lhs))
+        var returnVal: RuntimeResult = RuntimeResult()
+
+
+        let left_vst = self.visit(node: node.lhs)
+        let _ = rt.register(left_vst)
+        let left = rt.value!
         if rt.error != nil { return rt }
 
-        let right = rt.register(self.visit(node: node.rhs))
+        let right_vst = self.visit(node: node.rhs)
+        let _ = rt.register(right_vst)
+        let right = rt.value!
         if rt.error != nil { return rt }
 
         let op_node = node.op as! VariableNode
 
         switch op_node.token.type_name {
             case TT_PLUS: 
-                (result, error) = left.value!.added(to: right.value!)
+                (result, error) = left.added(to: right)
             case TT_MINUS:
-                (result, error) = left.value!.subtracted(from: right.value!)
+                (result, error) = left.subtracted(from: right)
             case TT_MUL:
-                (result, error) = left.value!.multiplied(by: right.value!)
+                (result, error) = left.multiplied(by: right)
             case TT_DIV: 
-                (result, error) = left.value!.divided(by: right.value!)
+                (result, error) = left.divided(by: right)
             default: 
                 (result, error) = (Number(0), nil)
         }
+        
+        if let err = error { returnVal = rt.failure(err) }
 
-        if let err = error {
-            return rt.failure(err)
-        }else {
-            return rt.success(result!)
-        }
+        if let res = result { returnVal = rt.success(res) }
+        return returnVal 
     }
 
     // Visit Number
     func visit_number(node: NumberNode) -> RuntimeResult {
+        if let val = node.token.value as? Float {
+            let i = Int(val)
+            return RuntimeResult().success(
+                Number(i)
+            )
+        }
+
         return RuntimeResult().success(
             Number(node.token.value as! Int)
         )
@@ -142,7 +155,8 @@ class RuntimeResult {
     }
 
     func register(_ result: RuntimeResult) -> RuntimeResult {
-        if result.error != nil { self.error = result.error }
+        if result.error != nil { self.error = result.error } 
+        self.value = result.value
         return self 
     } 
 
