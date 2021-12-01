@@ -2,12 +2,12 @@
 
 // This class is for storing numbers
 class Number {
-    var value: Int 
+    var value: Any
     var pos_start: Int? 
-    var pos_end: Int? 
+    var pos_end: Int?
 
-    init(_ value: Int) {
-        self.value = value 
+    init(_ value: Any) {
+        self.value = value
         self.set_pos()
     }
 
@@ -17,27 +17,38 @@ class Number {
     }
 
     func added(to other: Number) -> (Number?, Error?) {
-        return (Number(self.value + other.value), nil) 
+        let a = Float(self.value)
+        let b = Float(other.value)
+        return (Number(a + b), nil)
     }
 
     func subtracted(from other: Number) -> (Number?, Error?) {
-        return (Number(self.value - other.value), nil) 
+        let a = Float(self.value)
+        let b = Float(other.value)
+        return (Number(a - b), nil)
     }
 
     func multiplied(by other: Number) -> (Number?, Error?) {
-        return (Number(self.value * other.value), nil)
+        let a = Float(self.value)
+        let b = Float(other.value)
+        return (Number(a * b), nil)
     }
 
     func divided(by other: Number) -> (Number?, Error?) {
+        let a = Float(self.value)
+        let b = Float(other.value)
         if other.value == 0 { return (nil, RuntimeError(details: "cannot divide by zero")) }
 
-        return (Number(self.value / other.value), nil)
+        return (Number(a / b), nil)
     }
 
     func print_self() -> String {
         return "\(self.value)"
     }
 }
+
+// MARK: NEED TO FOLLOW EP 1'S LEXER
+// MARK: SHOULD IMPLEMENT A CURR CHARACTER SYSTEM (WITH ADVANCE FUNC MAYBE?)
 
 /* INTERPRETER */
 
@@ -50,6 +61,8 @@ class Interpreter {
             case 0:
                 result = visit_binop(node: node as! BinOpNode)
             case 1:
+                var n = node as! NumberNode
+                print("VISITING NODE WITH VAL \(n.token.value)")
                 result = visit_number(node: node as! NumberNode)
             case 3:
                 result = visit_unary(node: node as! UnaryOpNode)
@@ -102,10 +115,21 @@ class Interpreter {
     // Visit Number
     func visit_number(node: NumberNode) -> RuntimeResult {
         if let val = node.token.value as? Float {
-            let i = Int(val)
-            return RuntimeResult().success(
-                Number(i)
-            )
+
+            let num:Int = Int(float)
+            let temp:Float = Float(num)
+            let isInt = (float / temp) == 1
+
+            if isInt {
+                let i = Int(val)
+                return RuntimeResult().success(
+                    Number(i)
+                )
+            }else {
+                return RuntimeResult().success(
+                    Number(val)
+                )
+            }
         }
 
         return RuntimeResult().success(

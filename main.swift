@@ -38,11 +38,12 @@ class Lexer {
     var text:String 
     var ln_pos:Int 
     var filename: String 
+
     // var curr_line:String 
 
     init(text_:String, fn:String) {
         self.text = text_
-        self.ln_pos = -1 
+        self.ln_pos = 0
         self.filename = fn
     }
 
@@ -51,7 +52,11 @@ class Lexer {
 
         let items = Array(self.text).map(String.init)
 
-        for item in items {
+        let new_items = make_numbers(items: items)
+
+        // print("ITEMS \(new_items)")
+
+        for item in new_items {
             if item == " " { continue }
 
             if let float = Float(item) {
@@ -62,6 +67,7 @@ class Lexer {
                 if isInt {
                     tokens.append(Token(type_: .FACTOR, type_name: TT_INT, value_: num))
                 }else {
+                    // print("REGISTERING FLOAT")
                     tokens.append(Token(type_: .FACTOR, type_name: TT_FLOAT, value_: float))
                 }
                 continue
@@ -86,6 +92,62 @@ class Lexer {
         }
         tokens.append(Token(type_: .EOF, type_name: TT_EOF, value_: TT_EOF))
         return (tokens, nil)
+    }
+
+    
+
+    func make_numbers(items: [String]) -> [String] {
+        var curr_num = ""
+        var new_items: [String] = []
+
+        for item in items {
+            if item == " " {
+                curr_num = ""
+                continue
+            }
+
+            if isNum(item) || (item == ".") {
+                let new_num = curr_num == ""
+
+                curr_num = curr_num + item 
+
+                if new_num {
+                    new_items.append(curr_num)
+                }else {
+                    let idx = last_index(items: new_items)
+                    new_items[idx] = curr_num
+                }
+            }else {
+                new_items.append(item)
+                curr_num = ""
+            }
+        }     
+
+        return new_items
+    }
+
+    func last_index(items: [String]) -> Int {
+        if items.count == 1 {
+            return 0
+        }else {
+            return (items.count - 1)
+        }
+    }
+
+    func isNum(_ item: String) -> Bool {
+        if item == "0" { return true }
+        if let float = Float(item) {
+            let num:Int = Int(float)
+            let temp:Float = Float(num)
+            let isInt = (float / temp) == 1
+
+            if isInt {
+                return true 
+            }else {
+                return false 
+            }
+        } 
+        return false 
     }
 }/* POSITION */
 
@@ -215,7 +277,6 @@ class Parser {
 
     func advance() -> Token {
         self.token_idx += 1
-        // print(self.token_idx)
         if self.token_idx < self.tokens.count {
             self.curr_token = self.tokens[self.token_idx]
         }
@@ -353,12 +414,12 @@ class ParserResult {
 
 // This class is for storing numbers
 class Number {
-    var value: Int 
+    var value: Any
     var pos_start: Int? 
-    var pos_end: Int? 
+    var pos_end: Int?
 
-    init(_ value: Int) {
-        self.value = value 
+    init(_ value: Any) {
+        self.value = value
         self.set_pos()
     }
 
@@ -368,27 +429,38 @@ class Number {
     }
 
     func added(to other: Number) -> (Number?, Error?) {
-        return (Number(self.value + other.value), nil) 
+        let a = Float(self.value)
+        let b = Float(other.value)
+        return (Number(a + b), nil)
     }
 
     func subtracted(from other: Number) -> (Number?, Error?) {
-        return (Number(self.value - other.value), nil) 
+        let a = Float(self.value)
+        let b = Float(other.value)
+        return (Number(a - b), nil)
     }
 
     func multiplied(by other: Number) -> (Number?, Error?) {
-        return (Number(self.value * other.value), nil)
+        let a = Float(self.value)
+        let b = Float(other.value)
+        return (Number(a * b), nil)
     }
 
     func divided(by other: Number) -> (Number?, Error?) {
+        let a = Float(self.value)
+        let b = Float(other.value)
         if other.value == 0 { return (nil, RuntimeError(details: "cannot divide by zero")) }
 
-        return (Number(self.value / other.value), nil)
+        return (Number(a / b), nil)
     }
 
     func print_self() -> String {
         return "\(self.value)"
     }
 }
+
+// MARK: NEED TO FOLLOW EP 1'S LEXER
+// MARK: SHOULD IMPLEMENT A CURR CHARACTER SYSTEM (WITH ADVANCE FUNC MAYBE?)
 
 /* INTERPRETER */
 
@@ -401,6 +473,8 @@ class Interpreter {
             case 0:
                 result = visit_binop(node: node as! BinOpNode)
             case 1:
+                var n = node as! NumberNode
+                print("VISITING NODE WITH VAL \(n.token.value)")
                 result = visit_number(node: node as! NumberNode)
             case 3:
                 result = visit_unary(node: node as! UnaryOpNode)
@@ -453,10 +527,21 @@ class Interpreter {
     // Visit Number
     func visit_number(node: NumberNode) -> RuntimeResult {
         if let val = node.token.value as? Float {
-            let i = Int(val)
-            return RuntimeResult().success(
-                Number(i)
-            )
+
+            let num:Int = Int(float)
+            let temp:Float = Float(num)
+            let isInt = (float / temp) == 1
+
+            if isInt {
+                let i = Int(val)
+                return RuntimeResult().success(
+                    Number(i)
+                )
+            }else {
+                return RuntimeResult().success(
+                    Number(val)
+                )
+            }
         }
 
         return RuntimeResult().success(

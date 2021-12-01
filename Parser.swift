@@ -12,7 +12,6 @@ class Parser {
 
     func advance() -> Token {
         self.token_idx += 1
-        // print(self.token_idx)
         if self.token_idx < self.tokens.count {
             self.curr_token = self.tokens[self.token_idx]
         }
