@@ -29,6 +29,8 @@ class Number {
     }
 
     func divided(by other: Number) -> (Number?, Error?) {
+        print(other.value)
+        print("GETTING HERE")
         if other.value == 0 { return (nil, RuntimeError(details: "cannot divide by zero")) }
 
         return (Number(self.value / other.value), nil)
@@ -42,8 +44,6 @@ class Number {
 /* INTERPRETER */
 
 class Interpreter {
-    init(){}
-
     func visit(node: AbstractNode) -> RuntimeResult {
         let func_index = node.classType
         var result = RuntimeResult()
@@ -81,7 +81,7 @@ class Interpreter {
         if rt.error != nil { return rt }
 
         let op_node = node.op as! VariableNode
-
+        print(op_node.token.type_name)
         switch op_node.token.type_name {
             case TT_PLUS: 
                 (result, error) = left.added(to: right)
@@ -153,7 +153,7 @@ class RuntimeResult {
         self.value = nil 
         self.error = nil 
     }
-
+    
     func register(_ result: RuntimeResult) -> RuntimeResult {
         if result.error != nil { self.error = result.error } 
         self.value = result.value
