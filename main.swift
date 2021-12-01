@@ -32,6 +32,41 @@ class RuntimeError: Error {
     init(details: String) {
         super.init(error_name: "Runtime Error", details: details)
     }
+}/* POSITION */
+
+class Position {
+    var idx: Int?
+    var ln: Int 
+    var col: Int 
+
+    init(idx: Int, ln: Int, col: Int) {
+        self.idx = idx 
+        self.ln = ln 
+        self.col = col 
+    }
+
+    init(ln: Int, col: Int) {
+        self.idx = nil 
+        self.ln = ln 
+        self.col = col 
+    }
+
+    func copy() -> Position {
+        // return LinePosition(idx: self.idx, ln: self.ln, col: self.col)
+        return self 
+    }
+}/* CONTEXT */
+
+class Context {
+    var display_name: String 
+    var parent: String?
+    var parent_entry_pos: String?
+
+    init(display_name: String, parent: String?=nil, parent_entry_pos: String?=nil) {
+        self.display_name = display_name
+        self.parent = parent
+        self.parent_entry_pos = parent_entry_pos
+    }
 }/* LEXER */
 
 class Lexer {
@@ -51,13 +86,13 @@ class Lexer {
         var tokens:[Token] = []
 
         let items = Array(self.text).map(String.init)
-
         let new_items = make_numbers(items: items)
 
-        // print("ITEMS \(new_items)")
-
+        var txt_col = 0
         for item in new_items {
             if item == " " { continue }
+
+            let tok_pos = Position(ln: 1, col: txt_col)
 
             if let float = Float(item) {
                 let num:Int = Int(float)
@@ -65,36 +100,42 @@ class Lexer {
                 let isInt = (float / temp) == 1
 
                 if isInt {
-                    tokens.append(Token(type_: .FACTOR, type_name: TT_INT, value_: num))
+                    let token = Token(type: .FACTOR, type_name: TT_INT, value: num, pos: tok_pos)
+                    tokens.append(token)
                 }else {
-                    // print("REGISTERING FLOAT")
-                    tokens.append(Token(type_: .FACTOR, type_name: TT_FLOAT, value_: float))
+                    let token = Token(type: .FACTOR, type_name: TT_FLOAT, value: float, pos: tok_pos)
+                    tokens.append(token)
                 }
                 continue
             } 
 
             switch item {
                 case "+":
-                    tokens.append(Token(type_: .OPERATOR, type_name: TT_PLUS, value_: item))
+                    let token = Token(type: .OPERATOR, type_name: TT_PLUS, value: item, pos: tok_pos)
+                    tokens.append(token)
                 case "-": 
-                    tokens.append(Token(type_: .OPERATOR, type_name: TT_MINUS, value_: item))
+                    let token = Token(type: .OPERATOR, type_name: TT_MINUS, value: item, pos: tok_pos)
+                    tokens.append(token)
                 case "/":
-                    tokens.append(Token(type_: .OPERATOR, type_name: TT_DIV, value_: item))
+                    let token = Token(type: .OPERATOR, type_name: TT_DIV, value: item, pos: tok_pos)
+                    tokens.append(token)
                 case "*":
-                    tokens.append(Token(type_: .OPERATOR, type_name: TT_MUL, value_: item))
+                    let token = Token(type: .OPERATOR, type_name: TT_MUL, value: item, pos: tok_pos)
+                    tokens.append(token)
                 case "(":
-                    tokens.append(Token(type_: .GROUP, type_name: TT_LPAREN, value_: item))
+                    let token = Token(type: .GROUP, type_name: TT_LPAREN, value: item, pos: tok_pos)
+                    tokens.append(token)
                 case ")":
-                    tokens.append(Token(type_: .GROUP, type_name: TT_RPAREN, value_: item))
+                    let token = Token(type: .GROUP, type_name: TT_RPAREN, value: item, pos: tok_pos)
+                    tokens.append(token)
                 default: 
                     return ([], IllegalCharError(details: "'\(item)'"))
             }
+            txt_col += 1
         }
-        tokens.append(Token(type_: .EOF, type_name: TT_EOF, value_: TT_EOF))
+        tokens.append(Token(type: .EOF, type_name: TT_EOF, value: TT_EOF))
         return (tokens, nil)
     }
-
-    
 
     func make_numbers(items: [String]) -> [String] {
         var curr_num = ""
@@ -134,6 +175,7 @@ class Lexer {
         }
     }
 
+    // returns whether item is a number or not (PROBABLY NEEDS REFACTOR)
     func isNum(_ item: String) -> Bool {
         if item == "0" { return true }
         if let float = Float(item) {
@@ -149,30 +191,9 @@ class Lexer {
         } 
         return false 
     }
-}/* POSITION */
 
-class LinePosition {
-    var idx: Int
-    var ln: Int 
-    var col: Int 
-
-    init(idx: Int, ln: Int, col: Int) {
-        self.idx = idx 
-        self.ln = ln 
-        self.col = col 
-    }
-
-    func advance() { 
-        self.idx += 1
-        self.col += 1
-    }
-
-    // func copy() {
-    //     return LinePosition(idx: self.idx, ln: self.ln, col: self.col)
-    // }
-}
-
-/* NODE */
+    // .
+}/* NODE */
 
 protocol AbstractNode {
     var description: String { get }
@@ -183,12 +204,8 @@ protocol AbstractNode {
 
 struct NumberNode: AbstractNode {
     var token: Token
-    var description: String {
-        return "NumberNode(\(token.type_name))"
-    }
-    var classType: Int {
-        return 1
-    }
+    var description: String { return "NumberNode(\(token.type_name))" }
+    var classType: Int { return 1 }
 
     func as_string() -> String {
         return token.as_string()
@@ -197,12 +214,9 @@ struct NumberNode: AbstractNode {
 
 struct VariableNode: AbstractNode {
     var token: Token
-    var description: String {
-        return "VariableName(\(token.type_name))"
-    }
-    var classType: Int {
-        return 2
-    }
+    var description: String { return "VariableName(\(token.type_name))" }
+    var classType: Int { return 2 }
+
 
     init() {
         self.token = Token()
@@ -221,12 +235,8 @@ struct BinOpNode: AbstractNode {
     let lhs: AbstractNode
     let op: AbstractNode
     let rhs: AbstractNode
-    var description: String {
-        return "(\(lhs.as_string()), \(op.as_string()), \(rhs.as_string()))"
-    }
-    var classType: Int {
-        return 0
-    }
+    var description: String { return "(\(lhs.as_string()), \(op.as_string()), \(rhs.as_string()))" }
+    var classType: Int { return 0 }
 
     init(lhs: AbstractNode, op: AbstractNode, rhs: AbstractNode) {
         self.lhs = lhs 
@@ -604,7 +614,7 @@ class Token {
     // This is the name of the type (ex: int, add, minus, etc)
     var type_name: String 
     var value: Any?
-    var pos: LinePosition?
+    var pos: Position?
 
     init() {
         self.type = .FACTOR 
@@ -613,10 +623,10 @@ class Token {
         self.pos = nil
     }
 
-    init(type_: TT, type_name: String, value_: Any?=nil, pos: LinePosition?=nil) {
-        self.type = type_
+    init(type: TT, type_name: String, value: Any?=nil, pos: Position?=nil) {
+        self.type = type
         self.type_name = type_name
-        self.value = value_
+        self.value = value
         self.pos = pos
     }
 
@@ -642,6 +652,7 @@ func run(text: String, fn: String) -> (Number?, Error?) {
 
     // Run program
     let interpreter = Interpreter()
+    let context = Context(display_name: "<program>")
     let result = interpreter.visit(node: node!)
 
     return (result.value, result.error) 

@@ -23,7 +23,7 @@ class Token {
     // This is the name of the type (ex: int, add, minus, etc)
     var type_name: String 
     var value: Any?
-    var pos: LinePosition?
+    var pos: Position?
 
     init() {
         self.type = .FACTOR 
@@ -32,10 +32,10 @@ class Token {
         self.pos = nil
     }
 
-    init(type_: TT, type_name: String, value_: Any?=nil, pos: LinePosition?=nil) {
-        self.type = type_
+    init(type: TT, type_name: String, value: Any?=nil, pos: Position?=nil) {
+        self.type = type
         self.type_name = type_name
-        self.value = value_
+        self.value = value
         self.pos = pos
     }
 

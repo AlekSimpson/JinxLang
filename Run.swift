@@ -17,6 +17,7 @@ func run(text: String, fn: String) -> (Number?, Error?) {
 
     // Run program
     let interpreter = Interpreter()
+    let context = Context(display_name: "<program>")
     let result = interpreter.visit(node: node!)
 
     return (result.value, result.error) 
