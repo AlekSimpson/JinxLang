@@ -17,13 +17,13 @@ class Lexer {
         var tokens:[Token] = []
 
         let items = Array(self.text).map(String.init)
-
         let new_items = make_numbers(items: items)
 
-        // print("ITEMS \(new_items)")
-
+        var txt_col = 0
         for item in new_items {
             if item == " " { continue }
+
+            let tok_pos = Position(ln: 1, col: txt_col, fn: self.filename)
 
             if let float = Float(item) {
                 let num:Int = Int(float)
@@ -31,36 +31,42 @@ class Lexer {
                 let isInt = (float / temp) == 1
 
                 if isInt {
-                    tokens.append(Token(type_: .FACTOR, type_name: TT_INT, value_: num))
+                    let token = Token(type: .FACTOR, type_name: TT_INT, value: num, pos: tok_pos)
+                    tokens.append(token)
                 }else {
-                    // print("REGISTERING FLOAT")
-                    tokens.append(Token(type_: .FACTOR, type_name: TT_FLOAT, value_: float))
+                    let token = Token(type: .FACTOR, type_name: TT_FLOAT, value: float, pos: tok_pos)
+                    tokens.append(token)
                 }
                 continue
             } 
 
             switch item {
                 case "+":
-                    tokens.append(Token(type_: .OPERATOR, type_name: TT_PLUS, value_: item))
+                    let token = Token(type: .OPERATOR, type_name: TT_PLUS, value: item, pos: tok_pos)
+                    tokens.append(token)
                 case "-": 
-                    tokens.append(Token(type_: .OPERATOR, type_name: TT_MINUS, value_: item))
+                    let token = Token(type: .OPERATOR, type_name: TT_MINUS, value: item, pos: tok_pos)
+                    tokens.append(token)
                 case "/":
-                    tokens.append(Token(type_: .OPERATOR, type_name: TT_DIV, value_: item))
+                    let token = Token(type: .OPERATOR, type_name: TT_DIV, value: item, pos: tok_pos)
+                    tokens.append(token)
                 case "*":
-                    tokens.append(Token(type_: .OPERATOR, type_name: TT_MUL, value_: item))
+                    let token = Token(type: .OPERATOR, type_name: TT_MUL, value: item, pos: tok_pos)
+                    tokens.append(token)
                 case "(":
-                    tokens.append(Token(type_: .GROUP, type_name: TT_LPAREN, value_: item))
+                    let token = Token(type: .GROUP, type_name: TT_LPAREN, value: item, pos: tok_pos)
+                    tokens.append(token)
                 case ")":
-                    tokens.append(Token(type_: .GROUP, type_name: TT_RPAREN, value_: item))
+                    let token = Token(type: .GROUP, type_name: TT_RPAREN, value: item, pos: tok_pos)
+                    tokens.append(token)
                 default: 
-                    return ([], IllegalCharError(details: "'\(item)'"))
+                    return ([], IllegalCharError(details: "'\(item)'", pos: tok_pos))
             }
+            txt_col += 1
         }
-        tokens.append(Token(type_: .EOF, type_name: TT_EOF, value_: TT_EOF))
+        tokens.append(Token(type: .EOF, type_name: TT_EOF, value: TT_EOF))
         return (tokens, nil)
     }
-
-    
 
     func make_numbers(items: [String]) -> [String] {
         var curr_num = ""
@@ -100,6 +106,7 @@ class Lexer {
         }
     }
 
+    // returns whether item is a number or not (PROBABLY NEEDS REFACTOR)
     func isNum(_ item: String) -> Bool {
         if item == "0" { return true }
         if let float = Float(item) {
@@ -115,4 +122,6 @@ class Lexer {
         } 
         return false 
     }
+
+    // .
 }

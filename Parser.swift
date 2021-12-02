@@ -23,7 +23,9 @@ class Parser {
 
         if let _ = parse_result.error {
             if self.curr_token.type != .EOF {
-                return (nil, parse_result.failure(InvalidSyntaxError(details: "Expected an operator")))
+                var p = Position()
+                if let position = self.curr_token.pos { p = position }
+                return (nil, parse_result.failure(InvalidSyntaxError(details: "Expected an operator", pos: p)))
             }
             return (nil, parse_result.error)
         }
@@ -61,7 +63,9 @@ class Parser {
                     _ = res.register(self.advance())
                     returnVal = (res.success( epr ), res)
                 }else {
-                    _ = res.failure(InvalidSyntaxError(details: "Expected ')'"))
+                    var p = Position()
+                    if let position = tok.pos { p = position }
+                    _ = res.failure(InvalidSyntaxError(details: "Expected ')'", pos: p))
                     returnVal = (nil, res)
                 }
             }
@@ -71,7 +75,9 @@ class Parser {
                 returnVal = (nil, res)
             }
         }else {
-            _ = res.failure(InvalidSyntaxError(details: "Expected int or float"))
+            var p = Position()
+            if let position = tok.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected int or float", pos: p))
             returnVal = (nil, res)
         }
 

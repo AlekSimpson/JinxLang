@@ -1,58 +1,17 @@
-/* NUMBERS */
-
-// This class is for storing numbers
-class Number {
-    var value: Double 
-    var pos_start: Int? 
-    var pos_end: Int?
-
-    init(_ value: Double) {
-        self.value = value
-        self.set_pos()
-    }
-
-    func set_pos(start: Int?=nil, end: Int?=nil) {
-        self.pos_start = start
-        self.pos_end = end 
-    }
-
-    func added(to other: Number) -> (Number?, Error?) {
-        return (Number(self.value + other.value), nil)
-    }
-
-    func subtracted(from other: Number) -> (Number?, Error?) {
-        return (Number(self.value - other.value), nil)
-    }
-
-    func multiplied(by other: Number) -> (Number?, Error?) {
-        return (Number(self.value * other.value), nil)
-    }
-
-    func divided(by other: Number) -> (Number?, Error?) {
-        if other.value == 0 { return (nil, RuntimeError(details: "cannot divide by zero")) }
-
-        return (Number(self.value / other.value), nil)
-    }
-
-    func print_self() -> String {
-        return "\(self.value)"
-    }
-}
-
 /* INTERPRETER */
 
 class Interpreter {
-    func visit(node: AbstractNode) -> RuntimeResult {
+    func visit(node: AbstractNode, context: Context) -> RuntimeResult {
         let func_index = node.classType
         var result = RuntimeResult()
 
         switch func_index {
             case 0:
-                result = visit_binop(node: node as! BinOpNode)
+                result = visit_binop(node: node as! BinOpNode, ctx: context)
             case 1:
-                result = visit_number(node: node as! NumberNode)
+                result = visit_number(node: node as! NumberNode, ctx: context)
             case 3:
-                result = visit_unary(node: node as! UnaryOpNode)
+                result = visit_unary(node: node as! UnaryOpNode, ctx: context)
             default:
                 print("no visit method found")
         }
@@ -61,19 +20,28 @@ class Interpreter {
     }
 
     // Bin Op Node 
-    func visit_binop(node: BinOpNode) -> RuntimeResult {
+    func visit_binop(node: BinOpNode, ctx: Context) -> RuntimeResult {
         let rt = RuntimeResult()
         var result: Number? = nil
         var error: Error? = nil 
         var returnVal: RuntimeResult = RuntimeResult()
 
-
-        let left_vst = self.visit(node: node.lhs)
+        // Get context for nodes
+        var entry = Position()
+        if node.lhs is NumberNode {
+            let node = node.lhs as! NumberNode
+            if let position = node.token.pos { entry = position }
+        }
+        let child_context = Context(display_name: "<binary operation>", parent: ctx, parent_entry_pos: entry)
+        
+        // Get left node 
+        let left_vst = self.visit(node: node.lhs, context: child_context)
         let _ = rt.register(left_vst)
         let left = rt.value!
         if rt.error != nil { return rt }
 
-        let right_vst = self.visit(node: node.rhs)
+        // Get right node
+        let right_vst = self.visit(node: node.rhs, context: child_context)
         let _ = rt.register(right_vst)
         let right = rt.value!
         if rt.error != nil { return rt }
@@ -100,7 +68,11 @@ class Interpreter {
     }
 
     // Visit Number
-    func visit_number(node: NumberNode) -> RuntimeResult {
+    func visit_number(node: NumberNode, ctx: Context) -> RuntimeResult {
+        var entry = Position()
+        if let position = node.token.pos { entry = position }
+        let child_context = Context(display_name: "<number>", parent: ctx, parent_entry_pos: entry)
+
         var val = 0.0
         if let v = node.token.value as? Float {
             val = Double(v)
@@ -108,15 +80,21 @@ class Interpreter {
             val = Double(v)
         }
         
+        var p = Position()
+        if let position = node.token.pos { p = position }
+
+        let num = Number(val, pos: p)
+        num.set_context(ctx: child_context)
+
         return RuntimeResult().success(
-            Number(val)
+            num 
         )
     }
 
     // Unary Node 
-    func visit_unary(node: UnaryOpNode) -> RuntimeResult {
+    func visit_unary(node: UnaryOpNode, ctx: Context) -> RuntimeResult {
         let rt = RuntimeResult()
-        let number_reg = rt.register(self.visit(node: node.node))
+        let number_reg = rt.register(self.visit(node: node.node, context: ctx))
         var number: Number? = number_reg.value!
         if rt.error != nil { return rt }
 

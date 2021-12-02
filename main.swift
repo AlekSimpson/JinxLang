@@ -5,10 +5,12 @@ import Foundation
 class Error {
     var error_name: String 
     var details: String 
+    var pos: Position 
 
-    init(error_name: String, details: String) {
+    init(error_name: String, details: String, pos: Position) {
         self.error_name = error_name
         self.details = details
+        self.pos = pos
     }
 
     func as_string() -> String {
@@ -17,20 +19,140 @@ class Error {
 }
 
 class IllegalCharError: Error {
-    init(details: String) {
-        super.init(error_name: "Illegal Character", details: details)
+    init(details: String, pos: Position) {
+        super.init(error_name: "Illegal Character", details: details, pos: pos)
     }
 }
 
 class InvalidSyntaxError: Error {
-    init(details: String) {
-        super.init(error_name: "Illegal Character", details: details)
+    init(details: String, pos: Position) {
+        super.init(error_name: "Illegal Character", details: details, pos: pos)
     }
 }
 
 class RuntimeError: Error {
-    init(details: String) {
-        super.init(error_name: "Runtime Error", details: details)
+    var context: Context
+    init(details: String, context: Context, pos: Position) {
+        self.context = context
+        super.init(error_name: "Runtime Error", details: details, pos: pos)
+    }
+
+    override func as_string() -> String {
+        var result = self.generate_traceback()
+        result += "\(self.error_name): \(self.details)"
+        return result
+    }
+
+    func generate_traceback() -> String {
+        var result = ""
+        var p = self.pos 
+        var ctx = self.context
+        
+        while true {
+            if ctx.parent == nil { break }
+            result += "\tFile: \(p.fn), line: \(p.ln), in \(ctx.display_name)\n\(result)"
+            if let par_pos = ctx.parent_entry_pos { p = par_pos }
+            if let par_ctx = ctx.parent { ctx = par_ctx }
+        }  
+
+        return "Traceback (most recent call last):\n\(result)"
+    }
+}/* NUMBERS */
+
+// This class is for storing numbers
+class Number {
+    var value: Double 
+    var pos: Position?
+    var context: Context?
+
+    init(_ value: Double, pos: Position?=nil) {
+        self.value = value
+        self.pos = pos 
+        self.set_context()
+    }
+
+    func set_context(ctx: Context?=nil) {
+        self.context = ctx 
+    }
+
+    func added(to other: Number) -> (Number?, Error?) {
+        let new_num = Number(self.value + other.value)
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func subtracted(from other: Number) -> (Number?, Error?) {
+        let new_num = Number(self.value + other.value)
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func multiplied(by other: Number) -> (Number?, Error?) {
+        let new_num = Number(self.value + other.value)
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func divided(by other: Number) -> (Number?, Error?) {
+        var p = Position()
+        if let position = self.pos { p = position }
+
+        let new_num = Number(self.value / other.value)
+        new_num.set_context(ctx: other.context)
+
+        var c = Context()
+        if let ctx = self.context { c = ctx }
+        if other.value == 0 { return (nil, RuntimeError(details: "cannot divide by zero", 
+                                                        context: c, 
+                                                        pos: p)) }
+
+        return (new_num, nil)
+    }
+
+    func print_self() -> String {
+        return "\(self.value)"
+    }
+}
+/* POSITION */
+
+class Position {
+    var ln: Int 
+    var col: Int 
+    var fn: String 
+
+    init(ln: Int, col: Int, fn: String) {
+        self.ln = ln 
+        self.col = col 
+        self.fn = fn 
+    }
+
+    init() {
+        self.ln = 0
+        self.col = 0
+        self.fn = ""
+    }
+
+    func copy() -> Position {
+        // return LinePosition(idx: self.idx, ln: self.ln, col: self.col)
+        return self 
+    }
+}/* CONTEXT */
+
+class Context {
+    var display_name: String 
+    var parent: Context?
+    var parent_entry_pos: Position?
+
+    init(display_name: String, parent: Context?=nil, parent_entry_pos: Position?=nil) {
+        self.display_name = display_name
+        self.parent = parent
+        self.parent_entry_pos = parent_entry_pos
+    }
+
+    init() {
+        self.display_name = ""
+        self.parent = nil 
+        self.parent_entry_pos = nil 
     }
 }/* LEXER */
 
@@ -51,13 +173,13 @@ class Lexer {
         var tokens:[Token] = []
 
         let items = Array(self.text).map(String.init)
-
         let new_items = make_numbers(items: items)
 
-        // print("ITEMS \(new_items)")
-
+        var txt_col = 0
         for item in new_items {
             if item == " " { continue }
+
+            let tok_pos = Position(ln: 1, col: txt_col, fn: self.filename)
 
             if let float = Float(item) {
                 let num:Int = Int(float)
@@ -65,36 +187,42 @@ class Lexer {
                 let isInt = (float / temp) == 1
 
                 if isInt {
-                    tokens.append(Token(type_: .FACTOR, type_name: TT_INT, value_: num))
+                    let token = Token(type: .FACTOR, type_name: TT_INT, value: num, pos: tok_pos)
+                    tokens.append(token)
                 }else {
-                    // print("REGISTERING FLOAT")
-                    tokens.append(Token(type_: .FACTOR, type_name: TT_FLOAT, value_: float))
+                    let token = Token(type: .FACTOR, type_name: TT_FLOAT, value: float, pos: tok_pos)
+                    tokens.append(token)
                 }
                 continue
             } 
 
             switch item {
                 case "+":
-                    tokens.append(Token(type_: .OPERATOR, type_name: TT_PLUS, value_: item))
+                    let token = Token(type: .OPERATOR, type_name: TT_PLUS, value: item, pos: tok_pos)
+                    tokens.append(token)
                 case "-": 
-                    tokens.append(Token(type_: .OPERATOR, type_name: TT_MINUS, value_: item))
+                    let token = Token(type: .OPERATOR, type_name: TT_MINUS, value: item, pos: tok_pos)
+                    tokens.append(token)
                 case "/":
-                    tokens.append(Token(type_: .OPERATOR, type_name: TT_DIV, value_: item))
+                    let token = Token(type: .OPERATOR, type_name: TT_DIV, value: item, pos: tok_pos)
+                    tokens.append(token)
                 case "*":
-                    tokens.append(Token(type_: .OPERATOR, type_name: TT_MUL, value_: item))
+                    let token = Token(type: .OPERATOR, type_name: TT_MUL, value: item, pos: tok_pos)
+                    tokens.append(token)
                 case "(":
-                    tokens.append(Token(type_: .GROUP, type_name: TT_LPAREN, value_: item))
+                    let token = Token(type: .GROUP, type_name: TT_LPAREN, value: item, pos: tok_pos)
+                    tokens.append(token)
                 case ")":
-                    tokens.append(Token(type_: .GROUP, type_name: TT_RPAREN, value_: item))
+                    let token = Token(type: .GROUP, type_name: TT_RPAREN, value: item, pos: tok_pos)
+                    tokens.append(token)
                 default: 
-                    return ([], IllegalCharError(details: "'\(item)'"))
+                    return ([], IllegalCharError(details: "'\(item)'", pos: tok_pos))
             }
+            txt_col += 1
         }
-        tokens.append(Token(type_: .EOF, type_name: TT_EOF, value_: TT_EOF))
+        tokens.append(Token(type: .EOF, type_name: TT_EOF, value: TT_EOF))
         return (tokens, nil)
     }
-
-    
 
     func make_numbers(items: [String]) -> [String] {
         var curr_num = ""
@@ -134,6 +262,7 @@ class Lexer {
         }
     }
 
+    // returns whether item is a number or not (PROBABLY NEEDS REFACTOR)
     func isNum(_ item: String) -> Bool {
         if item == "0" { return true }
         if let float = Float(item) {
@@ -149,30 +278,9 @@ class Lexer {
         } 
         return false 
     }
-}/* POSITION */
 
-class LinePosition {
-    var idx: Int
-    var ln: Int 
-    var col: Int 
-
-    init(idx: Int, ln: Int, col: Int) {
-        self.idx = idx 
-        self.ln = ln 
-        self.col = col 
-    }
-
-    func advance() { 
-        self.idx += 1
-        self.col += 1
-    }
-
-    // func copy() {
-    //     return LinePosition(idx: self.idx, ln: self.ln, col: self.col)
-    // }
-}
-
-/* NODE */
+    // .
+}/* NODE */
 
 protocol AbstractNode {
     var description: String { get }
@@ -183,12 +291,8 @@ protocol AbstractNode {
 
 struct NumberNode: AbstractNode {
     var token: Token
-    var description: String {
-        return "NumberNode(\(token.type_name))"
-    }
-    var classType: Int {
-        return 1
-    }
+    var description: String { return "NumberNode(\(token.type_name))" }
+    var classType: Int { return 1 }
 
     func as_string() -> String {
         return token.as_string()
@@ -197,12 +301,9 @@ struct NumberNode: AbstractNode {
 
 struct VariableNode: AbstractNode {
     var token: Token
-    var description: String {
-        return "VariableName(\(token.type_name))"
-    }
-    var classType: Int {
-        return 2
-    }
+    var description: String { return "VariableName(\(token.type_name))" }
+    var classType: Int { return 2 }
+
 
     init() {
         self.token = Token()
@@ -221,12 +322,8 @@ struct BinOpNode: AbstractNode {
     let lhs: AbstractNode
     let op: AbstractNode
     let rhs: AbstractNode
-    var description: String {
-        return "(\(lhs.as_string()), \(op.as_string()), \(rhs.as_string()))"
-    }
-    var classType: Int {
-        return 0
-    }
+    var description: String { return "(\(lhs.as_string()), \(op.as_string()), \(rhs.as_string()))" }
+    var classType: Int { return 0 }
 
     init(lhs: AbstractNode, op: AbstractNode, rhs: AbstractNode) {
         self.lhs = lhs 
@@ -288,7 +385,9 @@ class Parser {
 
         if let _ = parse_result.error {
             if self.curr_token.type != .EOF {
-                return (nil, parse_result.failure(InvalidSyntaxError(details: "Expected an operator")))
+                var p = Position()
+                if let position = self.curr_token.pos { p = position }
+                return (nil, parse_result.failure(InvalidSyntaxError(details: "Expected an operator", pos: p)))
             }
             return (nil, parse_result.error)
         }
@@ -326,7 +425,9 @@ class Parser {
                     _ = res.register(self.advance())
                     returnVal = (res.success( epr ), res)
                 }else {
-                    _ = res.failure(InvalidSyntaxError(details: "Expected ')'"))
+                    var p = Position()
+                    if let position = tok.pos { p = position }
+                    _ = res.failure(InvalidSyntaxError(details: "Expected ')'", pos: p))
                     returnVal = (nil, res)
                 }
             }
@@ -336,7 +437,9 @@ class Parser {
                 returnVal = (nil, res)
             }
         }else {
-            _ = res.failure(InvalidSyntaxError(details: "Expected int or float"))
+            var p = Position()
+            if let position = tok.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected int or float", pos: p))
             returnVal = (nil, res)
         }
 
@@ -410,61 +513,20 @@ class ParserResult {
         self.error = error 
         return self.error!
     }
-}/* NUMBERS */
-
-// This class is for storing numbers
-class Number {
-    var value: Double 
-    var pos_start: Int? 
-    var pos_end: Int?
-
-    init(_ value: Double) {
-        self.value = value
-        self.set_pos()
-    }
-
-    func set_pos(start: Int?=nil, end: Int?=nil) {
-        self.pos_start = start
-        self.pos_end = end 
-    }
-
-    func added(to other: Number) -> (Number?, Error?) {
-        return (Number(self.value + other.value), nil)
-    }
-
-    func subtracted(from other: Number) -> (Number?, Error?) {
-        return (Number(self.value - other.value), nil)
-    }
-
-    func multiplied(by other: Number) -> (Number?, Error?) {
-        return (Number(self.value * other.value), nil)
-    }
-
-    func divided(by other: Number) -> (Number?, Error?) {
-        if other.value == 0 { return (nil, RuntimeError(details: "cannot divide by zero")) }
-
-        return (Number(self.value / other.value), nil)
-    }
-
-    func print_self() -> String {
-        return "\(self.value)"
-    }
-}
-
-/* INTERPRETER */
+}/* INTERPRETER */
 
 class Interpreter {
-    func visit(node: AbstractNode) -> RuntimeResult {
+    func visit(node: AbstractNode, context: Context) -> RuntimeResult {
         let func_index = node.classType
         var result = RuntimeResult()
 
         switch func_index {
             case 0:
-                result = visit_binop(node: node as! BinOpNode)
+                result = visit_binop(node: node as! BinOpNode, ctx: context)
             case 1:
-                result = visit_number(node: node as! NumberNode)
+                result = visit_number(node: node as! NumberNode, ctx: context)
             case 3:
-                result = visit_unary(node: node as! UnaryOpNode)
+                result = visit_unary(node: node as! UnaryOpNode, ctx: context)
             default:
                 print("no visit method found")
         }
@@ -473,19 +535,28 @@ class Interpreter {
     }
 
     // Bin Op Node 
-    func visit_binop(node: BinOpNode) -> RuntimeResult {
+    func visit_binop(node: BinOpNode, ctx: Context) -> RuntimeResult {
         let rt = RuntimeResult()
         var result: Number? = nil
         var error: Error? = nil 
         var returnVal: RuntimeResult = RuntimeResult()
 
-
-        let left_vst = self.visit(node: node.lhs)
+        // Get context for nodes
+        var entry = Position()
+        if node.lhs is NumberNode {
+            let node = node.lhs as! NumberNode
+            if let position = node.token.pos { entry = position }
+        }
+        let child_context = Context(display_name: "<binary operation>", parent: ctx, parent_entry_pos: entry)
+        
+        // Get left node 
+        let left_vst = self.visit(node: node.lhs, context: child_context)
         let _ = rt.register(left_vst)
         let left = rt.value!
         if rt.error != nil { return rt }
 
-        let right_vst = self.visit(node: node.rhs)
+        // Get right node
+        let right_vst = self.visit(node: node.rhs, context: child_context)
         let _ = rt.register(right_vst)
         let right = rt.value!
         if rt.error != nil { return rt }
@@ -512,7 +583,11 @@ class Interpreter {
     }
 
     // Visit Number
-    func visit_number(node: NumberNode) -> RuntimeResult {
+    func visit_number(node: NumberNode, ctx: Context) -> RuntimeResult {
+        var entry = Position()
+        if let position = node.token.pos { entry = position }
+        let child_context = Context(display_name: "<number>", parent: ctx, parent_entry_pos: entry)
+
         var val = 0.0
         if let v = node.token.value as? Float {
             val = Double(v)
@@ -520,15 +595,21 @@ class Interpreter {
             val = Double(v)
         }
         
+        var p = Position()
+        if let position = node.token.pos { p = position }
+
+        let num = Number(val, pos: p)
+        num.set_context(ctx: child_context)
+
         return RuntimeResult().success(
-            Number(val)
+            num 
         )
     }
 
     // Unary Node 
-    func visit_unary(node: UnaryOpNode) -> RuntimeResult {
+    func visit_unary(node: UnaryOpNode, ctx: Context) -> RuntimeResult {
         let rt = RuntimeResult()
-        let number_reg = rt.register(self.visit(node: node.node))
+        let number_reg = rt.register(self.visit(node: node.node, context: ctx))
         var number: Number? = number_reg.value!
         if rt.error != nil { return rt }
 
@@ -604,7 +685,7 @@ class Token {
     // This is the name of the type (ex: int, add, minus, etc)
     var type_name: String 
     var value: Any?
-    var pos: LinePosition?
+    var pos: Position?
 
     init() {
         self.type = .FACTOR 
@@ -613,10 +694,10 @@ class Token {
         self.pos = nil
     }
 
-    init(type_: TT, type_name: String, value_: Any?=nil, pos: LinePosition?=nil) {
-        self.type = type_
+    init(type: TT, type_name: String, value: Any?=nil, pos: Position?=nil) {
+        self.type = type
         self.type_name = type_name
-        self.value = value_
+        self.value = value
         self.pos = pos
     }
 
@@ -634,7 +715,7 @@ func run(text: String, fn: String) -> (Number?, Error?) {
 
     // Generate AST 
     let parser = Parser(tokens: tokens)
-    let (node, parse_error) = parser.parse()
+    let (nodes, parse_error) = parser.parse()
 
     if let err = parse_error {
         return (nil, err)
@@ -642,7 +723,8 @@ func run(text: String, fn: String) -> (Number?, Error?) {
 
     // Run program
     let interpreter = Interpreter()
-    let result = interpreter.visit(node: node!)
+    let ctx = Context(display_name: "<program>")
+    let result = interpreter.visit(node: nodes!, context: ctx)
 
     return (result.value, result.error) 
 }
@@ -652,7 +734,7 @@ while true {
     let text:String = readLine() ?? ""
     if text == "stop" { break }
 
-    let (result, error) = run(text: text, fn: "file.aqua")
+    let (result, error) = run(text: text, fn: "stdin")
 
     if let err = error {
         print(err.as_string())
