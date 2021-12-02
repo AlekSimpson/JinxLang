@@ -1,20 +1,20 @@
 /* POSITION */
 
 class Position {
-    var idx: Int?
     var ln: Int 
     var col: Int 
+    var fn: String 
 
-    init(idx: Int, ln: Int, col: Int) {
-        self.idx = idx 
+    init(ln: Int, col: Int, fn: String) {
         self.ln = ln 
         self.col = col 
+        self.fn = fn 
     }
 
-    init(ln: Int, col: Int) {
-        self.idx = nil 
-        self.ln = ln 
-        self.col = col 
+    init() {
+        self.ln = 0
+        self.col = 0
+        self.fn = ""
     }
 
     func copy() -> Position {

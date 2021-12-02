@@ -23,7 +23,7 @@ class Lexer {
         for item in new_items {
             if item == " " { continue }
 
-            let tok_pos = Position(ln: 1, col: txt_col)
+            let tok_pos = Position(ln: 1, col: txt_col, fn: self.filename)
 
             if let float = Float(item) {
                 let num:Int = Int(float)
@@ -60,7 +60,7 @@ class Lexer {
                     let token = Token(type: .GROUP, type_name: TT_RPAREN, value: item, pos: tok_pos)
                     tokens.append(token)
                 default: 
-                    return ([], IllegalCharError(details: "'\(item)'"))
+                    return ([], IllegalCharError(details: "'\(item)'", pos: tok_pos))
             }
             txt_col += 1
         }
