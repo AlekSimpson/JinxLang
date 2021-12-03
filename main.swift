@@ -82,13 +82,13 @@ class Number {
     }
 
     func subtracted(from other: Number) -> (Number?, Error?) {
-        let new_num = Number(self.value + other.value)
+        let new_num = Number(self.value - other.value)
         new_num.set_context(ctx: other.context)
         return (new_num, nil)
     }
 
     func multiplied(by other: Number) -> (Number?, Error?) {
-        let new_num = Number(self.value + other.value)
+        let new_num = Number(self.value * other.value)
         new_num.set_context(ctx: other.context)
         return (new_num, nil)
     }
@@ -106,6 +106,12 @@ class Number {
                                                         context: c, 
                                                         pos: p)) }
 
+        return (new_num, nil)
+    }
+
+    func power(by other: Number) -> (Number?, Error?) {
+        let new_num = Number(pow(self.value, other.value))
+        new_num.set_context(ctx: other.context)
         return (new_num, nil)
     }
 
@@ -208,6 +214,9 @@ class Lexer {
                     tokens.append(token)
                 case "*":
                     let token = Token(type: .OPERATOR, type_name: TT_MUL, value: item, pos: tok_pos)
+                    tokens.append(token)
+                case "^":
+                    let token = Token(type: .OPERATOR, type_name: TT_POW, value: item, pos: tok_pos)
                     tokens.append(token)
                 case "(":
                     let token = Token(type: .GROUP, type_name: TT_LPAREN, value: item, pos: tok_pos)
@@ -395,24 +404,12 @@ class Parser {
         return (node_result, nil)
     }
 
-    func factor() -> (AbstractNode?, ParserResult) {
+    func atom() -> (AbstractNode?, ParserResult) {
         let res = ParserResult()
         let tok = self.curr_token
         var returnVal: (AbstractNode?, ParserResult) = (nil, res)
 
-        if tok.type_name == "PLUS" || tok.type_name == "MINUS" {
-            _ = res.register(self.advance())
-            let recurrsion = self.factor()
-            if let ftr = recurrsion.0 {
-                _ = res.register(ftr)
-                returnVal = (res.success( UnaryOpNode(op_tok: tok, node: ftr) ), res)
-            }
-
-            if let err = recurrsion.1.error {
-                _ = res.failure(err)
-                returnVal = (nil, res)
-            }
-        }else if tok.type == .FACTOR {
+        if tok.type == .FACTOR {
             let val = NumberNode(token: self.curr_token)
             _ = res.register(self.advance())
             returnVal = (res.success(val), res)
@@ -439,10 +436,37 @@ class Parser {
         }else {
             var p = Position()
             if let position = tok.pos { p = position }
-            _ = res.failure(InvalidSyntaxError(details: "Expected int or float", pos: p))
+            _ = res.failure(InvalidSyntaxError(details: "Expected int, float, '+', '-', or '('", pos: p))
             returnVal = (nil, res)
         }
 
+        return returnVal
+    }
+
+    func power() -> (AbstractNode?, ParserResult) {
+        return bin_op(funcA: atom, ops: TT_POW, funcB: factor)
+    }
+
+    func factor() -> (AbstractNode?, ParserResult) {
+        let res = ParserResult()
+        let tok = self.curr_token
+        var returnVal: (AbstractNode?, ParserResult) = (nil, res)
+
+        if tok.type_name == "PLUS" || tok.type_name == "MINUS" {
+            _ = res.register(self.advance())
+            let recurrsion = self.factor()
+            if let ftr = recurrsion.0 {
+                _ = res.register(ftr)
+                returnVal = (res.success( UnaryOpNode(op_tok: tok, node: ftr) ), res)
+            }
+
+            if let err = recurrsion.1.error {
+                _ = res.failure(err)
+                returnVal = (nil, res)
+            }
+        }else {
+            returnVal = self.power()
+        }
         return returnVal
     }
 
@@ -472,6 +496,28 @@ class Parser {
             left = BinOpNode(lhs: left!, op: op_tok, rhs: right!)
         }
 
+        return (res.success(left ?? VariableNode()), res)
+    }
+
+    func bin_op(funcA functionA: () -> (AbstractNode?, ParserResult), ops: String, funcB functionB: () -> (AbstractNode?, ParserResult)) -> (AbstractNode?, ParserResult) {
+        let res = ParserResult()
+
+        var (left, parse_result) = functionA()
+        _ = res.register(parse_result)
+        if res.error != nil { return (nil, res) }
+
+        // let condition = ((ops.count == 2) : (self.curr_token.type_name == ops[0] || self.curr_token.type_name == ops[1]) ? self.curr_token.type_name == ops[0])
+
+        while self.curr_token.type_name == ops {
+            let op_tok = VariableNode(token: self.curr_token)
+            _ = res.register(self.advance())
+
+            let (right, parse_result_) = functionB()
+            _ = res.register(parse_result_)
+            if res.error != nil { return (nil, res) }
+
+            left = BinOpNode(lhs: left!, op: op_tok, rhs: right!)
+        }
         return (res.success(left ?? VariableNode()), res)
     }
 }
@@ -572,6 +618,8 @@ class Interpreter {
                 (result, error) = left.multiplied(by: right)
             case TT_DIV: 
                 (result, error) = left.divided(by: right)
+            case TT_POW:
+                (result, error) = left.power(by: right)
             default: 
                 (result, error) = (Number(0), nil)
         }
@@ -675,6 +723,7 @@ let TT_PLUS = "PLUS"
 let TT_MINUS = "MINUS"
 let TT_MUL = "MUL"
 let TT_DIV = "DIV"
+let TT_POW = "POW"
 let TT_LPAREN = "LPAREN"
 let TT_RPAREN = "RPAREN"
 let TT_EOF = "EOF"

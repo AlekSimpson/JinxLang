@@ -23,13 +23,13 @@ class Number {
     }
 
     func subtracted(from other: Number) -> (Number?, Error?) {
-        let new_num = Number(self.value + other.value)
+        let new_num = Number(self.value - other.value)
         new_num.set_context(ctx: other.context)
         return (new_num, nil)
     }
 
     func multiplied(by other: Number) -> (Number?, Error?) {
-        let new_num = Number(self.value + other.value)
+        let new_num = Number(self.value * other.value)
         new_num.set_context(ctx: other.context)
         return (new_num, nil)
     }
@@ -47,6 +47,12 @@ class Number {
                                                         context: c, 
                                                         pos: p)) }
 
+        return (new_num, nil)
+    }
+
+    func power(by other: Number) -> (Number?, Error?) {
+        let new_num = Number(pow(self.value, other.value))
+        new_num.set_context(ctx: other.context)
         return (new_num, nil)
     }
 

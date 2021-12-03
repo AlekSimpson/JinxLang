@@ -57,6 +57,8 @@ class Interpreter {
                 (result, error) = left.multiplied(by: right)
             case TT_DIV: 
                 (result, error) = left.divided(by: right)
+            case TT_POW:
+                (result, error) = left.power(by: right)
             default: 
                 (result, error) = (Number(0), nil)
         }

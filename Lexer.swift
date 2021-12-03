@@ -53,6 +53,9 @@ class Lexer {
                 case "*":
                     let token = Token(type: .OPERATOR, type_name: TT_MUL, value: item, pos: tok_pos)
                     tokens.append(token)
+                case "^":
+                    let token = Token(type: .OPERATOR, type_name: TT_POW, value: item, pos: tok_pos)
+                    tokens.append(token)
                 case "(":
                     let token = Token(type: .GROUP, type_name: TT_LPAREN, value: item, pos: tok_pos)
                     tokens.append(token)
