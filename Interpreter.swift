@@ -4,7 +4,9 @@ class Interpreter {
     func visit(node: AbstractNode, context: Context) -> RuntimeResult {
         let func_index = node.classType
         var result = RuntimeResult()
-        
+        var table = [String : Double]()
+        if let t = context.symbolTable { table = t.symbols }
+
         switch func_index {
             case 0:
                 result = visit_binop(node: node as! BinOpNode, ctx: context)
@@ -13,7 +15,12 @@ class Interpreter {
             case 3:
                 result = visit_unary(node: node as! UnaryOpNode, ctx: context)
             case 4: 
-                result = visit_VarAccessNode(node: node as! VarAccessNode, ctx: context)
+                let err = check_for_declaration(table: table, node: node, context: context)
+                if let e = err { 
+                    _ = result.failure(e)
+                }else {
+                    result = visit_VarAccessNode(node: node as! VarAccessNode, ctx: context)
+                }
             case 5: 
                 result = visit_VarAssignNode(node: node as! VarAssignNode, ctx: context)
             default:
@@ -21,6 +28,19 @@ class Interpreter {
         }
 
         return result
+    }
+
+    func check_for_declaration(table: [String : Double], node: AbstractNode, context: Context) -> Error? {
+        let access_node = node as! VarAccessNode
+        let name = access_node.token.value as! String 
+        var err:Error? = nil         
+
+        if table[name] == nil {
+            var pos = Position()
+            if let p = access_node.token.pos { pos = p }
+            err = RuntimeError(details: "'\(name)' is not defined", context: context, pos: pos)
+        }
+        return err
     }
 
     // Bin Op Node 
@@ -121,10 +141,9 @@ class Interpreter {
     func visit_VarAccessNode(node: VarAccessNode, ctx: Context) -> RuntimeResult {
         let res = RuntimeResult()
         let var_name = node.token.value as! String
-        // print("SYMBOL TABLE \(ctx.symbolTable)")
+        
         var value:Double? = nil
         if let table = ctx.symbolTable { 
-            // print("GETTING HERE ALSO")
             value = table.get_val(name: var_name) 
         }
         
@@ -156,8 +175,12 @@ class SymbolTable {
     var symbols = [String:Double]()
     var parent:SymbolTable? = nil 
 
+    init() {
+        self.symbols = [String : Double]()
+        self.parent = nil
+    }
+
     func get_val(name: String) -> Double {
-        // print("SYMBOL TABLE \(symbols)")
         let value = symbols[name]
         var returnVal: Double = 0.0
 

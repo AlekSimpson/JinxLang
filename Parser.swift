@@ -66,7 +66,7 @@ class Parser {
         }else {
             var p = Position()
             if let position = tok.pos { p = position }
-            _ = res.failure(InvalidSyntaxError(details: "Expected int, float, '+', '-', or '('", pos: p))
+            _ = res.failure(InvalidSyntaxError(details: "Expected int, float, identifier, '+', '-', or '('", pos: p))
             returnVal = (nil, res)
         }
 
