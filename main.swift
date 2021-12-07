@@ -30,6 +30,12 @@ class InvalidSyntaxError: Error {
     }
 }
 
+class ExpectedCharError: Error {
+    init(details: String, pos: Position) {
+        super.init(error_name: "Expected Character", details: details, pos: pos)
+    }
+}
+
 class RuntimeError: Error {
     var context: Context
     init(details: String, context: Context, pos: Position) {
@@ -182,7 +188,10 @@ class Lexer {
     func make_tokens() -> ([Token], Error?) {
         let items = Array(self.text).map(String.init)
         var new_items = make_numbers(items: items)
-        new_items = make_letters(items: new_items)
+        new_items = make_comparison(for: "!", items: new_items)
+        new_items = make_comparison(for: "=", items: new_items)
+        new_items = make_comparison(for: "<", items: new_items)
+        new_items = make_comparison(for: ">", items: new_items)
 
         var txt_col = 0
         for item in new_items {
@@ -222,6 +231,24 @@ class Lexer {
                     self.tokens.append(token)
                 case "=":
                     let token = Token(type: .EQ, type_name: TT_EQ, value: item, pos: tok_pos)
+                    self.tokens.append(token)
+                case "!":
+                    let token = Token(type: .NOT, type_name: TT_NOT, value: item, pos: tok_pos)
+                    self.tokens.append(token)
+                case "<":
+                    let token = Token(type: .LT, type_name: TT_LT, value: item, pos: tok_pos)
+                    self.tokens.append(token)
+                case ">":
+                    let token = Token(type: .GT, type_name: TT_GT, value: item, pos: tok_pos)
+                    self.tokens.append(token)
+                case "!=":
+                    let token = Token(type: .NE, type_name: TT_NE, value: item, pos: tok_pos)
+                    self.tokens.append(token)
+                case "<=":
+                    let token = Token(type: .LOE, type_name: TT_LOE, value: item, pos: tok_pos)
+                    self.tokens.append(token)
+                case ">=":
+                    let token = Token(type: .GOE, type_name: TT_GOE, value: item, pos: tok_pos)
                     self.tokens.append(token)
                 default: 
                     return ([], IllegalCharError(details: "'\(item)'", pos: tok_pos))
@@ -268,6 +295,28 @@ class Lexer {
             return true // continue
         } 
         return false 
+    }
+
+    func make_comparison(for comparison: String, items: [String]) -> [String] {
+        var new_items:[String] = []
+        var skipNext = false 
+
+        for i in 0...(items.count - 1) {
+            if skipNext { 
+                skipNext = false 
+                continue 
+            }
+
+            if items[i] == comparison && items[i + 1] == "=" {
+                let new_char = "\(comparison)="
+                new_items.append(new_char)
+                skipNext = true 
+                continue 
+            }
+            new_items.append(items[i])
+        }
+
+        return new_items
     }
 
     func make_letters(items: [String]) -> [String] {
@@ -729,13 +778,6 @@ class Interpreter {
         var result: Number? = nil
         var error: Error? = nil 
         var returnVal: RuntimeResult = RuntimeResult()
-
-        // Get context for nodes
-        // var entry = Position()
-        // if node.lhs is NumberNode {
-        //     let node = node.lhs as! NumberNode
-        //     if let position = node.token.pos { entry = position }
-        // }
         
         // Get left node 
         let left_vst = self.visit(node: node.lhs, context: ctx)
@@ -922,28 +964,45 @@ enum TT {
     case OPERATOR
     case GROUP
     case KEYWORD
-    case UNASSIGNED
+    // case UNASSIGNED
     case IDENTIFIER
+    
     case EQ
     case EOF
+    case EE 
+    case NE 
+    case LT 
+    case GT 
+    case LOE 
+    case GOE 
+    case AND 
+    case OR 
+    case NOT
 }
 
-let KEYWORDS:[String] = []
+let KEYWORDS:[String] = ["and", "or", "not", "&&", "||", "!"]
 
-let TT_INT     = "INT"
-let TT_FLOAT   = "FLOAT"
-let TT_PLUS    = "PLUS"
-let TT_MINUS   = "MINUS"
-let TT_MUL     = "MUL"
-let TT_DIV     = "DIV"
-let TT_POW     = "POW"
-let TT_LPAREN  = "LPAREN"
-let TT_RPAREN  = "RPAREN"
-let TT_KEYWORD = "KEYWORD"
-let TT_EQ      = "EQ"
-let TT_ID      = "IDENTIFIER" // name of variables
-let TT_EOF     = "EOF"
-let TT_UNASSIGNED = "UNASSIGNED"
+let TT_INT        = "INT"
+let TT_FLOAT      = "FLOAT"
+let TT_PLUS       = "PLUS"
+let TT_MINUS      = "MINUS"
+let TT_MUL        = "MUL"
+let TT_DIV        = "DIV"
+let TT_POW        = "POW"
+let TT_LPAREN     = "LPAREN"
+let TT_RPAREN     = "RPAREN"
+let TT_KEYWORD    = "KEYWORD"
+let TT_EQ         = "EQ"
+let TT_ID         = "IDENTIFIER" // name of variables
+let TT_EOF        = "EOF"
+// let TT_UNASSIGNED = "UNASSIGNED"
+let TT_EE         = "EQUALS"
+let TT_NE         = "NOT EQUALS"
+let TT_NOT        = "NOT"
+let TT_LT         = "LESS THAN"
+let TT_GT         = "GREATER THAN"
+let TT_LOE        = "LESS THAN OR EQUALS"
+let TT_GOE        = "GREATER THAN OR EQUALS"
 
 class Token {
     // This is is Metatype, (ex: factor, operator, etc)

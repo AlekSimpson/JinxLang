@@ -49,13 +49,6 @@ class Interpreter {
         var result: Number? = nil
         var error: Error? = nil 
         var returnVal: RuntimeResult = RuntimeResult()
-
-        // Get context for nodes
-        // var entry = Position()
-        // if node.lhs is NumberNode {
-        //     let node = node.lhs as! NumberNode
-        //     if let position = node.token.pos { entry = position }
-        // }
         
         // Get left node 
         let left_vst = self.visit(node: node.lhs, context: ctx)

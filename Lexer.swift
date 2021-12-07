@@ -17,7 +17,10 @@ class Lexer {
     func make_tokens() -> ([Token], Error?) {
         let items = Array(self.text).map(String.init)
         var new_items = make_numbers(items: items)
-        new_items = make_letters(items: new_items)
+        new_items = make_comparison(for: "!", items: new_items)
+        new_items = make_comparison(for: "=", items: new_items)
+        new_items = make_comparison(for: "<", items: new_items)
+        new_items = make_comparison(for: ">", items: new_items)
 
         var txt_col = 0
         for item in new_items {
@@ -57,6 +60,24 @@ class Lexer {
                     self.tokens.append(token)
                 case "=":
                     let token = Token(type: .EQ, type_name: TT_EQ, value: item, pos: tok_pos)
+                    self.tokens.append(token)
+                case "!":
+                    let token = Token(type: .NOT, type_name: TT_NOT, value: item, pos: tok_pos)
+                    self.tokens.append(token)
+                case "<":
+                    let token = Token(type: .LT, type_name: TT_LT, value: item, pos: tok_pos)
+                    self.tokens.append(token)
+                case ">":
+                    let token = Token(type: .GT, type_name: TT_GT, value: item, pos: tok_pos)
+                    self.tokens.append(token)
+                case "!=":
+                    let token = Token(type: .NE, type_name: TT_NE, value: item, pos: tok_pos)
+                    self.tokens.append(token)
+                case "<=":
+                    let token = Token(type: .LOE, type_name: TT_LOE, value: item, pos: tok_pos)
+                    self.tokens.append(token)
+                case ">=":
+                    let token = Token(type: .GOE, type_name: TT_GOE, value: item, pos: tok_pos)
                     self.tokens.append(token)
                 default: 
                     return ([], IllegalCharError(details: "'\(item)'", pos: tok_pos))
@@ -103,6 +124,28 @@ class Lexer {
             return true // continue
         } 
         return false 
+    }
+
+    func make_comparison(for comparison: String, items: [String]) -> [String] {
+        var new_items:[String] = []
+        var skipNext = false 
+
+        for i in 0...(items.count - 1) {
+            if skipNext { 
+                skipNext = false 
+                continue 
+            }
+
+            if items[i] == comparison && items[i + 1] == "=" {
+                let new_char = "\(comparison)="
+                new_items.append(new_char)
+                skipNext = true 
+                continue 
+            }
+            new_items.append(items[i])
+        }
+
+        return new_items
     }
 
     func make_letters(items: [String]) -> [String] {

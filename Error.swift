@@ -30,6 +30,12 @@ class InvalidSyntaxError: Error {
     }
 }
 
+class ExpectedCharError: Error {
+    init(details: String, pos: Position) {
+        super.init(error_name: "Expected Character", details: details, pos: pos)
+    }
+}
+
 class RuntimeError: Error {
     var context: Context
     init(details: String, context: Context, pos: Position) {
