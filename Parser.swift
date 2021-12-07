@@ -21,11 +21,9 @@ class Parser {
     func parse() -> (AbstractNode?, Error?) {
         let (node_result, parse_result) = self.expr()
 
-        if let _ = parse_result.error {
+        if let err = parse_result.error {
             if self.curr_token.type != .EOF {
-                var p = Position()
-                if let position = self.curr_token.pos { p = position }
-                return (nil, parse_result.failure(InvalidSyntaxError(details: "Expected an operator", pos: p)))
+                return (nil, parse_result.failure(err))
             }
             return (nil, parse_result.error)
         }
@@ -42,6 +40,9 @@ class Parser {
             let val = NumberNode(token: self.curr_token)
             _ = res.register(self.advance())
             returnVal = (res.success(val), res)
+        }else if tok.type == .IDENTIFIER {
+            _ = res.register(self.advance())
+            return (res.success(VarAccessNode(token: tok)), res)
         }else if tok.type_name == "LPAREN" {
             _ = res.register(self.advance())
             let recurrsion = self.expr()
@@ -104,6 +105,25 @@ class Parser {
     }
 
     func expr() -> (AbstractNode?, ParserResult) {
+        let res = ParserResult()
+
+        if self.curr_token.type == .IDENTIFIER {
+            let next = self.tokens[self.token_idx + 1]
+            
+            if next.type == .EQ {    
+                let var_name = self.curr_token
+                _ = res.register(self.advance())
+                _ = res.register(self.advance())
+                let (val, result) = self.expr()
+                _ = res.register(result)
+                if res.error != nil {
+                    return (nil, res)
+                }else {
+                    return (res.success(VarAssignNode(token: var_name, value_node: val!)), res)
+                }
+            }
+        }
+
         return self.bin_op(func: term, ops: [TT_PLUS, TT_MINUS])
     }
 
@@ -113,7 +133,7 @@ class Parser {
         var (left, parse_result) = function()
         _ = res.register(parse_result)
         if res.error != nil { return (nil, res) }
-
+        
         while self.curr_token.type_name == ops[0] || self.curr_token.type_name == ops[1] {
             let op_tok = VariableNode(token: self.curr_token)
             _ = res.register(self.advance())
@@ -121,7 +141,7 @@ class Parser {
             let (right, parse_result_) = function()
             _ = res.register(parse_result_)
             if res.error != nil { return (nil, res) }
-
+            
             left = BinOpNode(lhs: left!, op: op_tok, rhs: right!)
         }
 

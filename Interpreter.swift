@@ -4,7 +4,7 @@ class Interpreter {
     func visit(node: AbstractNode, context: Context) -> RuntimeResult {
         let func_index = node.classType
         var result = RuntimeResult()
-
+        
         switch func_index {
             case 0:
                 result = visit_binop(node: node as! BinOpNode, ctx: context)
@@ -12,6 +12,10 @@ class Interpreter {
                 result = visit_number(node: node as! NumberNode, ctx: context)
             case 3:
                 result = visit_unary(node: node as! UnaryOpNode, ctx: context)
+            case 4: 
+                result = visit_VarAccessNode(node: node as! VarAccessNode, ctx: context)
+            case 5: 
+                result = visit_VarAssignNode(node: node as! VarAssignNode, ctx: context)
             default:
                 print("no visit method found")
         }
@@ -27,24 +31,23 @@ class Interpreter {
         var returnVal: RuntimeResult = RuntimeResult()
 
         // Get context for nodes
-        var entry = Position()
-        if node.lhs is NumberNode {
-            let node = node.lhs as! NumberNode
-            if let position = node.token.pos { entry = position }
-        }
-        let child_context = Context(display_name: "<binary operation>", parent: ctx, parent_entry_pos: entry)
+        // var entry = Position()
+        // if node.lhs is NumberNode {
+        //     let node = node.lhs as! NumberNode
+        //     if let position = node.token.pos { entry = position }
+        // }
         
         // Get left node 
-        let left_vst = self.visit(node: node.lhs, context: child_context)
+        let left_vst = self.visit(node: node.lhs, context: ctx)
         let _ = rt.register(left_vst)
-        let left = rt.value!
         if rt.error != nil { return rt }
+        let left = rt.value!
 
         // Get right node
-        let right_vst = self.visit(node: node.rhs, context: child_context)
+        let right_vst = self.visit(node: node.rhs, context: ctx)
         let _ = rt.register(right_vst)
-        let right = rt.value!
         if rt.error != nil { return rt }
+        let right = rt.value!
 
         let op_node = node.op as! VariableNode
         
@@ -102,7 +105,7 @@ class Interpreter {
 
         var error: Error? = nil 
 
-        if node.op_tok.type_name == TT_MINUS {
+        if node.token.type_name == TT_MINUS {
             if let num = number {
                 (number, error) = num.multiplied(by: Number(-1))
             }
@@ -114,37 +117,66 @@ class Interpreter {
             return rt.success(number!)
         }
     }
+
+    func visit_VarAccessNode(node: VarAccessNode, ctx: Context) -> RuntimeResult {
+        let res = RuntimeResult()
+        let var_name = node.token.value as! String
+        // print("SYMBOL TABLE \(ctx.symbolTable)")
+        var value:Double? = nil
+        if let table = ctx.symbolTable { 
+            // print("GETTING HERE ALSO")
+            value = table.get_val(name: var_name) 
+        }
+        
+
+        if value != nil {
+            return res.success(Number(value!))
+        }else {
+            var p = Position()
+            if let pos = node.token.pos { p = pos }
+            let error = RuntimeError(details: "'\(var_name)' is not defined", context: ctx, pos: p)
+            return res.failure(error)
+        }
+    }
+
+    func visit_VarAssignNode(node: VarAssignNode, ctx: Context) -> RuntimeResult {
+        let res = RuntimeResult()
+        let var_name = node.token.value as! String
+        let value = res.register(self.visit(node: node.value_node, context: ctx))
+        if res.error != nil { return res }
+
+        ctx.symbolTable!.set_val(name: var_name, value: value.value!.value)
+        return res.success(value.value!)
+    }
 }
 
-/* RUNTIME RESULT */
+/* SYMBOL TABLE */
 
-class RuntimeResult {
-    var value: Number? 
-    var error: Error?
+class SymbolTable {
+    var symbols = [String:Double]()
+    var parent:SymbolTable? = nil 
 
-    init(value: Number, error: Error){
-        self.value = value 
-        self.error = error 
+    func get_val(name: String) -> Double {
+        // print("SYMBOL TABLE \(symbols)")
+        let value = symbols[name]
+        var returnVal: Double = 0.0
+
+        if let v = value {
+            returnVal = v 
+        }
+
+        if let p = parent {
+            returnVal = p.get_val(name: name)
+        }
+
+        return returnVal
     }
 
-    init() {
-        self.value = nil 
-        self.error = nil 
-    }
-    
-    func register(_ result: RuntimeResult) -> RuntimeResult {
-        if result.error != nil { self.error = result.error } 
-        self.value = result.value
-        return self 
-    } 
-
-    func success(_ value: Number) -> RuntimeResult {
-        self.value = value 
-        return self 
+    func set_val(name: String, value: Double) {
+        self.symbols[name] = value 
     }
 
-    func failure(_ error: Error) -> RuntimeResult {
-        self.error = error 
-        return self
+    func remove_val(name: String) {
+        self.symbols.removeValue(forKey: name)
     }
 }

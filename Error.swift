@@ -26,7 +26,7 @@ class IllegalCharError: Error {
 
 class InvalidSyntaxError: Error {
     init(details: String, pos: Position) {
-        super.init(error_name: "Illegal Character", details: details, pos: pos)
+        super.init(error_name: "Invalid Syntax Error", details: details, pos: pos)
     }
 }
 

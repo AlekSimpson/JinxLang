@@ -1,5 +1,7 @@
 /* RUN */
 
+var global_symbol_table = SymbolTable()
+
 func run(text: String, fn: String) -> (Number?, Error?) {
     let lexer = Lexer(text_: text, fn: fn)
     let (tokens, error) = lexer.make_tokens()
@@ -18,6 +20,7 @@ func run(text: String, fn: String) -> (Number?, Error?) {
     // Run program
     let interpreter = Interpreter()
     let ctx = Context(display_name: "<program>")
+    ctx.symbolTable = global_symbol_table
     let result = interpreter.visit(node: nodes!, context: ctx)
 
     return (result.value, result.error) 

@@ -1,22 +1,34 @@
 /* TOKENS */
 
+let letters = CharacterSet.letters
+
 enum TT {
     case FACTOR 
     case OPERATOR
     case GROUP
+    case KEYWORD
+    case UNASSIGNED
+    case IDENTIFIER
+    case EQ
     case EOF
 }
 
-let TT_INT = "INT"
-let TT_FLOAT = "FLOAT"
-let TT_PLUS = "PLUS"
-let TT_MINUS = "MINUS"
-let TT_MUL = "MUL"
-let TT_DIV = "DIV"
-let TT_POW = "POW"
-let TT_LPAREN = "LPAREN"
-let TT_RPAREN = "RPAREN"
-let TT_EOF = "EOF"
+let KEYWORDS:[String] = []
+
+let TT_INT     = "INT"
+let TT_FLOAT   = "FLOAT"
+let TT_PLUS    = "PLUS"
+let TT_MINUS   = "MINUS"
+let TT_MUL     = "MUL"
+let TT_DIV     = "DIV"
+let TT_POW     = "POW"
+let TT_LPAREN  = "LPAREN"
+let TT_RPAREN  = "RPAREN"
+let TT_KEYWORD = "KEYWORD"
+let TT_EQ      = "EQ"
+let TT_ID      = "IDENTIFIER" // name of variables
+let TT_EOF     = "EOF"
+let TT_UNASSIGNED = "UNASSIGNED"
 
 class Token {
     // This is is Metatype, (ex: factor, operator, etc)

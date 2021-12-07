@@ -26,7 +26,7 @@ class IllegalCharError: Error {
 
 class InvalidSyntaxError: Error {
     init(details: String, pos: Position) {
-        super.init(error_name: "Illegal Character", details: details, pos: pos)
+        super.init(error_name: "Invalid Syntax Error", details: details, pos: pos)
     }
 }
 
@@ -148,17 +148,20 @@ class Context {
     var display_name: String 
     var parent: Context?
     var parent_entry_pos: Position?
+    var symbolTable: SymbolTable?
 
     init(display_name: String, parent: Context?=nil, parent_entry_pos: Position?=nil) {
         self.display_name = display_name
         self.parent = parent
         self.parent_entry_pos = parent_entry_pos
+        self.symbolTable = nil 
     }
 
     init() {
         self.display_name = ""
         self.parent = nil 
         self.parent_entry_pos = nil 
+        self.symbolTable = nil 
     }
 }/* LEXER */
 
@@ -166,6 +169,7 @@ class Lexer {
     var text:String 
     var ln_pos:Int 
     var filename: String 
+    var tokens:[Token] = []
 
     // var curr_line:String 
 
@@ -176,10 +180,9 @@ class Lexer {
     }
 
     func make_tokens() -> ([Token], Error?) {
-        var tokens:[Token] = []
-
         let items = Array(self.text).map(String.init)
-        let new_items = make_numbers(items: items)
+        var new_items = make_numbers(items: items)
+        new_items = make_letters(items: new_items)
 
         var txt_col = 0
         for item in new_items {
@@ -187,52 +190,117 @@ class Lexer {
 
             let tok_pos = Position(ln: 1, col: txt_col, fn: self.filename)
 
-            if let float = Float(item) {
-                let num:Int = Int(float)
-                let temp:Float = Float(num)
-                let isInt = (float / temp) == 1
+            // tokenize numbers
+            let num_check = tokenize_number(item: item, pos: tok_pos)
+            if num_check { continue }
 
-                if isInt {
-                    let token = Token(type: .FACTOR, type_name: TT_INT, value: num, pos: tok_pos)
-                    tokens.append(token)
-                }else {
-                    let token = Token(type: .FACTOR, type_name: TT_FLOAT, value: float, pos: tok_pos)
-                    tokens.append(token)
-                }
-                continue
-            } 
+            // tokenize words
+            let word_check = tokenize_letters(item: item, pos: tok_pos)
+            if word_check { continue }            
 
             switch item {
                 case "+":
                     let token = Token(type: .OPERATOR, type_name: TT_PLUS, value: item, pos: tok_pos)
-                    tokens.append(token)
+                    self.tokens.append(token)
                 case "-": 
                     let token = Token(type: .OPERATOR, type_name: TT_MINUS, value: item, pos: tok_pos)
-                    tokens.append(token)
+                    self.tokens.append(token)
                 case "/":
                     let token = Token(type: .OPERATOR, type_name: TT_DIV, value: item, pos: tok_pos)
-                    tokens.append(token)
+                    self.tokens.append(token)
                 case "*":
                     let token = Token(type: .OPERATOR, type_name: TT_MUL, value: item, pos: tok_pos)
-                    tokens.append(token)
+                    self.tokens.append(token)
                 case "^":
                     let token = Token(type: .OPERATOR, type_name: TT_POW, value: item, pos: tok_pos)
-                    tokens.append(token)
+                    self.tokens.append(token)
                 case "(":
                     let token = Token(type: .GROUP, type_name: TT_LPAREN, value: item, pos: tok_pos)
-                    tokens.append(token)
+                    self.tokens.append(token)
                 case ")":
                     let token = Token(type: .GROUP, type_name: TT_RPAREN, value: item, pos: tok_pos)
-                    tokens.append(token)
+                    self.tokens.append(token)
+                case "=":
+                    let token = Token(type: .EQ, type_name: TT_EQ, value: item, pos: tok_pos)
+                    self.tokens.append(token)
                 default: 
                     return ([], IllegalCharError(details: "'\(item)'", pos: tok_pos))
             }
             txt_col += 1
         }
-        tokens.append(Token(type: .EOF, type_name: TT_EOF, value: TT_EOF))
-        return (tokens, nil)
+        self.tokens.append(Token(type: .EOF, type_name: TT_EOF, value: TT_EOF))
+        return (self.tokens, nil)
     }
 
+    func isLetter(item: String) -> Bool {
+        let range = item.rangeOfCharacter(from: letters)
+        if let _ = range {
+            return true 
+        }
+        return false 
+    }
+
+    func tokenize_letters(item: String, pos: Position) -> Bool {
+        let chars:[String] = Array(arrayLiteral: item)
+        if isLetter(item: chars[0]) {
+            let token = Token(type: .IDENTIFIER, type_name: TT_ID, value: item, pos: pos)
+            self.tokens.append(token)
+            return true // continue 
+        }
+        return false 
+    }
+
+    // checks if current token is a number and creates a number token if it is
+    // returning true means it will skip the for loop (calls continue), returning false means it will not skip the for loop
+    func tokenize_number(item: String, pos: Position) -> Bool {
+        if let float = Float(item) {
+            let num:Int = Int(float)
+            let temp:Float = Float(num)
+            let isInt = (float / temp) == 1
+
+            if isInt {
+                let token = Token(type: .FACTOR, type_name: TT_INT, value: num, pos: pos)
+                self.tokens.append(token)
+            }else {
+                let token = Token(type: .FACTOR, type_name: TT_FLOAT, value: float, pos: pos)
+                self.tokens.append(token)
+            }
+            return true // continue
+        } 
+        return false 
+    }
+
+    func make_letters(items: [String]) -> [String] {
+        var curr_word = ""
+        var new_items:[String] = []
+
+        for item in items {
+            if item == " " {
+                curr_word = ""
+                continue
+            }
+
+            if isLetter(item: item) || (item == "_") {
+                let new_word = curr_word == ""
+
+                curr_word = curr_word + item 
+
+                if new_word {
+                    new_items.append(curr_word)
+                }else {
+                    let idx = last_index(items: new_items)
+                    new_items[idx] = curr_word
+                }
+            }else {
+                new_items.append(item)
+                curr_word = ""
+            }
+        }
+
+        return new_items
+    }
+
+    // takes the individual digits of numbers and combines them together so that they are counted as full numbers (ex: ["3", "4"] => "34")
     func make_numbers(items: [String]) -> [String] {
         var curr_num = ""
         var new_items: [String] = []
@@ -240,6 +308,7 @@ class Lexer {
         for item in items {
             if item == " " {
                 curr_num = ""
+                new_items.append(item)
                 continue
             }
 
@@ -287,15 +356,14 @@ class Lexer {
         } 
         return false 
     }
-
-    // .
 }/* NODE */
 
 protocol AbstractNode {
+    var token: Token { get set }
     var description: String { get }
     var classType: Int { get }
 
-    func as_string() -> String 
+    func as_string() -> String
 }
 
 struct NumberNode: AbstractNode {
@@ -308,11 +376,39 @@ struct NumberNode: AbstractNode {
     }
 }
 
+struct VarAccessNode: AbstractNode {
+    var token: Token 
+    var description: String { return "VarAccessNode(\(token.type_name))" }
+    var classType: Int { return 4 }
+    init(token: Token) {
+        self.token = token
+    }
+
+    func as_string() -> String {
+        return token.as_string()
+    }
+}
+
+struct VarAssignNode: AbstractNode {
+    var token: Token 
+    var value_node: AbstractNode 
+    var description: String { return "VarAssignNode(\(token.type_name), \(value_node))" }
+    var classType: Int { return 5 }
+
+    init(token: Token, value_node: AbstractNode) {
+        self.token = token
+        self.value_node = value_node
+    }
+
+    func as_string() -> String {
+        return token.as_string()
+    }
+}
+
 struct VariableNode: AbstractNode {
     var token: Token
     var description: String { return "VariableName(\(token.type_name))" }
     var classType: Int { return 2 }
-
 
     init() {
         self.token = Token()
@@ -333,17 +429,20 @@ struct BinOpNode: AbstractNode {
     let rhs: AbstractNode
     var description: String { return "(\(lhs.as_string()), \(op.as_string()), \(rhs.as_string()))" }
     var classType: Int { return 0 }
+    var token: Token
 
     init(lhs: AbstractNode, op: AbstractNode, rhs: AbstractNode) {
         self.lhs = lhs 
         self.op = op
         self.rhs = rhs 
+        self.token = Token() 
     }
 
     init() {
         self.lhs = VariableNode()
         self.op = VariableNode()
         self.rhs = VariableNode()
+        self.token = Token() 
     }
 
     func as_string() -> String {
@@ -352,17 +451,17 @@ struct BinOpNode: AbstractNode {
 }
 
 class UnaryOpNode: AbstractNode {
-    var op_tok: Token 
+    var token: Token 
     var node: AbstractNode
     var description: String {
-        return "\(op_tok.as_string()) \(node.as_string())"
+        return "\(token.as_string()) \(node.as_string())"
     }
     var classType: Int {
         return 3
     }
 
     init(op_tok: Token, node: AbstractNode){
-        self.op_tok = op_tok
+        self.token = op_tok
         self.node = node 
     }
 
@@ -392,11 +491,9 @@ class Parser {
     func parse() -> (AbstractNode?, Error?) {
         let (node_result, parse_result) = self.expr()
 
-        if let _ = parse_result.error {
+        if let err = parse_result.error {
             if self.curr_token.type != .EOF {
-                var p = Position()
-                if let position = self.curr_token.pos { p = position }
-                return (nil, parse_result.failure(InvalidSyntaxError(details: "Expected an operator", pos: p)))
+                return (nil, parse_result.failure(err))
             }
             return (nil, parse_result.error)
         }
@@ -413,6 +510,9 @@ class Parser {
             let val = NumberNode(token: self.curr_token)
             _ = res.register(self.advance())
             returnVal = (res.success(val), res)
+        }else if tok.type == .IDENTIFIER {
+            _ = res.register(self.advance())
+            return (res.success(VarAccessNode(token: tok)), res)
         }else if tok.type_name == "LPAREN" {
             _ = res.register(self.advance())
             let recurrsion = self.expr()
@@ -475,6 +575,25 @@ class Parser {
     }
 
     func expr() -> (AbstractNode?, ParserResult) {
+        let res = ParserResult()
+
+        if self.curr_token.type == .IDENTIFIER {
+            let next = self.tokens[self.token_idx + 1]
+            
+            if next.type == .EQ {    
+                let var_name = self.curr_token
+                _ = res.register(self.advance())
+                _ = res.register(self.advance())
+                let (val, result) = self.expr()
+                _ = res.register(result)
+                if res.error != nil {
+                    return (nil, res)
+                }else {
+                    return (res.success(VarAssignNode(token: var_name, value_node: val!)), res)
+                }
+            }
+        }
+
         return self.bin_op(func: term, ops: [TT_PLUS, TT_MINUS])
     }
 
@@ -484,7 +603,7 @@ class Parser {
         var (left, parse_result) = function()
         _ = res.register(parse_result)
         if res.error != nil { return (nil, res) }
-
+        
         while self.curr_token.type_name == ops[0] || self.curr_token.type_name == ops[1] {
             let op_tok = VariableNode(token: self.curr_token)
             _ = res.register(self.advance())
@@ -492,7 +611,7 @@ class Parser {
             let (right, parse_result_) = function()
             _ = res.register(parse_result_)
             if res.error != nil { return (nil, res) }
-
+            
             left = BinOpNode(lhs: left!, op: op_tok, rhs: right!)
         }
 
@@ -565,7 +684,7 @@ class Interpreter {
     func visit(node: AbstractNode, context: Context) -> RuntimeResult {
         let func_index = node.classType
         var result = RuntimeResult()
-
+        
         switch func_index {
             case 0:
                 result = visit_binop(node: node as! BinOpNode, ctx: context)
@@ -573,6 +692,10 @@ class Interpreter {
                 result = visit_number(node: node as! NumberNode, ctx: context)
             case 3:
                 result = visit_unary(node: node as! UnaryOpNode, ctx: context)
+            case 4: 
+                result = visit_VarAccessNode(node: node as! VarAccessNode, ctx: context)
+            case 5: 
+                result = visit_VarAssignNode(node: node as! VarAssignNode, ctx: context)
             default:
                 print("no visit method found")
         }
@@ -588,24 +711,23 @@ class Interpreter {
         var returnVal: RuntimeResult = RuntimeResult()
 
         // Get context for nodes
-        var entry = Position()
-        if node.lhs is NumberNode {
-            let node = node.lhs as! NumberNode
-            if let position = node.token.pos { entry = position }
-        }
-        let child_context = Context(display_name: "<binary operation>", parent: ctx, parent_entry_pos: entry)
+        // var entry = Position()
+        // if node.lhs is NumberNode {
+        //     let node = node.lhs as! NumberNode
+        //     if let position = node.token.pos { entry = position }
+        // }
         
         // Get left node 
-        let left_vst = self.visit(node: node.lhs, context: child_context)
+        let left_vst = self.visit(node: node.lhs, context: ctx)
         let _ = rt.register(left_vst)
-        let left = rt.value!
         if rt.error != nil { return rt }
+        let left = rt.value!
 
         // Get right node
-        let right_vst = self.visit(node: node.rhs, context: child_context)
+        let right_vst = self.visit(node: node.rhs, context: ctx)
         let _ = rt.register(right_vst)
-        let right = rt.value!
         if rt.error != nil { return rt }
+        let right = rt.value!
 
         let op_node = node.op as! VariableNode
         
@@ -663,7 +785,7 @@ class Interpreter {
 
         var error: Error? = nil 
 
-        if node.op_tok.type_name == TT_MINUS {
+        if node.token.type_name == TT_MINUS {
             if let num = number {
                 (number, error) = num.multiplied(by: Number(-1))
             }
@@ -675,9 +797,69 @@ class Interpreter {
             return rt.success(number!)
         }
     }
+
+    func visit_VarAccessNode(node: VarAccessNode, ctx: Context) -> RuntimeResult {
+        let res = RuntimeResult()
+        let var_name = node.token.value as! String
+        // print("SYMBOL TABLE \(ctx.symbolTable)")
+        var value:Double? = nil
+        if let table = ctx.symbolTable { 
+            // print("GETTING HERE ALSO")
+            value = table.get_val(name: var_name) 
+        }
+        
+
+        if value != nil {
+            return res.success(Number(value!))
+        }else {
+            var p = Position()
+            if let pos = node.token.pos { p = pos }
+            let error = RuntimeError(details: "'\(var_name)' is not defined", context: ctx, pos: p)
+            return res.failure(error)
+        }
+    }
+
+    func visit_VarAssignNode(node: VarAssignNode, ctx: Context) -> RuntimeResult {
+        let res = RuntimeResult()
+        let var_name = node.token.value as! String
+        let value = res.register(self.visit(node: node.value_node, context: ctx))
+        if res.error != nil { return res }
+
+        ctx.symbolTable!.set_val(name: var_name, value: value.value!.value)
+        return res.success(value.value!)
+    }
 }
 
-/* RUNTIME RESULT */
+/* SYMBOL TABLE */
+
+class SymbolTable {
+    var symbols = [String:Double]()
+    var parent:SymbolTable? = nil 
+
+    func get_val(name: String) -> Double {
+        // print("SYMBOL TABLE \(symbols)")
+        let value = symbols[name]
+        var returnVal: Double = 0.0
+
+        if let v = value {
+            returnVal = v 
+        }
+
+        if let p = parent {
+            returnVal = p.get_val(name: name)
+        }
+
+        return returnVal
+    }
+
+    func set_val(name: String, value: Double) {
+        self.symbols[name] = value 
+    }
+
+    func remove_val(name: String) {
+        self.symbols.removeValue(forKey: name)
+    }
+}/* RUNTIME RESULT */
 
 class RuntimeResult {
     var value: Number? 
@@ -710,23 +892,35 @@ class RuntimeResult {
     }
 }/* TOKENS */
 
+let letters = CharacterSet.letters
+
 enum TT {
     case FACTOR 
     case OPERATOR
     case GROUP
+    case KEYWORD
+    case UNASSIGNED
+    case IDENTIFIER
+    case EQ
     case EOF
 }
 
-let TT_INT = "INT"
-let TT_FLOAT = "FLOAT"
-let TT_PLUS = "PLUS"
-let TT_MINUS = "MINUS"
-let TT_MUL = "MUL"
-let TT_DIV = "DIV"
-let TT_POW = "POW"
-let TT_LPAREN = "LPAREN"
-let TT_RPAREN = "RPAREN"
-let TT_EOF = "EOF"
+let KEYWORDS:[String] = []
+
+let TT_INT     = "INT"
+let TT_FLOAT   = "FLOAT"
+let TT_PLUS    = "PLUS"
+let TT_MINUS   = "MINUS"
+let TT_MUL     = "MUL"
+let TT_DIV     = "DIV"
+let TT_POW     = "POW"
+let TT_LPAREN  = "LPAREN"
+let TT_RPAREN  = "RPAREN"
+let TT_KEYWORD = "KEYWORD"
+let TT_EQ      = "EQ"
+let TT_ID      = "IDENTIFIER" // name of variables
+let TT_EOF     = "EOF"
+let TT_UNASSIGNED = "UNASSIGNED"
 
 class Token {
     // This is is Metatype, (ex: factor, operator, etc)
@@ -755,6 +949,8 @@ class Token {
     }
 }/* RUN */
 
+var global_symbol_table = SymbolTable()
+
 func run(text: String, fn: String) -> (Number?, Error?) {
     let lexer = Lexer(text_: text, fn: fn)
     let (tokens, error) = lexer.make_tokens()
@@ -773,6 +969,7 @@ func run(text: String, fn: String) -> (Number?, Error?) {
     // Run program
     let interpreter = Interpreter()
     let ctx = Context(display_name: "<program>")
+    ctx.symbolTable = global_symbol_table
     let result = interpreter.visit(node: nodes!, context: ctx)
 
     return (result.value, result.error) 
