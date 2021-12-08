@@ -63,6 +63,18 @@ class Parser {
                 _ = res.failure(err)
                 returnVal = (nil, res)
             }
+        }else if tok.type_name == "IF" {
+            var (if_expr, expr_res) = self.if_expr()
+            _ = res.register(expr_res)
+            if let err = res.error {
+                _ = res.failure(err)
+                returnVal = (nil, res)
+            }else {
+                if let unwrapped = if_expr {
+                    if_expr = unwrapped
+                }
+                returnVal = (if_expr, res)
+            }
         }else {
             var p = Position()
             if let position = tok.pos { p = position }
@@ -71,6 +83,109 @@ class Parser {
         }
 
         return returnVal
+    }
+
+    func if_expr() -> (AbstractNode?, ParserResult) {
+        let res = ParserResult()
+        var cases:[[AbstractNode]] = []
+        var else_case:AbstractNode? = nil 
+
+        if !(self.curr_token.type_name == "IF") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected 'if'", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        let (condition, cond_result) = self.expr()
+        _ = res.register(cond_result)
+        if res.error != nil { return (nil, res) }
+
+        if !(self.curr_token.type_name == "LCURLY") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected '{'", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        let (expression, expr_result) = self.expr()
+        _ = res.register(expr_result)
+        if res.error != nil { return (nil, res) }
+
+        let new_element: [AbstractNode] = [condition!, expression!]
+        cases.append(new_element)
+
+        if !(self.curr_token.type_name == "RCURLY") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected '}'", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+        
+        while self.curr_token.type_name == "ELSE IF" {
+            _ = res.register(self.advance())
+
+            let (cond, result) = self.expr()
+            _ = res.register(result)
+            if res.error != nil { return (nil, res) }
+
+            if !(self.curr_token.type_name == "LCURLY") {
+                var p = Position()
+                if let position = self.curr_token.pos { p = position }
+                _ = res.failure(InvalidSyntaxError(details: "Expected '{'", pos: p))
+                return (nil, res)
+            }
+
+            _ = res.register(self.advance())
+
+            let (exp, exp_result) = self.expr()
+            _ = res.register(exp_result)
+            if res.error != nil { return (nil, res) }
+
+            let new_element:[AbstractNode] = [cond!, exp!]
+            cases.append(new_element)
+
+            if !(self.curr_token.type_name == "RCURLY") {
+                var p = Position()
+                if let position = self.curr_token.pos { p = position }
+                _ = res.failure(InvalidSyntaxError(details: "Expected '}'", pos: p))
+                return (nil, res)
+            }
+        }
+
+        if self.curr_token.type_name == "ELSE" {
+            _ = res.register(self.advance())
+
+            if !(self.curr_token.type_name == "LCURLY") {
+                var p = Position()
+                if let position = self.curr_token.pos { p = position }
+                _ = res.failure(InvalidSyntaxError(details: "Expected '{'", pos: p))
+                return (nil, res)
+            }
+
+            _ = res.register(self.advance())
+
+            let (e, e_result) = self.expr()
+            _ = res.register(e_result)
+            if res.error != nil { return (nil, res) }
+
+            else_case = e
+
+            if !(self.curr_token.type_name == "RCURLY") {
+                var p = Position()
+                if let position = self.curr_token.pos { p = position }
+                _ = res.failure(InvalidSyntaxError(details: "Expected '}'", pos: p))
+                return (nil, res)
+            }
+        }
+
+        return (res.success(IfNode(cases: cases, else_case: else_case)), res)
     }
 
     func power() -> (AbstractNode?, ParserResult) {

@@ -65,6 +65,24 @@ struct VariableNode: AbstractNode {
     }
 }
 
+struct IfNode: AbstractNode {
+    var token: Token
+    var cases: [[AbstractNode]]
+    var else_case: AbstractNode?
+    var description: String { return "IfNode(\(token.type_name))" } 
+    var classType: Int { return 6 }
+
+    init(cases: [[AbstractNode]], else_case: AbstractNode?=nil) {
+        self.cases = cases
+        self.else_case = else_case
+        self.token = cases[0][0].token
+    }
+
+    func as_string() -> String {
+        return token.as_string()
+    }
+}
+
 struct BinOpNode: AbstractNode {
     let lhs: AbstractNode
     let op: AbstractNode

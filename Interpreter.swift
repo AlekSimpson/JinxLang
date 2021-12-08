@@ -23,6 +23,8 @@ class Interpreter {
                 }
             case 5: 
                 result = visit_VarAssignNode(node: node as! VarAssignNode, ctx: context)
+            case 6:
+                result = visit_IfNode(node: node as! IfNode, ctx: context)
             default:
                 print("no visit method found")
         }
@@ -123,6 +125,31 @@ class Interpreter {
         return RuntimeResult().success(
             num 
         )
+    }
+
+    func visit_IfNode(node: IfNode, ctx: Context) -> RuntimeResult {
+        let res = RuntimeResult()
+
+        for _case in node.cases {
+            let condition_value = res.register(self.visit(node: _case[0], context: ctx))
+            if res.error != nil { return res }
+            let c_value = condition_value.value!
+
+            if c_value.is_true() {
+                let expr_value = res.register(self.visit(node: _case[1], context: ctx))
+                if res.error != nil { return res }
+                let e_value = expr_value.value!
+                return res.success(e_value)
+            }
+        }
+
+        if let e_case = node.else_case {
+            let else_value = res.register(self.visit(node: e_case, context: ctx))
+            if res.error != nil { return res }
+            let e_value = else_value.value!
+            return res.success(e_value)
+        }
+        return RuntimeResult()
     }
 
     // Unary Node 

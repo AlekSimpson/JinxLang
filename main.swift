@@ -175,6 +175,10 @@ class Number {
         return (new_num, nil)
     }
 
+    func is_true() -> Bool {
+        return self.value != 0.0
+    }
+
     func print_self() -> String {
         return "\(self.value)"
     }
@@ -241,6 +245,7 @@ class Lexer {
         let items = Array(self.text).map(String.init)
         var new_items = make_numbers(items: items)
         new_items = make_letters(items: new_items)
+        new_items = make_else_if(items: new_items)
         new_items = make_comparison(for: "!", items: new_items)
         new_items = make_comparison(for: "=", items: new_items)
         new_items = make_comparison(for: "<", items: new_items)
@@ -312,6 +317,12 @@ class Lexer {
                 case "==":
                     let token = Token(type: .EE, type_name: TT_EE, value: item, pos: tok_pos)
                     self.tokens.append(token)
+                case "{":
+                    let token = Token(type: .LCURLY, type_name: TT_LCURLY, value: item, pos: tok_pos)
+                    self.tokens.append(token)
+                case "}":
+                    let token = Token(type: .RCURLY, type_name: TT_RCURLY, value: item, pos: tok_pos)
+                    self.tokens.append(token)
                 default: 
                     return ([], IllegalCharError(details: "'\(item)'", pos: tok_pos))
             }
@@ -340,6 +351,15 @@ class Lexer {
                 self.tokens.append(token)
             }else if item == "not" {
                 let token = Token(type: .NOT, type_name: TT_NOT, value: item, pos: pos)
+                self.tokens.append(token)
+            }else if item == "if" {
+                let token = Token(type: .IF, type_name: TT_IF, value: item, pos: pos)
+                self.tokens.append(token)
+            }else if item == "else" {
+                let token = Token(type: .ELSE, type_name: TT_ELSE, value: item, pos: pos)
+                self.tokens.append(token)
+            }else if item == "else if" {
+                let token = Token(type: .ELIF, type_name: TT_ELIF, value: item, pos: pos)
                 self.tokens.append(token)
             }else {
                 let token = Token(type: .IDENTIFIER, type_name: TT_ID, value: item, pos: pos)
@@ -390,6 +410,28 @@ class Lexer {
             new_items.append(items[i])
         }
 
+        return new_items
+    }
+
+    func make_else_if(items: [String]) -> [String] {
+        var new_items:[String] = []
+        var skipNext = false 
+
+        for i in 0...(items.count - 1) {
+            if skipNext {
+                skipNext = false 
+                continue
+            }
+
+            if items[i] == "else" && items[i + 1] == "if" {
+                let new_word = "else if"
+                new_items.append(new_word)
+                skipNext = true
+                continue 
+            }
+            new_items.append(items[i])
+        }
+        
         return new_items
     }
 
@@ -546,6 +588,24 @@ struct VariableNode: AbstractNode {
     }
 }
 
+struct IfNode: AbstractNode {
+    var token: Token
+    var cases: [[AbstractNode]]
+    var else_case: AbstractNode?
+    var description: String { return "IfNode(\(token.type_name))" } 
+    var classType: Int { return 6 }
+
+    init(cases: [[AbstractNode]], else_case: AbstractNode?=nil) {
+        self.cases = cases
+        self.else_case = else_case
+        self.token = cases[0][0].token
+    }
+
+    func as_string() -> String {
+        return token.as_string()
+    }
+}
+
 struct BinOpNode: AbstractNode {
     let lhs: AbstractNode
     let op: AbstractNode
@@ -614,6 +674,10 @@ class Parser {
     func parse() -> (AbstractNode?, Error?) {
         let (node_result, parse_result) = self.expr()
 
+        // for token in tokens {
+        //     print(token.as_string())
+        // }
+
         if let err = parse_result.error {
             if self.curr_token.type != .EOF {
                 return (nil, parse_result.failure(err))
@@ -656,6 +720,18 @@ class Parser {
                 _ = res.failure(err)
                 returnVal = (nil, res)
             }
+        }else if tok.type_name == "IF" {
+            var (if_expr, expr_res) = self.if_expr()
+            _ = res.register(expr_res)
+            if let err = res.error {
+                _ = res.failure(err)
+                returnVal = (nil, res)
+            }else {
+                if let unwrapped = if_expr {
+                    if_expr = unwrapped
+                }
+                returnVal = (if_expr, res)
+            }
         }else {
             var p = Position()
             if let position = tok.pos { p = position }
@@ -664,6 +740,111 @@ class Parser {
         }
 
         return returnVal
+    }
+
+    func if_expr() -> (AbstractNode?, ParserResult) {
+        let res = ParserResult()
+        var cases:[[AbstractNode]] = []
+        var else_case:AbstractNode? = nil 
+
+        if !(self.curr_token.type_name == "IF") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected 'if'", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        let (condition, cond_result) = self.expr()
+        _ = res.register(cond_result)
+        if res.error != nil { return (nil, res) }
+
+        if !(self.curr_token.type_name == "LCURLY") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected '{'", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        let (expression, expr_result) = self.expr()
+        _ = res.register(expr_result)
+        if res.error != nil { return (nil, res) }
+
+        let new_element: [AbstractNode] = [condition!, expression!]
+        cases.append(new_element)
+
+        if !(self.curr_token.type_name == "RCURLY") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected '}'", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+        // print("TYPE NAME \(self.curr_token.type_name)")
+        while self.curr_token.type_name == "ELSE IF" {
+            _ = res.register(self.advance())
+
+            print("SEEING ELSE IF")
+
+            let (cond, result) = self.expr()
+            _ = res.register(result)
+            if res.error != nil { return (nil, res) }
+
+            if !(self.curr_token.type_name == "LCURLY") {
+                var p = Position()
+                if let position = self.curr_token.pos { p = position }
+                _ = res.failure(InvalidSyntaxError(details: "Expected '{'", pos: p))
+                return (nil, res)
+            }
+
+            _ = res.register(self.advance())
+
+            let (exp, exp_result) = self.expr()
+            _ = res.register(exp_result)
+            if res.error != nil { return (nil, res) }
+
+            let new_element:[AbstractNode] = [cond!, exp!]
+            cases.append(new_element)
+
+            if !(self.curr_token.type_name == "RCURLY") {
+                var p = Position()
+                if let position = self.curr_token.pos { p = position }
+                _ = res.failure(InvalidSyntaxError(details: "Expected '}'", pos: p))
+                return (nil, res)
+            }
+        }
+
+        if self.curr_token.type_name == "ELSE" {
+            _ = res.register(self.advance())
+
+            if !(self.curr_token.type_name == "LCURLY") {
+                var p = Position()
+                if let position = self.curr_token.pos { p = position }
+                _ = res.failure(InvalidSyntaxError(details: "Expected '{'", pos: p))
+                return (nil, res)
+            }
+
+            _ = res.register(self.advance())
+
+            let (e, e_result) = self.expr()
+            _ = res.register(e_result)
+            if res.error != nil { return (nil, res) }
+
+            else_case = e
+
+            if !(self.curr_token.type_name == "RCURLY") {
+                var p = Position()
+                if let position = self.curr_token.pos { p = position }
+                _ = res.failure(InvalidSyntaxError(details: "Expected '}'", pos: p))
+                return (nil, res)
+            }
+        }
+
+        return (res.success(IfNode(cases: cases, else_case: else_case)), res)
     }
 
     func power() -> (AbstractNode?, ParserResult) {
@@ -864,6 +1045,8 @@ class Interpreter {
                 }
             case 5: 
                 result = visit_VarAssignNode(node: node as! VarAssignNode, ctx: context)
+            case 6:
+                result = visit_IfNode(node: node as! IfNode, ctx: context)
             default:
                 print("no visit method found")
         }
@@ -964,6 +1147,31 @@ class Interpreter {
         return RuntimeResult().success(
             num 
         )
+    }
+
+    func visit_IfNode(node: IfNode, ctx: Context) -> RuntimeResult {
+        let res = RuntimeResult()
+
+        for _case in node.cases {
+            let condition_value = res.register(self.visit(node: _case[0], context: ctx))
+            if res.error != nil { return res }
+            let c_value = condition_value.value!
+
+            if c_value.is_true() {
+                let expr_value = res.register(self.visit(node: _case[1], context: ctx))
+                if res.error != nil { return res }
+                let e_value = expr_value.value!
+                return res.success(e_value)
+            }
+        }
+
+        if let e_case = node.else_case {
+            let else_value = res.register(self.visit(node: e_case, context: ctx))
+            if res.error != nil { return res }
+            let e_value = else_value.value!
+            return res.success(e_value)
+        }
+        return RuntimeResult()
     }
 
     // Unary Node 
@@ -1095,8 +1303,7 @@ enum TT {
     case FACTOR 
     case OPERATOR
     case GROUP
-    case KEYWORD
-    // case UNASSIGNED
+    // case KEYWORD
     case IDENTIFIER
     
     case EQ
@@ -1110,33 +1317,45 @@ enum TT {
     case AND 
     case OR 
     case NOT
+
+    case IF
+    case ELIF 
+    case ELSE 
+
+    case LCURLY 
+    case RCURLY 
 }
 
-let KEYWORDS:[String] = ["and", "or", "not", "&&", "||", "!"]
+// let KEYWORDS:[String] = ["and", "or", "not", "&&", "||", "!"]
 
-let TT_INT        = "INT"
-let TT_FLOAT      = "FLOAT"
-let TT_PLUS       = "PLUS"
-let TT_MINUS      = "MINUS"
-let TT_MUL        = "MUL"
-let TT_DIV        = "DIV"
-let TT_POW        = "POW"
-let TT_LPAREN     = "LPAREN"
-let TT_RPAREN     = "RPAREN"
-let TT_KEYWORD    = "KEYWORD"
-let TT_EQ         = "EQ"
-let TT_ID         = "IDENTIFIER" // name of variables
-let TT_EOF        = "EOF"
-// let TT_UNASSIGNED = "UNASSIGNED"
-let TT_EE         = "EQUALS"
-let TT_NE         = "NOT EQUALS"
-let TT_NOT        = "NOT"
-let TT_LT         = "LESS THAN"
-let TT_GT         = "GREATER THAN"
-let TT_LOE        = "LESS THAN OR EQUALS"
-let TT_GOE        = "GREATER THAN OR EQUALS"
-let TT_AND        = "AND"
-let TT_OR         = "OR"
+let TT_INT    = "INT"
+let TT_FLOAT  = "FLOAT"
+let TT_PLUS   = "PLUS"
+let TT_MINUS  = "MINUS"
+let TT_MUL    = "MUL"
+let TT_DIV    = "DIV"
+let TT_POW    = "POW"
+let TT_LPAREN = "LPAREN"
+let TT_RPAREN = "RPAREN"
+// let TT_KEYWORD    = "KEYWORD"
+let TT_EQ     = "EQ"
+let TT_ID     = "IDENTIFIER" // name of variables
+let TT_EOF    = "EOF"
+let TT_EE     = "EQUALS"
+let TT_NE     = "NOT EQUALS"
+let TT_NOT    = "NOT"
+let TT_LT     = "LESS THAN"
+let TT_GT     = "GREATER THAN"
+let TT_LOE    = "LESS THAN OR EQUALS"
+let TT_GOE    = "GREATER THAN OR EQUALS"
+let TT_AND    = "AND"
+let TT_OR     = "OR"
+let TT_IF     = "IF" 
+let TT_ELIF   = "ELSE IF"
+let TT_ELSE   = "ELSE"
+
+let TT_LCURLY = "LCURLY"
+let TT_RCURLY = "RCURLY"
 
 class Token {
     // This is is Metatype, (ex: factor, operator, etc)
@@ -1202,11 +1421,6 @@ while true {
 
     let (result, error) = run(text: text, fn: "stdin")
 
-    if let err = error {
-        print(err.as_string())
-        // break 
-    }
-    if let r = result {
-        print(r.print_self())
-    }
+    if let err = error { print(err.as_string()) }
+    if let r = result { print(r.print_self()) }
 }

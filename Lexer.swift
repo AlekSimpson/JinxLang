@@ -16,6 +16,7 @@ class Lexer {
         let items = Array(self.text).map(String.init)
         var new_items = make_numbers(items: items)
         new_items = make_letters(items: new_items)
+        new_items = make_else_if(items: new_items)
         new_items = make_comparison(for: "!", items: new_items)
         new_items = make_comparison(for: "=", items: new_items)
         new_items = make_comparison(for: "<", items: new_items)
@@ -87,6 +88,12 @@ class Lexer {
                 case "==":
                     let token = Token(type: .EE, type_name: TT_EE, value: item, pos: tok_pos)
                     self.tokens.append(token)
+                case "{":
+                    let token = Token(type: .LCURLY, type_name: TT_LCURLY, value: item, pos: tok_pos)
+                    self.tokens.append(token)
+                case "}":
+                    let token = Token(type: .RCURLY, type_name: TT_RCURLY, value: item, pos: tok_pos)
+                    self.tokens.append(token)
                 default: 
                     return ([], IllegalCharError(details: "'\(item)'", pos: tok_pos))
             }
@@ -115,6 +122,15 @@ class Lexer {
                 self.tokens.append(token)
             }else if item == "not" {
                 let token = Token(type: .NOT, type_name: TT_NOT, value: item, pos: pos)
+                self.tokens.append(token)
+            }else if item == "if" {
+                let token = Token(type: .IF, type_name: TT_IF, value: item, pos: pos)
+                self.tokens.append(token)
+            }else if item == "else" {
+                let token = Token(type: .ELSE, type_name: TT_ELSE, value: item, pos: pos)
+                self.tokens.append(token)
+            }else if item == "else if" {
+                let token = Token(type: .ELIF, type_name: TT_ELIF, value: item, pos: pos)
                 self.tokens.append(token)
             }else {
                 let token = Token(type: .IDENTIFIER, type_name: TT_ID, value: item, pos: pos)
@@ -165,6 +181,28 @@ class Lexer {
             new_items.append(items[i])
         }
 
+        return new_items
+    }
+
+    func make_else_if(items: [String]) -> [String] {
+        var new_items:[String] = []
+        var skipNext = false 
+
+        for i in 0...(items.count - 1) {
+            if skipNext {
+                skipNext = false 
+                continue
+            }
+
+            if items[i] == "else" && items[i + 1] == "if" {
+                let new_word = "else if"
+                new_items.append(new_word)
+                skipNext = true
+                continue 
+            }
+            new_items.append(items[i])
+        }
+        
         return new_items
     }
 

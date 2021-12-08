@@ -110,6 +110,10 @@ class Number {
         return (new_num, nil)
     }
 
+    func is_true() -> Bool {
+        return self.value != 0.0
+    }
+
     func print_self() -> String {
         return "\(self.value)"
     }
