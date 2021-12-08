@@ -124,7 +124,44 @@ class Parser {
             }
         }
 
-        return self.bin_op(func: term, ops: [TT_PLUS, TT_MINUS])
+        return self.bin_op(func: comp_expr, ops: [TT_AND, TT_OR])
+    }
+
+    func comp_expr() -> (AbstractNode?, ParserResult) {
+        let res = ParserResult()
+
+        if self.curr_token.type_name == "NOT" || self.curr_token.type_name == "AND" {
+            let op_tok = self.curr_token
+            _ = res.register(self.advance())
+
+            let (node, node_result) = self.comp_expr()
+            _ = res.register(node_result)
+            if let _ = res.error { return (nil, res) }
+
+            return (UnaryOpNode(op_tok: op_tok, node: node!), res)
+        }
+
+        let (node, node_result) = self.bin_op(func: self.arith_expr, ops: [TT_EE, TT_NE, TT_LT, TT_GT, TT_LOE, TT_GOE])
+        _ = res.register(node_result)
+        if let err = res.error {
+            _ = res.failure(err)
+            return (nil, res) 
+        }
+
+        return (node, res)
+    }
+
+    func arith_expr() -> (AbstractNode?, ParserResult) {
+        return self.bin_op(func: self.term, ops: [TT_PLUS, TT_MINUS])
+    }
+
+    func check_equal_to_ops(ops: [String], type_name: String) -> Bool {
+        for op in ops {
+            if type_name == op {
+                return true 
+            }
+        }
+        return false 
     }
 
     func bin_op(func function: () -> (AbstractNode?, ParserResult), ops: [String]) -> (AbstractNode?, ParserResult) {
@@ -134,7 +171,9 @@ class Parser {
         _ = res.register(parse_result)
         if res.error != nil { return (nil, res) }
         
-        while self.curr_token.type_name == ops[0] || self.curr_token.type_name == ops[1] {
+        var loop_condition = check_equal_to_ops(ops: ops, type_name: self.curr_token.type_name)
+
+        while  loop_condition { //self.curr_token.type_name == ops[0] || self.curr_token.type_name == ops[1]
             let op_tok = VariableNode(token: self.curr_token)
             _ = res.register(self.advance())
 
@@ -143,6 +182,7 @@ class Parser {
             if res.error != nil { return (nil, res) }
             
             left = BinOpNode(lhs: left!, op: op_tok, rhs: right!)
+            loop_condition = check_equal_to_ops(ops: ops, type_name: self.curr_token.type_name)
         }
 
         return (res.success(left ?? VariableNode()), res)
@@ -154,8 +194,6 @@ class Parser {
         var (left, parse_result) = functionA()
         _ = res.register(parse_result)
         if res.error != nil { return (nil, res) }
-
-        // let condition = ((ops.count == 2) : (self.curr_token.type_name == ops[0] || self.curr_token.type_name == ops[1]) ? self.curr_token.type_name == ops[0])
 
         while self.curr_token.type_name == ops {
             let op_tok = VariableNode(token: self.curr_token)

@@ -1,6 +1,9 @@
 /* RUN */
 
 var global_symbol_table = SymbolTable()
+global_symbol_table.set_val(name: "nil", value: 0.0) // nil value
+global_symbol_table.set_val(name: "true", value: 1.0)
+global_symbol_table.set_val(name: "false", value: 0.0)
 
 func run(text: String, fn: String) -> (Number?, Error?) {
     let lexer = Lexer(text_: text, fn: fn)
@@ -21,6 +24,7 @@ func run(text: String, fn: String) -> (Number?, Error?) {
     let interpreter = Interpreter()
     let ctx = Context(display_name: "<program>")
     ctx.symbolTable = global_symbol_table
+    
     let result = interpreter.visit(node: nodes!, context: ctx)
 
     return (result.value, result.error) 
@@ -33,10 +37,6 @@ while true {
 
     let (result, error) = run(text: text, fn: "stdin")
 
-    if let err = error {
-        print(err.as_string())
-        break 
-    }
-
-    print(result!.print_self())
+    if let err = error { print(err.as_string()) }
+    if let r = result { print(r.print_self()) }
 }

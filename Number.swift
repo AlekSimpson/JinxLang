@@ -56,6 +56,60 @@ class Number {
         return (new_num, nil)
     }
 
+    func comp_eq(by other: Number) -> (Number?, Error?) {
+        let new_num = Number((self.value == other.value ? 1 : 0))
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func comp_ne(by other: Number) -> (Number?, Error?) {
+        let new_num = Number((self.value != other.value ? 1 : 0))
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func comp_lt(by other: Number) -> (Number?, Error?) {
+        let new_num = Number((self.value < other.value ? 1 : 0))
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func comp_gt(by other: Number) -> (Number?, Error?) {
+        let new_num = Number((self.value > other.value ? 1 : 0))
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func comp_loe(by other: Number) -> (Number?, Error?) {
+        let new_num = Number((self.value <= other.value ? 1 : 0))
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func comp_goe(by other: Number) -> (Number?, Error?) {
+        let new_num = Number((self.value >= other.value ? 1 : 0))
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func comp_and(by other: Number) -> (Number?, Error?) {
+        let new_num = Number((self.value == 1 && other.value == 1 ? 1 : 0))
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func comp_or(by other: Number) -> (Number?, Error?) {
+        let new_num = Number((self.value == 1 || other.value == 1 ? 1 : 0))
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func not() -> (Number?, Error?) {
+        let new_num = Number((self.value == 1 ? 0 : 1))
+        new_num.set_context(ctx: self.context)
+        return (new_num, nil)
+    }
+
     func print_self() -> String {
         return "\(self.value)"
     }

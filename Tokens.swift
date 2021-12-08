@@ -46,6 +46,8 @@ let TT_LT         = "LESS THAN"
 let TT_GT         = "GREATER THAN"
 let TT_LOE        = "LESS THAN OR EQUALS"
 let TT_GOE        = "GREATER THAN OR EQUALS"
+let TT_AND        = "AND"
+let TT_OR         = "OR"
 
 class Token {
     // This is is Metatype, (ex: factor, operator, etc)

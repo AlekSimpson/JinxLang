@@ -6,8 +6,6 @@ class Lexer {
     var filename: String 
     var tokens:[Token] = []
 
-    // var curr_line:String 
-
     init(text_:String, fn:String) {
         self.text = text_
         self.ln_pos = 0
@@ -17,6 +15,7 @@ class Lexer {
     func make_tokens() -> ([Token], Error?) {
         let items = Array(self.text).map(String.init)
         var new_items = make_numbers(items: items)
+        new_items = make_letters(items: new_items)
         new_items = make_comparison(for: "!", items: new_items)
         new_items = make_comparison(for: "=", items: new_items)
         new_items = make_comparison(for: "<", items: new_items)
@@ -79,6 +78,15 @@ class Lexer {
                 case ">=":
                     let token = Token(type: .GOE, type_name: TT_GOE, value: item, pos: tok_pos)
                     self.tokens.append(token)
+                case "&":
+                    let token = Token(type: .AND, type_name: TT_AND, value: item, pos: tok_pos)
+                    self.tokens.append(token)
+                case "|":
+                    let token = Token(type: .OR, type_name: TT_OR, value: item, pos: tok_pos)
+                    self.tokens.append(token)
+                case "==":
+                    let token = Token(type: .EE, type_name: TT_EE, value: item, pos: tok_pos)
+                    self.tokens.append(token)
                 default: 
                     return ([], IllegalCharError(details: "'\(item)'", pos: tok_pos))
             }
@@ -99,9 +107,21 @@ class Lexer {
     func tokenize_letters(item: String, pos: Position) -> Bool {
         let chars:[String] = Array(arrayLiteral: item)
         if isLetter(item: chars[0]) {
-            let token = Token(type: .IDENTIFIER, type_name: TT_ID, value: item, pos: pos)
-            self.tokens.append(token)
+            if item == "and" {
+                let token = Token(type: .AND, type_name: TT_AND, value: item, pos: pos)
+                self.tokens.append(token)
+            }else if item == "or" {
+                let token = Token(type: .OR, type_name: TT_OR, value: item, pos: pos)
+                self.tokens.append(token)
+            }else if item == "not" {
+                let token = Token(type: .NOT, type_name: TT_NOT, value: item, pos: pos)
+                self.tokens.append(token)
+            }else {
+                let token = Token(type: .IDENTIFIER, type_name: TT_ID, value: item, pos: pos)
+                self.tokens.append(token)
+            }
             return true // continue 
+            
         }
         return false 
     }

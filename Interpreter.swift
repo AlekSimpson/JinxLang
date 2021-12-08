@@ -75,6 +75,22 @@ class Interpreter {
                 (result, error) = left.divided(by: right)
             case TT_POW:
                 (result, error) = left.power(by: right)
+            case TT_EE:
+                (result, error) = left.comp_eq(by: right)
+            case TT_NE:
+                (result, error) = left.comp_ne(by: right)
+            case TT_LT:
+                (result, error) = left.comp_lt(by: right)
+            case TT_GT:
+                (result, error) = left.comp_gt(by: right)
+            case TT_LOE:
+                (result, error) = left.comp_loe(by: right)
+            case TT_GOE:
+                (result, error) = left.comp_goe(by: right)
+            case TT_AND: 
+                (result, error) = left.comp_and(by: right)
+            case TT_OR: 
+                (result, error) = left.comp_or(by: right)
             default: 
                 (result, error) = (Number(0), nil)
         }
@@ -121,6 +137,10 @@ class Interpreter {
         if node.token.type_name == TT_MINUS {
             if let num = number {
                 (number, error) = num.multiplied(by: Number(-1))
+            }
+        }else if node.token.type_name == TT_NOT {
+            if let num = number {
+                (number, error) = num.not()
             }
         }
 

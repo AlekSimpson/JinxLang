@@ -121,6 +121,60 @@ class Number {
         return (new_num, nil)
     }
 
+    func comp_eq(by other: Number) -> (Number?, Error?) {
+        let new_num = Number((self.value == other.value ? 1 : 0))
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func comp_ne(by other: Number) -> (Number?, Error?) {
+        let new_num = Number((self.value != other.value ? 1 : 0))
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func comp_lt(by other: Number) -> (Number?, Error?) {
+        let new_num = Number((self.value < other.value ? 1 : 0))
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func comp_gt(by other: Number) -> (Number?, Error?) {
+        let new_num = Number((self.value > other.value ? 1 : 0))
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func comp_loe(by other: Number) -> (Number?, Error?) {
+        let new_num = Number((self.value <= other.value ? 1 : 0))
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func comp_goe(by other: Number) -> (Number?, Error?) {
+        let new_num = Number((self.value >= other.value ? 1 : 0))
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func comp_and(by other: Number) -> (Number?, Error?) {
+        let new_num = Number((self.value == 1 && other.value == 1 ? 1 : 0))
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func comp_or(by other: Number) -> (Number?, Error?) {
+        let new_num = Number((self.value == 1 || other.value == 1 ? 1 : 0))
+        new_num.set_context(ctx: other.context)
+        return (new_num, nil)
+    }
+
+    func not() -> (Number?, Error?) {
+        let new_num = Number((self.value == 1 ? 0 : 1))
+        new_num.set_context(ctx: self.context)
+        return (new_num, nil)
+    }
+
     func print_self() -> String {
         return "\(self.value)"
     }
@@ -177,8 +231,6 @@ class Lexer {
     var filename: String 
     var tokens:[Token] = []
 
-    // var curr_line:String 
-
     init(text_:String, fn:String) {
         self.text = text_
         self.ln_pos = 0
@@ -188,6 +240,7 @@ class Lexer {
     func make_tokens() -> ([Token], Error?) {
         let items = Array(self.text).map(String.init)
         var new_items = make_numbers(items: items)
+        new_items = make_letters(items: new_items)
         new_items = make_comparison(for: "!", items: new_items)
         new_items = make_comparison(for: "=", items: new_items)
         new_items = make_comparison(for: "<", items: new_items)
@@ -250,6 +303,15 @@ class Lexer {
                 case ">=":
                     let token = Token(type: .GOE, type_name: TT_GOE, value: item, pos: tok_pos)
                     self.tokens.append(token)
+                case "&":
+                    let token = Token(type: .AND, type_name: TT_AND, value: item, pos: tok_pos)
+                    self.tokens.append(token)
+                case "|":
+                    let token = Token(type: .OR, type_name: TT_OR, value: item, pos: tok_pos)
+                    self.tokens.append(token)
+                case "==":
+                    let token = Token(type: .EE, type_name: TT_EE, value: item, pos: tok_pos)
+                    self.tokens.append(token)
                 default: 
                     return ([], IllegalCharError(details: "'\(item)'", pos: tok_pos))
             }
@@ -270,9 +332,21 @@ class Lexer {
     func tokenize_letters(item: String, pos: Position) -> Bool {
         let chars:[String] = Array(arrayLiteral: item)
         if isLetter(item: chars[0]) {
-            let token = Token(type: .IDENTIFIER, type_name: TT_ID, value: item, pos: pos)
-            self.tokens.append(token)
+            if item == "and" {
+                let token = Token(type: .AND, type_name: TT_AND, value: item, pos: pos)
+                self.tokens.append(token)
+            }else if item == "or" {
+                let token = Token(type: .OR, type_name: TT_OR, value: item, pos: pos)
+                self.tokens.append(token)
+            }else if item == "not" {
+                let token = Token(type: .NOT, type_name: TT_NOT, value: item, pos: pos)
+                self.tokens.append(token)
+            }else {
+                let token = Token(type: .IDENTIFIER, type_name: TT_ID, value: item, pos: pos)
+                self.tokens.append(token)
+            }
             return true // continue 
+            
         }
         return false 
     }
@@ -643,7 +717,44 @@ class Parser {
             }
         }
 
-        return self.bin_op(func: term, ops: [TT_PLUS, TT_MINUS])
+        return self.bin_op(func: comp_expr, ops: [TT_AND, TT_OR])
+    }
+
+    func comp_expr() -> (AbstractNode?, ParserResult) {
+        let res = ParserResult()
+
+        if self.curr_token.type_name == "NOT" || self.curr_token.type_name == "AND" {
+            let op_tok = self.curr_token
+            _ = res.register(self.advance())
+
+            let (node, node_result) = self.comp_expr()
+            _ = res.register(node_result)
+            if let _ = res.error { return (nil, res) }
+
+            return (UnaryOpNode(op_tok: op_tok, node: node!), res)
+        }
+
+        let (node, node_result) = self.bin_op(func: self.arith_expr, ops: [TT_EE, TT_NE, TT_LT, TT_GT, TT_LOE, TT_GOE])
+        _ = res.register(node_result)
+        if let err = res.error {
+            _ = res.failure(err)
+            return (nil, res) 
+        }
+
+        return (node, res)
+    }
+
+    func arith_expr() -> (AbstractNode?, ParserResult) {
+        return self.bin_op(func: self.term, ops: [TT_PLUS, TT_MINUS])
+    }
+
+    func check_equal_to_ops(ops: [String], type_name: String) -> Bool {
+        for op in ops {
+            if type_name == op {
+                return true 
+            }
+        }
+        return false 
     }
 
     func bin_op(func function: () -> (AbstractNode?, ParserResult), ops: [String]) -> (AbstractNode?, ParserResult) {
@@ -653,7 +764,9 @@ class Parser {
         _ = res.register(parse_result)
         if res.error != nil { return (nil, res) }
         
-        while self.curr_token.type_name == ops[0] || self.curr_token.type_name == ops[1] {
+        var loop_condition = check_equal_to_ops(ops: ops, type_name: self.curr_token.type_name)
+
+        while  loop_condition { //self.curr_token.type_name == ops[0] || self.curr_token.type_name == ops[1]
             let op_tok = VariableNode(token: self.curr_token)
             _ = res.register(self.advance())
 
@@ -662,6 +775,7 @@ class Parser {
             if res.error != nil { return (nil, res) }
             
             left = BinOpNode(lhs: left!, op: op_tok, rhs: right!)
+            loop_condition = check_equal_to_ops(ops: ops, type_name: self.curr_token.type_name)
         }
 
         return (res.success(left ?? VariableNode()), res)
@@ -673,8 +787,6 @@ class Parser {
         var (left, parse_result) = functionA()
         _ = res.register(parse_result)
         if res.error != nil { return (nil, res) }
-
-        // let condition = ((ops.count == 2) : (self.curr_token.type_name == ops[0] || self.curr_token.type_name == ops[1]) ? self.curr_token.type_name == ops[0])
 
         while self.curr_token.type_name == ops {
             let op_tok = VariableNode(token: self.curr_token)
@@ -804,6 +916,22 @@ class Interpreter {
                 (result, error) = left.divided(by: right)
             case TT_POW:
                 (result, error) = left.power(by: right)
+            case TT_EE:
+                (result, error) = left.comp_eq(by: right)
+            case TT_NE:
+                (result, error) = left.comp_ne(by: right)
+            case TT_LT:
+                (result, error) = left.comp_lt(by: right)
+            case TT_GT:
+                (result, error) = left.comp_gt(by: right)
+            case TT_LOE:
+                (result, error) = left.comp_loe(by: right)
+            case TT_GOE:
+                (result, error) = left.comp_goe(by: right)
+            case TT_AND: 
+                (result, error) = left.comp_and(by: right)
+            case TT_OR: 
+                (result, error) = left.comp_or(by: right)
             default: 
                 (result, error) = (Number(0), nil)
         }
@@ -850,6 +978,10 @@ class Interpreter {
         if node.token.type_name == TT_MINUS {
             if let num = number {
                 (number, error) = num.multiplied(by: Number(-1))
+            }
+        }else if node.token.type_name == TT_NOT {
+            if let num = number {
+                (number, error) = num.not()
             }
         }
 
@@ -1003,6 +1135,8 @@ let TT_LT         = "LESS THAN"
 let TT_GT         = "GREATER THAN"
 let TT_LOE        = "LESS THAN OR EQUALS"
 let TT_GOE        = "GREATER THAN OR EQUALS"
+let TT_AND        = "AND"
+let TT_OR         = "OR"
 
 class Token {
     // This is is Metatype, (ex: factor, operator, etc)
@@ -1032,6 +1166,9 @@ class Token {
 }/* RUN */
 
 var global_symbol_table = SymbolTable()
+global_symbol_table.set_val(name: "nil", value: 0.0) // nil value
+global_symbol_table.set_val(name: "true", value: 1.0)
+global_symbol_table.set_val(name: "false", value: 0.0)
 
 func run(text: String, fn: String) -> (Number?, Error?) {
     let lexer = Lexer(text_: text, fn: fn)
@@ -1052,6 +1189,7 @@ func run(text: String, fn: String) -> (Number?, Error?) {
     let interpreter = Interpreter()
     let ctx = Context(display_name: "<program>")
     ctx.symbolTable = global_symbol_table
+    
     let result = interpreter.visit(node: nodes!, context: ctx)
 
     return (result.value, result.error) 
@@ -1066,8 +1204,9 @@ while true {
 
     if let err = error {
         print(err.as_string())
-        break 
+        // break 
     }
-
-    print(result!.print_self())
+    if let r = result {
+        print(r.print_self())
+    }
 }
