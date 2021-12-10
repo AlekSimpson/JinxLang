@@ -36,70 +36,57 @@ class Lexer {
             let word_check = tokenize_letters(item: item, pos: tok_pos)
             if word_check { continue }            
 
+            var token = Token()
+
             switch item {
                 case "+":
-                    let token = Token(type: .OPERATOR, type_name: TT_PLUS, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .OPERATOR, type_name: TT_PLUS, value: item, pos: tok_pos)
                 case "-": 
-                    let token = Token(type: .OPERATOR, type_name: TT_MINUS, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .OPERATOR, type_name: TT_MINUS, value: item, pos: tok_pos)
                 case "/":
-                    let token = Token(type: .OPERATOR, type_name: TT_DIV, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .OPERATOR, type_name: TT_DIV, value: item, pos: tok_pos)
                 case "*":
-                    let token = Token(type: .OPERATOR, type_name: TT_MUL, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .OPERATOR, type_name: TT_MUL, value: item, pos: tok_pos)
                 case "^":
-                    let token = Token(type: .OPERATOR, type_name: TT_POW, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .OPERATOR, type_name: TT_POW, value: item, pos: tok_pos)
                 case "(":
-                    let token = Token(type: .GROUP, type_name: TT_LPAREN, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .GROUP, type_name: TT_LPAREN, value: item, pos: tok_pos)
                 case ")":
-                    let token = Token(type: .GROUP, type_name: TT_RPAREN, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .GROUP, type_name: TT_RPAREN, value: item, pos: tok_pos)
                 case "=":
-                    let token = Token(type: .EQ, type_name: TT_EQ, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .EQ, type_name: TT_EQ, value: item, pos: tok_pos)
                 case "!":
-                    let token = Token(type: .NOT, type_name: TT_NOT, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .NOT, type_name: TT_NOT, value: item, pos: tok_pos)
                 case "<":
-                    let token = Token(type: .LT, type_name: TT_LT, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .LT, type_name: TT_LT, value: item, pos: tok_pos)
                 case ">":
-                    let token = Token(type: .GT, type_name: TT_GT, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .GT, type_name: TT_GT, value: item, pos: tok_pos)
                 case "!=":
-                    let token = Token(type: .NE, type_name: TT_NE, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .NE, type_name: TT_NE, value: item, pos: tok_pos)
                 case "<=":
-                    let token = Token(type: .LOE, type_name: TT_LOE, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .LOE, type_name: TT_LOE, value: item, pos: tok_pos)
                 case ">=":
-                    let token = Token(type: .GOE, type_name: TT_GOE, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .GOE, type_name: TT_GOE, value: item, pos: tok_pos)
                 case "&":
-                    let token = Token(type: .AND, type_name: TT_AND, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .AND, type_name: TT_AND, value: item, pos: tok_pos)
                 case "|":
-                    let token = Token(type: .OR, type_name: TT_OR, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .OR, type_name: TT_OR, value: item, pos: tok_pos)
                 case "==":
-                    let token = Token(type: .EE, type_name: TT_EE, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .EE, type_name: TT_EE, value: item, pos: tok_pos)
                 case "{":
-                    let token = Token(type: .LCURLY, type_name: TT_LCURLY, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .LCURLY, type_name: TT_LCURLY, value: item, pos: tok_pos)
                 case "}":
-                    let token = Token(type: .RCURLY, type_name: TT_RCURLY, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .RCURLY, type_name: TT_RCURLY, value: item, pos: tok_pos)
+                case ":":
+                    token = Token(type: .INDICATOR, type_name: TT_INDICATOR, value: item, pos: tok_pos)
                 default: 
                     return ([], IllegalCharError(details: "'\(item)'", pos: tok_pos))
             }
+            self.tokens.append(token)
             txt_col += 1
         }
         self.tokens.append(Token(type: .EOF, type_name: TT_EOF, value: TT_EOF))
+
         return (self.tokens, nil)
     }
 
@@ -113,31 +100,33 @@ class Lexer {
 
     func tokenize_letters(item: String, pos: Position) -> Bool {
         let chars:[String] = Array(arrayLiteral: item)
+        var token = Token()
         if isLetter(item: chars[0]) {
-            if item == "and" {
-                let token = Token(type: .AND, type_name: TT_AND, value: item, pos: pos)
-                self.tokens.append(token)
-            }else if item == "or" {
-                let token = Token(type: .OR, type_name: TT_OR, value: item, pos: pos)
-                self.tokens.append(token)
-            }else if item == "not" {
-                let token = Token(type: .NOT, type_name: TT_NOT, value: item, pos: pos)
-                self.tokens.append(token)
-            }else if item == "if" {
-                let token = Token(type: .IF, type_name: TT_IF, value: item, pos: pos)
-                self.tokens.append(token)
-            }else if item == "else" {
-                let token = Token(type: .ELSE, type_name: TT_ELSE, value: item, pos: pos)
-                self.tokens.append(token)
-            }else if item == "else if" {
-                let token = Token(type: .ELIF, type_name: TT_ELIF, value: item, pos: pos)
-                self.tokens.append(token)
-            }else {
-                let token = Token(type: .IDENTIFIER, type_name: TT_ID, value: item, pos: pos)
-                self.tokens.append(token)
+            switch item {
+                case "and":
+                    token = Token(type: .AND, type_name: TT_AND, value: item, pos: pos)
+                case "or":
+                    token = Token(type: .OR, type_name: TT_OR, value: item, pos: pos)
+                case "not":
+                    token = Token(type: .NOT, type_name: TT_NOT, value: item, pos: pos)
+                case "if":
+                    token = Token(type: .IF, type_name: TT_IF, value: item, pos: pos)
+                case "else":
+                    token = Token(type: .ELSE, type_name: TT_ELSE, value: item, pos: pos)
+                case "else if":
+                    token = Token(type: .ELIF, type_name: TT_ELIF, value: item, pos: pos)
+                case "for":
+                    token = Token(type: .FOR, type_name: TT_FOR, value: item, pos: pos)
+                case "in":
+                    token = Token(type: .IN, type_name: TT_IN, value: item, pos: pos)
+                case "while":
+                    token = Token(type: .WHILE, type_name: TT_WHILE, value: item, pos: pos)
+                default:
+                    token = Token(type: .IDENTIFIER, type_name: TT_ID, value: item, pos: pos)
             }
+
+            self.tokens.append(token)
             return true // continue 
-            
         }
         return false 
     }

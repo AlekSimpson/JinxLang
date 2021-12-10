@@ -25,11 +25,63 @@ class Interpreter {
                 result = visit_VarAssignNode(node: node as! VarAssignNode, ctx: context)
             case 6:
                 result = visit_IfNode(node: node as! IfNode, ctx: context)
+            case 7: 
+                result = visit_ForNode(node: node as! ForNode, ctx: context)
+            case 8: 
+                result = visit_WhileNode(node: node as! WhileNode, ctx: context)
             default:
                 print("no visit method found")
         }
 
         return result
+    }
+
+    func visit_ForNode(node: ForNode, ctx: Context) -> RuntimeResult {
+        let rt = RuntimeResult()    
+        
+        var res_value = rt.register(self.visit(node: node.startValue, context: ctx))
+        if rt.error != nil { return rt }
+        let start_value = res_value.value!.value
+
+        res_value = rt.register(self.visit(node: node.endValue, context: ctx))
+        if rt.error != nil { return rt }
+        let end_value = res_value.value!.value 
+
+        res_value = rt.register(self.visit(node: node.iterator, context: ctx))
+        if rt.error != nil { return rt }
+        let iterator_name = node.iterator.token.value as! String 
+
+        var i = start_value
+
+        var table = SymbolTable()
+        if let t = ctx.symbolTable { table = t } 
+
+        while i < end_value {
+            table.set_val(name: iterator_name, value: i)
+            i += 1
+
+            _ = rt.register(self.visit(node: node.bodyNode, context: ctx))
+            if rt.error != nil { return rt }
+        }
+
+        return RuntimeResult()
+    }
+
+    func visit_WhileNode(node: WhileNode, ctx: Context) -> RuntimeResult {
+        let rt = RuntimeResult()
+
+        while true {
+            let condition = rt.register(self.visit(node: node.conditionNode, context: ctx))
+            if rt.error != nil { return rt }
+            let cond_value = condition.value!
+
+            if !cond_value.is_true() { break }
+            
+            _ = rt.register(self.visit(node: node.bodyNode, context: ctx))
+            if rt.error != nil { return rt }
+        }
+
+        return RuntimeResult()
     }
 
     func check_for_declaration(table: [String : Double], node: AbstractNode, context: Context) -> Error? {

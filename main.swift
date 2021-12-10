@@ -265,70 +265,57 @@ class Lexer {
             let word_check = tokenize_letters(item: item, pos: tok_pos)
             if word_check { continue }            
 
+            var token = Token()
+
             switch item {
                 case "+":
-                    let token = Token(type: .OPERATOR, type_name: TT_PLUS, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .OPERATOR, type_name: TT_PLUS, value: item, pos: tok_pos)
                 case "-": 
-                    let token = Token(type: .OPERATOR, type_name: TT_MINUS, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .OPERATOR, type_name: TT_MINUS, value: item, pos: tok_pos)
                 case "/":
-                    let token = Token(type: .OPERATOR, type_name: TT_DIV, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .OPERATOR, type_name: TT_DIV, value: item, pos: tok_pos)
                 case "*":
-                    let token = Token(type: .OPERATOR, type_name: TT_MUL, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .OPERATOR, type_name: TT_MUL, value: item, pos: tok_pos)
                 case "^":
-                    let token = Token(type: .OPERATOR, type_name: TT_POW, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .OPERATOR, type_name: TT_POW, value: item, pos: tok_pos)
                 case "(":
-                    let token = Token(type: .GROUP, type_name: TT_LPAREN, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .GROUP, type_name: TT_LPAREN, value: item, pos: tok_pos)
                 case ")":
-                    let token = Token(type: .GROUP, type_name: TT_RPAREN, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .GROUP, type_name: TT_RPAREN, value: item, pos: tok_pos)
                 case "=":
-                    let token = Token(type: .EQ, type_name: TT_EQ, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .EQ, type_name: TT_EQ, value: item, pos: tok_pos)
                 case "!":
-                    let token = Token(type: .NOT, type_name: TT_NOT, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .NOT, type_name: TT_NOT, value: item, pos: tok_pos)
                 case "<":
-                    let token = Token(type: .LT, type_name: TT_LT, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .LT, type_name: TT_LT, value: item, pos: tok_pos)
                 case ">":
-                    let token = Token(type: .GT, type_name: TT_GT, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .GT, type_name: TT_GT, value: item, pos: tok_pos)
                 case "!=":
-                    let token = Token(type: .NE, type_name: TT_NE, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .NE, type_name: TT_NE, value: item, pos: tok_pos)
                 case "<=":
-                    let token = Token(type: .LOE, type_name: TT_LOE, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .LOE, type_name: TT_LOE, value: item, pos: tok_pos)
                 case ">=":
-                    let token = Token(type: .GOE, type_name: TT_GOE, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .GOE, type_name: TT_GOE, value: item, pos: tok_pos)
                 case "&":
-                    let token = Token(type: .AND, type_name: TT_AND, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .AND, type_name: TT_AND, value: item, pos: tok_pos)
                 case "|":
-                    let token = Token(type: .OR, type_name: TT_OR, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .OR, type_name: TT_OR, value: item, pos: tok_pos)
                 case "==":
-                    let token = Token(type: .EE, type_name: TT_EE, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .EE, type_name: TT_EE, value: item, pos: tok_pos)
                 case "{":
-                    let token = Token(type: .LCURLY, type_name: TT_LCURLY, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .LCURLY, type_name: TT_LCURLY, value: item, pos: tok_pos)
                 case "}":
-                    let token = Token(type: .RCURLY, type_name: TT_RCURLY, value: item, pos: tok_pos)
-                    self.tokens.append(token)
+                    token = Token(type: .RCURLY, type_name: TT_RCURLY, value: item, pos: tok_pos)
+                case ":":
+                    token = Token(type: .INDICATOR, type_name: TT_INDICATOR, value: item, pos: tok_pos)
                 default: 
                     return ([], IllegalCharError(details: "'\(item)'", pos: tok_pos))
             }
+            self.tokens.append(token)
             txt_col += 1
         }
         self.tokens.append(Token(type: .EOF, type_name: TT_EOF, value: TT_EOF))
+
         return (self.tokens, nil)
     }
 
@@ -342,31 +329,33 @@ class Lexer {
 
     func tokenize_letters(item: String, pos: Position) -> Bool {
         let chars:[String] = Array(arrayLiteral: item)
+        var token = Token()
         if isLetter(item: chars[0]) {
-            if item == "and" {
-                let token = Token(type: .AND, type_name: TT_AND, value: item, pos: pos)
-                self.tokens.append(token)
-            }else if item == "or" {
-                let token = Token(type: .OR, type_name: TT_OR, value: item, pos: pos)
-                self.tokens.append(token)
-            }else if item == "not" {
-                let token = Token(type: .NOT, type_name: TT_NOT, value: item, pos: pos)
-                self.tokens.append(token)
-            }else if item == "if" {
-                let token = Token(type: .IF, type_name: TT_IF, value: item, pos: pos)
-                self.tokens.append(token)
-            }else if item == "else" {
-                let token = Token(type: .ELSE, type_name: TT_ELSE, value: item, pos: pos)
-                self.tokens.append(token)
-            }else if item == "else if" {
-                let token = Token(type: .ELIF, type_name: TT_ELIF, value: item, pos: pos)
-                self.tokens.append(token)
-            }else {
-                let token = Token(type: .IDENTIFIER, type_name: TT_ID, value: item, pos: pos)
-                self.tokens.append(token)
+            switch item {
+                case "and":
+                    token = Token(type: .AND, type_name: TT_AND, value: item, pos: pos)
+                case "or":
+                    token = Token(type: .OR, type_name: TT_OR, value: item, pos: pos)
+                case "not":
+                    token = Token(type: .NOT, type_name: TT_NOT, value: item, pos: pos)
+                case "if":
+                    token = Token(type: .IF, type_name: TT_IF, value: item, pos: pos)
+                case "else":
+                    token = Token(type: .ELSE, type_name: TT_ELSE, value: item, pos: pos)
+                case "else if":
+                    token = Token(type: .ELIF, type_name: TT_ELIF, value: item, pos: pos)
+                case "for":
+                    token = Token(type: .FOR, type_name: TT_FOR, value: item, pos: pos)
+                case "in":
+                    token = Token(type: .IN, type_name: TT_IN, value: item, pos: pos)
+                case "while":
+                    token = Token(type: .WHILE, type_name: TT_WHILE, value: item, pos: pos)
+                default:
+                    token = Token(type: .IDENTIFIER, type_name: TT_ID, value: item, pos: pos)
             }
+
+            self.tokens.append(token)
             return true // continue 
-            
         }
         return false 
     }
@@ -533,8 +522,19 @@ protocol AbstractNode {
 
 struct NumberNode: AbstractNode {
     var token: Token
+    var direct_value: Number? = nil 
     var description: String { return "NumberNode(\(token.type_name))" }
     var classType: Int { return 1 }
+
+    init(direct_value: Number) {
+        self.direct_value = direct_value
+        self.token = Token()
+    }
+
+    init(token: Token) {
+        self.token = token 
+        self.direct_value = nil 
+    }
 
     func as_string() -> String {
         return token.as_string()
@@ -599,6 +599,46 @@ struct IfNode: AbstractNode {
         self.cases = cases
         self.else_case = else_case
         self.token = cases[0][0].token
+    }
+
+    func as_string() -> String {
+        return token.as_string()
+    }
+}
+
+struct ForNode: AbstractNode {
+    var token: Token 
+    var startValue: NumberNode 
+    var endValue: NumberNode 
+    var bodyNode: AbstractNode
+    var iterator: VarAssignNode
+    var description:String { return "ForNode(\(token.type_name))" }
+    var classType: Int { return 7 }
+
+    init(iterator: VarAssignNode, startValue: NumberNode, endValue: NumberNode, bodyNode: AbstractNode) {
+        self.iterator = iterator 
+        self.startValue = startValue
+        self.endValue = endValue
+        self.bodyNode = bodyNode
+        self.token = startValue.token 
+    }
+
+    func as_string() -> String {
+        return token.as_string()
+    }
+}
+
+struct WhileNode: AbstractNode {
+    var token: Token 
+    var conditionNode: AbstractNode 
+    var bodyNode: AbstractNode
+    var description: String { return "WhileNode(\(token.type_name))" }
+    var classType: Int { return 8 }
+
+    init(conditionNode: AbstractNode, bodyNode: AbstractNode) {
+        self.conditionNode = conditionNode
+        self.bodyNode = bodyNode
+        self.token = conditionNode.token 
     }
 
     func as_string() -> String {
@@ -674,10 +714,6 @@ class Parser {
     func parse() -> (AbstractNode?, Error?) {
         let (node_result, parse_result) = self.expr()
 
-        // for token in tokens {
-        //     print(token.as_string())
-        // }
-
         if let err = parse_result.error {
             if self.curr_token.type != .EOF {
                 return (nil, parse_result.failure(err))
@@ -712,34 +748,158 @@ class Parser {
                     var p = Position()
                     if let position = tok.pos { p = position }
                     _ = res.failure(InvalidSyntaxError(details: "Expected ')'", pos: p))
-                    returnVal = (nil, res)
                 }
             }
 
             if let err = recurrsion.1.error {
                 _ = res.failure(err)
-                returnVal = (nil, res)
             }
         }else if tok.type_name == "IF" {
             var (if_expr, expr_res) = self.if_expr()
             _ = res.register(expr_res)
             if let err = res.error {
                 _ = res.failure(err)
-                returnVal = (nil, res)
             }else {
-                if let unwrapped = if_expr {
-                    if_expr = unwrapped
-                }
+                if let unwrapped = if_expr { if_expr = unwrapped }
                 returnVal = (if_expr, res)
+            }
+        }else if tok.type_name == "FOR" {
+            var (for_expr, expr_res) = self.for_expr()
+            _ = res.register(expr_res)
+            if let err = res.error {
+                _ = res.failure(err)
+            }else {
+                if let unwrapped = for_expr { for_expr = unwrapped }
+                returnVal = (for_expr, res)
+            }
+        }else if tok.type_name == "WHILE" {
+            var (while_expr, expr_res) = self.while_expr()
+            _ = res.register(expr_res)
+            if let err = res.error {
+                _ = res.failure(err)
+            }else {
+                if let unwrapped = while_expr { while_expr = unwrapped }
+                returnVal = (while_expr, res)
             }
         }else {
             var p = Position()
             if let position = tok.pos { p = position }
             _ = res.failure(InvalidSyntaxError(details: "Expected int, float, identifier, '+', '-', or '('", pos: p))
-            returnVal = (nil, res)
         }
 
         return returnVal
+    }
+
+    func for_expr() -> (AbstractNode?, ParserResult) {
+        let res = ParserResult()
+
+        if !(self.curr_token.type_name == "FOR") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected 'for'", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        if !(self.curr_token.type_name == "IDENTIFIER") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected variable", pos: p))
+            return (nil, res)
+        }
+
+        let iterator_token = self.curr_token
+        _ = res.register(self.advance())
+
+        if !(self.curr_token.type_name == "IN") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected 'in' keyword", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        let (start_value, start_res) = self.expr()
+        _ = res.register(start_res)
+        if res.error != nil { return (nil, res) }
+
+        let iterator_var = VarAssignNode(token: iterator_token, value_node: start_value as! NumberNode)
+
+        if !(self.curr_token.type_name == "INDICATOR") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected ':' in range", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        let (end_value, end_res) = self.expr()
+        _ = res.register(end_res)
+        if res.error != nil { return (nil, res) }
+
+        if !(self.curr_token.type_name == "LCURLY") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected '{' in for loop", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        let (body, body_res) = self.expr()
+        _ = res.register(body_res)
+        if res.error != nil { return (nil, res) }
+
+        if !(self.curr_token.type_name == "RCURLY") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected '}' in for loop", pos: p))
+            return (nil, res)
+        }
+        
+        return (res.success(ForNode(iterator: iterator_var, startValue: start_value as! NumberNode, endValue: end_value as! NumberNode, bodyNode: body!)), res)
+    }
+
+    func while_expr() -> (AbstractNode?, ParserResult) {
+        let res = ParserResult()
+
+        if !(self.curr_token.type_name == "WHILE") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected 'while' keyword in while loop", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        let (cond_value, cond_res) = self.expr()
+        _ = res.register(cond_res)
+        if res.error != nil { return (nil, res) }
+
+        if !(self.curr_token.type_name == "LCURLY") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected '{' in for loop", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        let (body_value, body_res) = self.expr()
+        _ = res.register(body_res)
+        if res.error != nil { return (nil, res) }
+
+        if !(self.curr_token.type_name == "RCURLY") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected '}' in for loop", pos: p))
+            return (nil, res)
+        }
+
+        return (res.success(WhileNode(conditionNode: cond_value!, bodyNode: body_value!)), res)
     }
 
     func if_expr() -> (AbstractNode?, ParserResult) {
@@ -784,11 +944,9 @@ class Parser {
         }
 
         _ = res.register(self.advance())
-        // print("TYPE NAME \(self.curr_token.type_name)")
+        
         while self.curr_token.type_name == "ELSE IF" {
             _ = res.register(self.advance())
-
-            print("SEEING ELSE IF")
 
             let (cond, result) = self.expr()
             _ = res.register(result)
@@ -1047,11 +1205,63 @@ class Interpreter {
                 result = visit_VarAssignNode(node: node as! VarAssignNode, ctx: context)
             case 6:
                 result = visit_IfNode(node: node as! IfNode, ctx: context)
+            case 7: 
+                result = visit_ForNode(node: node as! ForNode, ctx: context)
+            case 8: 
+                result = visit_WhileNode(node: node as! WhileNode, ctx: context)
             default:
                 print("no visit method found")
         }
 
         return result
+    }
+
+    func visit_ForNode(node: ForNode, ctx: Context) -> RuntimeResult {
+        let rt = RuntimeResult()    
+        
+        var res_value = rt.register(self.visit(node: node.startValue, context: ctx))
+        if rt.error != nil { return rt }
+        let start_value = res_value.value!.value
+
+        res_value = rt.register(self.visit(node: node.endValue, context: ctx))
+        if rt.error != nil { return rt }
+        let end_value = res_value.value!.value 
+
+        res_value = rt.register(self.visit(node: node.iterator, context: ctx))
+        if rt.error != nil { return rt }
+        let iterator_name = node.iterator.token.value as! String 
+
+        var i = start_value
+
+        var table = SymbolTable()
+        if let t = ctx.symbolTable { table = t } 
+
+        while i < end_value {
+            table.set_val(name: iterator_name, value: i)
+            i += 1
+
+            _ = rt.register(self.visit(node: node.bodyNode, context: ctx))
+            if rt.error != nil { return rt }
+        }
+
+        return RuntimeResult()
+    }
+
+    func visit_WhileNode(node: WhileNode, ctx: Context) -> RuntimeResult {
+        let rt = RuntimeResult()
+
+        while true {
+            let condition = rt.register(self.visit(node: node.conditionNode, context: ctx))
+            if rt.error != nil { return rt }
+            let cond_value = condition.value!
+
+            if !cond_value.is_true() { break }
+            
+            _ = rt.register(self.visit(node: node.bodyNode, context: ctx))
+            if rt.error != nil { return rt }
+        }
+
+        return RuntimeResult()
     }
 
     func check_for_declaration(table: [String : Double], node: AbstractNode, context: Context) -> Error? {
@@ -1322,37 +1532,43 @@ enum TT {
     case ELIF 
     case ELSE 
 
+    case FOR
+    case IN
+    case WHILE
+
     case LCURLY 
     case RCURLY 
+    case INDICATOR
 }
 
-// let KEYWORDS:[String] = ["and", "or", "not", "&&", "||", "!"]
-
-let TT_INT    = "INT"
-let TT_FLOAT  = "FLOAT"
-let TT_PLUS   = "PLUS"
-let TT_MINUS  = "MINUS"
-let TT_MUL    = "MUL"
-let TT_DIV    = "DIV"
-let TT_POW    = "POW"
-let TT_LPAREN = "LPAREN"
-let TT_RPAREN = "RPAREN"
-// let TT_KEYWORD    = "KEYWORD"
-let TT_EQ     = "EQ"
-let TT_ID     = "IDENTIFIER" // name of variables
-let TT_EOF    = "EOF"
-let TT_EE     = "EQUALS"
-let TT_NE     = "NOT EQUALS"
-let TT_NOT    = "NOT"
-let TT_LT     = "LESS THAN"
-let TT_GT     = "GREATER THAN"
-let TT_LOE    = "LESS THAN OR EQUALS"
-let TT_GOE    = "GREATER THAN OR EQUALS"
-let TT_AND    = "AND"
-let TT_OR     = "OR"
-let TT_IF     = "IF" 
-let TT_ELIF   = "ELSE IF"
-let TT_ELSE   = "ELSE"
+let TT_INT       = "INT"
+let TT_FLOAT     = "FLOAT"
+let TT_PLUS      = "PLUS"
+let TT_MINUS     = "MINUS"
+let TT_MUL       = "MUL"
+let TT_DIV       = "DIV"
+let TT_POW       = "POW"
+let TT_LPAREN    = "LPAREN"
+let TT_RPAREN    = "RPAREN"
+let TT_EQ        = "EQ"
+let TT_ID        = "IDENTIFIER" // name of variables
+let TT_EOF       = "EOF"
+let TT_EE        = "EQUALS"
+let TT_NE        = "NOT EQUALS"
+let TT_NOT       = "NOT"
+let TT_LT        = "LESS THAN"
+let TT_GT        = "GREATER THAN"
+let TT_LOE       = "LESS THAN OR EQUALS"
+let TT_GOE       = "GREATER THAN OR EQUALS"
+let TT_AND       = "AND"
+let TT_OR        = "OR"
+let TT_IF        = "IF" 
+let TT_ELIF      = "ELSE IF"
+let TT_ELSE      = "ELSE"
+let TT_FOR       = "FOR"
+let TT_WHILE     = "WHILE"
+let TT_IN        = "IN"
+let TT_INDICATOR = "INDICATOR"
 
 let TT_LCURLY = "LCURLY"
 let TT_RCURLY = "RCURLY"
@@ -1385,9 +1601,9 @@ class Token {
 }/* RUN */
 
 var global_symbol_table = SymbolTable()
-global_symbol_table.set_val(name: "nil", value: 0.0) // nil value
-global_symbol_table.set_val(name: "true", value: 1.0)
-global_symbol_table.set_val(name: "false", value: 0.0)
+// global_symbol_table.set_val(name: "nil", value: 0.0)
+// global_symbol_table.set_val(name: "true", value: 1.0)
+// global_symbol_table.set_val(name: "false", value: 0.0)
 
 func run(text: String, fn: String) -> (Number?, Error?) {
     let lexer = Lexer(text_: text, fn: fn)

@@ -55,34 +55,158 @@ class Parser {
                     var p = Position()
                     if let position = tok.pos { p = position }
                     _ = res.failure(InvalidSyntaxError(details: "Expected ')'", pos: p))
-                    returnVal = (nil, res)
                 }
             }
 
             if let err = recurrsion.1.error {
                 _ = res.failure(err)
-                returnVal = (nil, res)
             }
         }else if tok.type_name == "IF" {
             var (if_expr, expr_res) = self.if_expr()
             _ = res.register(expr_res)
             if let err = res.error {
                 _ = res.failure(err)
-                returnVal = (nil, res)
             }else {
-                if let unwrapped = if_expr {
-                    if_expr = unwrapped
-                }
+                if let unwrapped = if_expr { if_expr = unwrapped }
                 returnVal = (if_expr, res)
+            }
+        }else if tok.type_name == "FOR" {
+            var (for_expr, expr_res) = self.for_expr()
+            _ = res.register(expr_res)
+            if let err = res.error {
+                _ = res.failure(err)
+            }else {
+                if let unwrapped = for_expr { for_expr = unwrapped }
+                returnVal = (for_expr, res)
+            }
+        }else if tok.type_name == "WHILE" {
+            var (while_expr, expr_res) = self.while_expr()
+            _ = res.register(expr_res)
+            if let err = res.error {
+                _ = res.failure(err)
+            }else {
+                if let unwrapped = while_expr { while_expr = unwrapped }
+                returnVal = (while_expr, res)
             }
         }else {
             var p = Position()
             if let position = tok.pos { p = position }
             _ = res.failure(InvalidSyntaxError(details: "Expected int, float, identifier, '+', '-', or '('", pos: p))
-            returnVal = (nil, res)
         }
 
         return returnVal
+    }
+
+    func for_expr() -> (AbstractNode?, ParserResult) {
+        let res = ParserResult()
+
+        if !(self.curr_token.type_name == "FOR") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected 'for'", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        if !(self.curr_token.type_name == "IDENTIFIER") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected variable", pos: p))
+            return (nil, res)
+        }
+
+        let iterator_token = self.curr_token
+        _ = res.register(self.advance())
+
+        if !(self.curr_token.type_name == "IN") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected 'in' keyword", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        let (start_value, start_res) = self.expr()
+        _ = res.register(start_res)
+        if res.error != nil { return (nil, res) }
+
+        let iterator_var = VarAssignNode(token: iterator_token, value_node: start_value as! NumberNode)
+
+        if !(self.curr_token.type_name == "INDICATOR") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected ':' in range", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        let (end_value, end_res) = self.expr()
+        _ = res.register(end_res)
+        if res.error != nil { return (nil, res) }
+
+        if !(self.curr_token.type_name == "LCURLY") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected '{' in for loop", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        let (body, body_res) = self.expr()
+        _ = res.register(body_res)
+        if res.error != nil { return (nil, res) }
+
+        if !(self.curr_token.type_name == "RCURLY") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected '}' in for loop", pos: p))
+            return (nil, res)
+        }
+        
+        return (res.success(ForNode(iterator: iterator_var, startValue: start_value as! NumberNode, endValue: end_value as! NumberNode, bodyNode: body!)), res)
+    }
+
+    func while_expr() -> (AbstractNode?, ParserResult) {
+        let res = ParserResult()
+
+        if !(self.curr_token.type_name == "WHILE") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected 'while' keyword in while loop", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        let (cond_value, cond_res) = self.expr()
+        _ = res.register(cond_res)
+        if res.error != nil { return (nil, res) }
+
+        if !(self.curr_token.type_name == "LCURLY") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected '{' in for loop", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        let (body_value, body_res) = self.expr()
+        _ = res.register(body_res)
+        if res.error != nil { return (nil, res) }
+
+        if !(self.curr_token.type_name == "RCURLY") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected '}' in for loop", pos: p))
+            return (nil, res)
+        }
+
+        return (res.success(WhileNode(conditionNode: cond_value!, bodyNode: body_value!)), res)
     }
 
     func if_expr() -> (AbstractNode?, ParserResult) {

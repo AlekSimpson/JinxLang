@@ -1,9 +1,9 @@
 /* RUN */
 
 var global_symbol_table = SymbolTable()
-global_symbol_table.set_val(name: "nil", value: 0.0) // nil value
-global_symbol_table.set_val(name: "true", value: 1.0)
-global_symbol_table.set_val(name: "false", value: 0.0)
+// global_symbol_table.set_val(name: "nil", value: 0.0)
+// global_symbol_table.set_val(name: "true", value: 1.0)
+// global_symbol_table.set_val(name: "false", value: 0.0)
 
 func run(text: String, fn: String) -> (Number?, Error?) {
     let lexer = Lexer(text_: text, fn: fn)
