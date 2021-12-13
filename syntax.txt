@@ -90,3 +90,13 @@ method minMax(arr: Array[Int], min?: Int, max?: Int): (Int, Int) {
     }
     m, n: (Int, Int) = minMax(arr: )
 }
+
+
+// Type structure
+
+abstract type Number end
+abstract type Real     <: Number end
+abstract type AbstractFloat <: Real end
+abstract type Integer  <: Real end
+abstract type Signed   <: Integer end
+abstract type Unsigned <: Integer end

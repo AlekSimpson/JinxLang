@@ -4,7 +4,7 @@ class Interpreter {
     func visit(node: AbstractNode, context: Context) -> RuntimeResult {
         let func_index = node.classType
         var result = RuntimeResult()
-        var table = [String : Double]()
+        var table = [String : Number]()
         if let t = context.symbolTable { table = t.symbols }
 
         switch func_index {
@@ -16,6 +16,7 @@ class Interpreter {
                 result = visit_unary(node: node as! UnaryOpNode, ctx: context)
             case 4: 
                 let err = check_for_declaration(table: table, node: node, context: context)
+
                 if let e = err { 
                     _ = result.failure(e)
                 }else {
@@ -29,6 +30,10 @@ class Interpreter {
                 result = visit_ForNode(node: node as! ForNode, ctx: context)
             case 8: 
                 result = visit_WhileNode(node: node as! WhileNode, ctx: context)
+            case 9:
+                result = visit_FuncDefNode(node: node as! FuncDefNode, ctx: context)
+            case 10:
+                result = visit_CallNode(node: node as! CallNode, ctx: context)
             default:
                 print("no visit method found")
         }
@@ -41,7 +46,7 @@ class Interpreter {
         
         var res_value = rt.register(self.visit(node: node.startValue, context: ctx))
         if rt.error != nil { return rt }
-        let start_value = res_value.value!.value
+        let start_value = res_value.value!
 
         res_value = rt.register(self.visit(node: node.endValue, context: ctx))
         if rt.error != nil { return rt }
@@ -51,14 +56,14 @@ class Interpreter {
         if rt.error != nil { return rt }
         let iterator_name = node.iterator.token.value as! String 
 
-        var i = start_value
+        let i = start_value
 
         var table = SymbolTable()
         if let t = ctx.symbolTable { table = t } 
 
-        while i < end_value {
+        while i.value < end_value {
             table.set_val(name: iterator_name, value: i)
-            i += 1
+            i.value += 1
 
             _ = rt.register(self.visit(node: node.bodyNode, context: ctx))
             if rt.error != nil { return rt }
@@ -84,7 +89,7 @@ class Interpreter {
         return RuntimeResult()
     }
 
-    func check_for_declaration(table: [String : Double], node: AbstractNode, context: Context) -> Error? {
+    func check_for_declaration(table: [String : Number], node: AbstractNode, context: Context) -> Error? {
         let access_node = node as! VarAccessNode
         let name = access_node.token.value as! String 
         var err:Error? = nil         
@@ -234,14 +239,14 @@ class Interpreter {
         let res = RuntimeResult()
         let var_name = node.token.value as! String
         
-        var value:Double? = nil
+        var value:Number? = nil
         if let table = ctx.symbolTable { 
             value = table.get_val(name: var_name) 
         }
         
 
         if value != nil {
-            return res.success(Number(value!))
+            return res.success(value!)
         }else {
             var p = Position()
             if let pos = node.token.pos { p = pos }
@@ -256,42 +261,60 @@ class Interpreter {
         let value = res.register(self.visit(node: node.value_node, context: ctx))
         if res.error != nil { return res }
 
-        ctx.symbolTable!.set_val(name: var_name, value: value.value!.value)
+        ctx.symbolTable!.set_val(name: var_name, value: value.value!)
         return res.success(value.value!)
     }
-}
 
-/* SYMBOL TABLE */
+    // create Function type and add it to the symbol table [function name (String) : function (Function)]
+    func visit_FuncDefNode(node: FuncDefNode, ctx: Context) -> RuntimeResult {
+        let res = RuntimeResult()
 
-class SymbolTable {
-    var symbols = [String:Double]()
-    var parent:SymbolTable? = nil 
+        let func_name = node.token.value 
+        let body_node = node.body_node
+        var func_arg_names:[String] = []
+        
+        var a_name_tokens: [Token] = []
+        if let unwrapped = node.arg_name_tokens { a_name_tokens = unwrapped }
 
-    init() {
-        self.symbols = [String : Double]()
-        self.parent = nil
-    }
-
-    func get_val(name: String) -> Double {
-        let value = symbols[name]
-        var returnVal: Double = 0.0
-
-        if let v = value {
-            returnVal = v 
+        for arg_name in a_name_tokens {
+            func_arg_names.append(arg_name.value as! String)
         }
 
-        if let p = parent {
-            returnVal = p.get_val(name: name)
+        let method = Function(name: func_name as? String, body_node: body_node, arg_nodes: func_arg_names)
+        method.set_context(ctx: ctx)
+
+        if func_name != nil {
+            var sTable = SymbolTable()
+            if let unwrapped = ctx.symbolTable { sTable = unwrapped }
+            sTable.set_val(name: func_name as! String, value: method)
         }
 
-        return returnVal
+        return res.success(method)
     }
 
-    func set_val(name: String, value: Double) {
-        self.symbols[name] = value 
-    }
+    // Get function name (value_to_call) then get the Function type from the symbol tree and then execute that function 
+    func visit_CallNode(node: CallNode, ctx: Context) -> RuntimeResult {
+        let res = RuntimeResult()
+        var args: [Number] = []
+        
+        let value_to_call = res.register(self.visit(node: node.node_to_call, context: ctx))
+        if res.error != nil { return (res) }
 
-    func remove_val(name: String) {
-        self.symbols.removeValue(forKey: name)
+        var func_value = Function()
+        if let unwrapped = value_to_call.value { func_value = unwrapped as! Function }
+
+        let val_cal = func_value.copy()
+
+        for arg_node in node.arg_nodes {
+            let x = Double(arg_node.token.value as! Int)
+            let new = Number(x)
+
+            args.append(new)
+        }
+
+        let (return_value, return_res) = val_cal.execute(args: args)
+        _ = res.register(return_res)
+        if res.error != nil { return res }
+        return res.success(return_value!)
     }
 }

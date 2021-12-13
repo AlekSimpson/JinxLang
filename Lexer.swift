@@ -17,6 +17,7 @@ class Lexer {
         var new_items = make_numbers(items: items)
         new_items = make_letters(items: new_items)
         new_items = make_else_if(items: new_items)
+        new_items = make_comparison(for: "-", op: ">", items: new_items)
         new_items = make_comparison(for: "!", items: new_items)
         new_items = make_comparison(for: "=", items: new_items)
         new_items = make_comparison(for: "<", items: new_items)
@@ -73,12 +74,16 @@ class Lexer {
                     token = Token(type: .OR, type_name: TT_OR, value: item, pos: tok_pos)
                 case "==":
                     token = Token(type: .EE, type_name: TT_EE, value: item, pos: tok_pos)
+                case "->": 
+                    token = Token(type: .ARROW, type_name: TT_ARROW, value: item, pos: tok_pos)
                 case "{":
                     token = Token(type: .LCURLY, type_name: TT_LCURLY, value: item, pos: tok_pos)
                 case "}":
                     token = Token(type: .RCURLY, type_name: TT_RCURLY, value: item, pos: tok_pos)
                 case ":":
                     token = Token(type: .INDICATOR, type_name: TT_INDICATOR, value: item, pos: tok_pos)
+                case ",":
+                    token = Token(type: .COMMA, type_name: TT_COMMA, value: item, pos: tok_pos)
                 default: 
                     return ([], IllegalCharError(details: "'\(item)'", pos: tok_pos))
             }
@@ -121,6 +126,8 @@ class Lexer {
                     token = Token(type: .IN, type_name: TT_IN, value: item, pos: pos)
                 case "while":
                     token = Token(type: .WHILE, type_name: TT_WHILE, value: item, pos: pos)
+                case "method":
+                    token = Token(type: .FUNC, type_name: TT_FUNC, value: item, pos: pos)
                 default:
                     token = Token(type: .IDENTIFIER, type_name: TT_ID, value: item, pos: pos)
             }
@@ -151,7 +158,7 @@ class Lexer {
         return false 
     }
 
-    func make_comparison(for comparison: String, items: [String]) -> [String] {
+    func make_comparison(for comparison: String, op: String="=", items: [String]) -> [String] {
         var new_items:[String] = []
         var skipNext = false 
 
@@ -161,8 +168,8 @@ class Lexer {
                 continue 
             }
 
-            if items[i] == comparison && items[i + 1] == "=" {
-                let new_char = "\(comparison)="
+            if items[i] == comparison && items[i + 1] == op {
+                let new_char = "\(comparison)\(op)"
                 new_items.append(new_char)
                 skipNext = true 
                 continue 

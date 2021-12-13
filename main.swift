@@ -77,6 +77,11 @@ class Number {
         self.set_context()
     }
 
+    init() {
+        self.value = 0.0
+        self.pos = nil
+    }
+
     func set_context(ctx: Context?=nil) {
         self.context = ctx 
     }
@@ -183,7 +188,87 @@ class Number {
         return "\(self.value)"
     }
 }
-/* POSITION */
+
+
+class Function: Number {
+    var name: String?
+    var body_node: AbstractNode
+    var arg_nodes: [String]?
+
+    init(name: String?="anonymous", body_node: AbstractNode, arg_nodes: [String]?=nil) {
+        self.name = name 
+        self.body_node = body_node
+        self.arg_nodes = arg_nodes
+        super.init()
+    }
+
+    override init() {
+        self.name = ""
+        self.body_node = BinOpNode()
+        self.arg_nodes = nil 
+        super.init()
+    }
+
+    func execute(args: [Number]) -> (Number?, RuntimeResult) {
+        let res = RuntimeResult()
+        let interpreter = Interpreter()
+
+        var str = ""
+        if let s = name { str = s }
+
+        let new_context = Context(display_name: str, parent: self.context, parent_entry_pos: self.pos)
+        var par = Context()
+        if let p = new_context.parent { par = p }
+        new_context.symbolTable = par.symbolTable
+
+        var a_nodes: [String] = []
+        if let a = self.arg_nodes { a_nodes = a }
+
+        var pos = Position()
+        if let unwrapped = body_node.token.pos { pos = unwrapped }
+
+
+        if args.count != 0 {
+            if args.count > a_nodes.count {
+                let err = RuntimeError(details: "to many arguements passed into function \(String(describing: name))", context: new_context, pos: pos)
+                _ = res.failure(err)
+                return (nil, res)
+            }
+
+            if args.count < a_nodes.count {
+                let err = RuntimeError(details: "to few arguements passed into function \(String(describing: name))", context: new_context, pos: pos)
+                _ = res.failure(err)
+                return (nil, res)
+            }
+
+            for i in 0...(a_nodes.count - 1) {
+                let arg_name = a_nodes[i] 
+                let arg_value = args[i]
+                arg_value.set_context(ctx: new_context)
+                var sTable = SymbolTable()
+                if let unwrapped = new_context.symbolTable { sTable = unwrapped }
+                sTable.set_val(name: arg_name, value: arg_value)
+            }
+        }
+
+        let body_res = interpreter.visit(node: self.body_node, context: new_context)
+        _ = res.register(body_res)
+        let value = res.value
+        if res.error != nil { return (nil, res) }
+        self.context = new_context
+        return (value, res)
+    }
+
+    func copy() -> Function {
+        let copy = Function(name: self.name, body_node: self.body_node, arg_nodes: self.arg_nodes) 
+        copy.set_context(ctx: self.context)
+        return copy 
+    }
+
+    override func print_self() -> String {
+        return "<function \(self.name ?? "lambda")>"
+    }
+}/* POSITION */
 
 class Position {
     var ln: Int 
@@ -205,6 +290,39 @@ class Position {
     func copy() -> Position {
         // return LinePosition(idx: self.idx, ln: self.ln, col: self.col)
         return self 
+    }
+}/* SYMBOL TABLE */
+
+class SymbolTable {
+    var symbols = [String:Number]()
+    var parent:SymbolTable? = nil 
+
+    init() {
+        self.symbols = [String : Number]()
+        self.parent = nil
+    }
+
+    func get_val(name: String) -> Number {
+        let value = symbols[name]
+        var returnVal: Number = Number(0.0)
+
+        if let v = value {
+            returnVal = v 
+        }
+
+        if let p = parent {
+            returnVal = p.get_val(name: name)
+        }
+
+        return returnVal
+    }
+
+    func set_val(name: String, value: Number) {
+        self.symbols[name] = value 
+    }
+
+    func remove_val(name: String) {
+        self.symbols.removeValue(forKey: name)
     }
 }/* CONTEXT */
 
@@ -246,6 +364,7 @@ class Lexer {
         var new_items = make_numbers(items: items)
         new_items = make_letters(items: new_items)
         new_items = make_else_if(items: new_items)
+        new_items = make_comparison(for: "-", op: ">", items: new_items)
         new_items = make_comparison(for: "!", items: new_items)
         new_items = make_comparison(for: "=", items: new_items)
         new_items = make_comparison(for: "<", items: new_items)
@@ -302,12 +421,16 @@ class Lexer {
                     token = Token(type: .OR, type_name: TT_OR, value: item, pos: tok_pos)
                 case "==":
                     token = Token(type: .EE, type_name: TT_EE, value: item, pos: tok_pos)
+                case "->": 
+                    token = Token(type: .ARROW, type_name: TT_ARROW, value: item, pos: tok_pos)
                 case "{":
                     token = Token(type: .LCURLY, type_name: TT_LCURLY, value: item, pos: tok_pos)
                 case "}":
                     token = Token(type: .RCURLY, type_name: TT_RCURLY, value: item, pos: tok_pos)
                 case ":":
                     token = Token(type: .INDICATOR, type_name: TT_INDICATOR, value: item, pos: tok_pos)
+                case ",":
+                    token = Token(type: .COMMA, type_name: TT_COMMA, value: item, pos: tok_pos)
                 default: 
                     return ([], IllegalCharError(details: "'\(item)'", pos: tok_pos))
             }
@@ -350,6 +473,8 @@ class Lexer {
                     token = Token(type: .IN, type_name: TT_IN, value: item, pos: pos)
                 case "while":
                     token = Token(type: .WHILE, type_name: TT_WHILE, value: item, pos: pos)
+                case "method":
+                    token = Token(type: .FUNC, type_name: TT_FUNC, value: item, pos: pos)
                 default:
                     token = Token(type: .IDENTIFIER, type_name: TT_ID, value: item, pos: pos)
             }
@@ -380,7 +505,7 @@ class Lexer {
         return false 
     }
 
-    func make_comparison(for comparison: String, items: [String]) -> [String] {
+    func make_comparison(for comparison: String, op: String="=", items: [String]) -> [String] {
         var new_items:[String] = []
         var skipNext = false 
 
@@ -390,8 +515,8 @@ class Lexer {
                 continue 
             }
 
-            if items[i] == comparison && items[i + 1] == "=" {
-                let new_char = "\(comparison)="
+            if items[i] == comparison && items[i + 1] == op {
+                let new_char = "\(comparison)\(op)"
                 new_items.append(new_char)
                 skipNext = true 
                 continue 
@@ -536,6 +661,10 @@ struct NumberNode: AbstractNode {
         self.direct_value = nil 
     }
 
+    func getNumber() -> Number {
+        return Number(token.value as! Double)
+    }
+
     func as_string() -> String {
         return token.as_string()
     }
@@ -646,6 +775,51 @@ struct WhileNode: AbstractNode {
     }
 }
 
+struct FuncDefNode: AbstractNode {
+    var token: Token 
+    var arg_name_tokens: [Token]?
+    var body_node: AbstractNode
+    var description: String { return "FuncDefNode(\(token.type_name))" }
+    var classType: Int { return 9 }
+    var lambda = Token(type: .IDENTIFIER, type_name: TT_ID, value: "lambda")
+
+    init(token: Token?=nil, arg_name_tokens: [Token]?=nil, body_node: AbstractNode) {
+        if token == nil {
+            self.token = lambda 
+        }else {
+            self.token = token!
+        }
+        self.arg_name_tokens = arg_name_tokens
+        self.body_node = body_node
+    }
+
+    func as_string() -> String {
+        return token.as_string()
+    }
+}
+
+struct CallNode: AbstractNode {
+    var token: Token 
+    var node_to_call: AbstractNode
+    var arg_nodes: [AbstractNode]
+    var description: String { return "CallNode(\(token.type_name))" }
+    var classType: Int { return 10 }
+
+    init(token: Token?=nil, node_to_call: AbstractNode, arg_nodes: [AbstractNode]) {
+        if token == nil {
+            self.token = Token()
+        }else {
+            self.token = token!
+        }
+        self.node_to_call = node_to_call
+        self.arg_nodes = arg_nodes
+    }
+
+    func as_string() -> String {
+        return token.as_string()
+    }
+}
+
 struct BinOpNode: AbstractNode {
     let lhs: AbstractNode
     let op: AbstractNode
@@ -724,6 +898,56 @@ class Parser {
         return (node_result, nil)
     }
 
+    func call() -> (AbstractNode?, ParserResult) {
+        let res = ParserResult()
+
+        let (atom, atom_res) = self.atom()
+        _ = res.register(atom_res)
+        if res.error != nil { return (nil, res) }
+        
+        if self.curr_token.type_name == TT_LPAREN {
+            _ = res.register(self.advance())
+            
+            var arg_nodes:[AbstractNode] = []
+
+            if self.curr_token.type_name == TT_RPAREN {
+                _ = res.register(self.advance())
+            }else {
+                let (expr, expr_res) = self.expr()
+                if expr_res.error != nil { return (nil, expr_res) }
+                arg_nodes.append(res.register(expr!))
+                if expr_res.error != nil {
+                    var p = Position()
+                    if let unwrapped = expr!.token.pos { p = unwrapped }
+                    let err = InvalidSyntaxError(details: "Expected closing parenthese in function declaration", pos: p) 
+                    _ = res.failure(err)
+                    return (nil, res)
+                }
+
+                while self.curr_token.type_name == TT_COMMA {
+                    _ = res.register(self.advance())
+
+                    let (expr, expr_res) = self.expr()
+                    if expr_res.error != nil { return (nil, expr_res) }
+                    arg_nodes.append(res.register(expr!))
+                }
+
+                if self.curr_token.type_name != TT_RPAREN {
+                    var p = Position()
+                    if let unwrapped = expr!.token.pos { p = unwrapped }
+                    let err = InvalidSyntaxError(details: "Expected closing parenthese in function declaration", pos: p) 
+                    _ = res.failure(err)
+                    return (nil, res)
+                }
+
+                _ = res.register(self.advance())
+            }
+            return (res.success(CallNode(node_to_call: atom!, arg_nodes: arg_nodes)), res)
+        }
+        
+        return (res.success(atom!), res)
+    }
+
     func atom() -> (AbstractNode?, ParserResult) {
         let res = ParserResult()
         let tok = self.curr_token
@@ -781,13 +1005,102 @@ class Parser {
                 if let unwrapped = while_expr { while_expr = unwrapped }
                 returnVal = (while_expr, res)
             }
-        }else {
+        }else if tok.type_name == "FUNC" {
+            var (func_def, func_res) = self.func_def()
+            _ = res.register(func_res)
+            if let err = res.error {
+                _ = res.failure(err)
+            }else {
+                if let unwrapped = func_def { func_def = unwrapped }
+                returnVal = (func_def, res)
+            }
+        }
+        else {
             var p = Position()
             if let position = tok.pos { p = position }
             _ = res.failure(InvalidSyntaxError(details: "Expected int, float, identifier, '+', '-', or '('", pos: p))
         }
 
         return returnVal
+    }
+
+    func func_def() -> (AbstractNode?, ParserResult) {
+        let res = ParserResult()
+
+        if !(self.curr_token.type_name == "FUNC") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected 'method' keyword in function definition", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        var name_token = Token()
+        if self.curr_token.type_name == TT_ID { 
+            name_token = self.curr_token 
+            _ = res.register(self.advance())
+        }
+
+        if !(self.curr_token.type_name == TT_LPAREN) {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected '(' in function definition", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+        var arg_name_tokens: [Token] = []
+
+        if self.curr_token.type_name == TT_ID {
+            arg_name_tokens.append(self.curr_token)
+            _ = res.register(self.advance())
+
+            while self.curr_token.type_name == TT_COMMA {
+                _ = res.register(self.advance())
+
+                if self.curr_token.type_name != TT_ID {
+                    var p = Position()
+                    if let position = self.curr_token.pos { p = position }
+                    _ = res.failure(InvalidSyntaxError(details: "Expected identifier after comma in function definition", pos: p))
+                    return (nil, res)
+                }
+
+                arg_name_tokens.append(self.curr_token)
+                _ = res.register(self.advance())
+            }
+
+            if !(self.curr_token.type_name == TT_RPAREN) {
+                var p = Position()
+                if let position = self.curr_token.pos { p = position }
+                _ = res.failure(InvalidSyntaxError(details: "Expected ')' in function defintion", pos: p))
+                return (nil, res)
+            }
+        }else {
+            if !(self.curr_token.type_name == TT_RPAREN) {
+                var p = Position()
+                if let position = self.curr_token.pos { p = position }
+                _ = res.failure(InvalidSyntaxError(details: "Expected identifier or ')' in function defintion", pos: p))
+                return (nil, res)
+            }
+        }
+
+        _ = res.register(self.advance())
+
+        if self.curr_token.type_name != TT_ARROW {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected '->' in function defintion", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        let (node_to_return, return_res) = self.expr()
+        _ = res.register(return_res)
+        if res.error != nil { return (nil, res) }
+
+        return (res.success(FuncDefNode(token: name_token, arg_name_tokens: arg_name_tokens, body_node: node_to_return!)), res)
     }
 
     func for_expr() -> (AbstractNode?, ParserResult) {
@@ -1006,7 +1319,8 @@ class Parser {
     }
 
     func power() -> (AbstractNode?, ParserResult) {
-        return bin_op(funcA: atom, ops: TT_POW, funcB: factor)
+        // return bin_op(funcA: atom, ops: TT_POW, funcB: factor)
+        return bin_op(funcA: call, ops: TT_POW, funcB: factor)
     }
 
     func factor() -> (AbstractNode?, ParserResult) {
@@ -1141,50 +1455,13 @@ class Parser {
     }
 }
 
-/* Parse Result */
-
-class ParserResult { 
-    var error: Error?
-    var node: AbstractNode? 
-
-    init() {
-        self.error = nil 
-        self.node = nil 
-    }
-
-    ///////////////////////////////////////////
-
-    func register(_ res: ParserResult) -> AbstractNode {
-        if res.error != nil { self.error = res.error }
-        return res.node ?? VariableNode()
-    }
-
-    func register(_ _node: AbstractNode) -> AbstractNode {
-        return _node
-    }
-
-    func register(_ _token: Token ) -> Token {
-        return _token 
-    }
-
-    ///////////////////////////////////////////
-
-    func success(_ node: AbstractNode) -> AbstractNode {
-        self.node = node
-        return node 
-    }
-
-    func failure(_ error: Error) -> Error {
-        self.error = error 
-        return self.error!
-    }
-}/* INTERPRETER */
+/* INTERPRETER */
 
 class Interpreter {
     func visit(node: AbstractNode, context: Context) -> RuntimeResult {
         let func_index = node.classType
         var result = RuntimeResult()
-        var table = [String : Double]()
+        var table = [String : Number]()
         if let t = context.symbolTable { table = t.symbols }
 
         switch func_index {
@@ -1196,6 +1473,7 @@ class Interpreter {
                 result = visit_unary(node: node as! UnaryOpNode, ctx: context)
             case 4: 
                 let err = check_for_declaration(table: table, node: node, context: context)
+
                 if let e = err { 
                     _ = result.failure(e)
                 }else {
@@ -1209,6 +1487,10 @@ class Interpreter {
                 result = visit_ForNode(node: node as! ForNode, ctx: context)
             case 8: 
                 result = visit_WhileNode(node: node as! WhileNode, ctx: context)
+            case 9:
+                result = visit_FuncDefNode(node: node as! FuncDefNode, ctx: context)
+            case 10:
+                result = visit_CallNode(node: node as! CallNode, ctx: context)
             default:
                 print("no visit method found")
         }
@@ -1221,7 +1503,7 @@ class Interpreter {
         
         var res_value = rt.register(self.visit(node: node.startValue, context: ctx))
         if rt.error != nil { return rt }
-        let start_value = res_value.value!.value
+        let start_value = res_value.value!
 
         res_value = rt.register(self.visit(node: node.endValue, context: ctx))
         if rt.error != nil { return rt }
@@ -1231,14 +1513,14 @@ class Interpreter {
         if rt.error != nil { return rt }
         let iterator_name = node.iterator.token.value as! String 
 
-        var i = start_value
+        let i = start_value
 
         var table = SymbolTable()
         if let t = ctx.symbolTable { table = t } 
 
-        while i < end_value {
+        while i.value < end_value {
             table.set_val(name: iterator_name, value: i)
-            i += 1
+            i.value += 1
 
             _ = rt.register(self.visit(node: node.bodyNode, context: ctx))
             if rt.error != nil { return rt }
@@ -1264,7 +1546,7 @@ class Interpreter {
         return RuntimeResult()
     }
 
-    func check_for_declaration(table: [String : Double], node: AbstractNode, context: Context) -> Error? {
+    func check_for_declaration(table: [String : Number], node: AbstractNode, context: Context) -> Error? {
         let access_node = node as! VarAccessNode
         let name = access_node.token.value as! String 
         var err:Error? = nil         
@@ -1414,14 +1696,14 @@ class Interpreter {
         let res = RuntimeResult()
         let var_name = node.token.value as! String
         
-        var value:Double? = nil
+        var value:Number? = nil
         if let table = ctx.symbolTable { 
             value = table.get_val(name: var_name) 
         }
         
 
         if value != nil {
-            return res.success(Number(value!))
+            return res.success(value!)
         }else {
             var p = Position()
             if let pos = node.token.pos { p = pos }
@@ -1436,43 +1718,98 @@ class Interpreter {
         let value = res.register(self.visit(node: node.value_node, context: ctx))
         if res.error != nil { return res }
 
-        ctx.symbolTable!.set_val(name: var_name, value: value.value!.value)
+        ctx.symbolTable!.set_val(name: var_name, value: value.value!)
         return res.success(value.value!)
     }
-}
 
-/* SYMBOL TABLE */
+    // create Function type and add it to the symbol table [function name (String) : function (Function)]
+    func visit_FuncDefNode(node: FuncDefNode, ctx: Context) -> RuntimeResult {
+        let res = RuntimeResult()
 
-class SymbolTable {
-    var symbols = [String:Double]()
-    var parent:SymbolTable? = nil 
+        let func_name = node.token.value 
+        let body_node = node.body_node
+        var func_arg_names:[String] = []
+        
+        var a_name_tokens: [Token] = []
+        if let unwrapped = node.arg_name_tokens { a_name_tokens = unwrapped }
+
+        for arg_name in a_name_tokens {
+            func_arg_names.append(arg_name.value as! String)
+        }
+
+        let method = Function(name: func_name as? String, body_node: body_node, arg_nodes: func_arg_names)
+        method.set_context(ctx: ctx)
+
+        if func_name != nil {
+            var sTable = SymbolTable()
+            if let unwrapped = ctx.symbolTable { sTable = unwrapped }
+            sTable.set_val(name: func_name as! String, value: method)
+        }
+
+        return res.success(method)
+    }
+
+    // Get function name (value_to_call) then get the Function type from the symbol tree and then execute that function 
+    func visit_CallNode(node: CallNode, ctx: Context) -> RuntimeResult {
+        let res = RuntimeResult()
+        var args: [Number] = []
+        
+        let value_to_call = res.register(self.visit(node: node.node_to_call, context: ctx))
+        if res.error != nil { return (res) }
+
+        var func_value = Function()
+        if let unwrapped = value_to_call.value { func_value = unwrapped as! Function }
+
+        let val_cal = func_value.copy()
+
+        for arg_node in node.arg_nodes {
+            let x = Double(arg_node.token.value as! Int)
+            let new = Number(x)
+
+            args.append(new)
+        }
+
+        let (return_value, return_res) = val_cal.execute(args: args)
+        _ = res.register(return_res)
+        if res.error != nil { return res }
+        return res.success(return_value!)
+    }
+}/* Parse Result */
+
+class ParserResult { 
+    var error: Error?
+    var node: AbstractNode? 
 
     init() {
-        self.symbols = [String : Double]()
-        self.parent = nil
+        self.error = nil 
+        self.node = nil 
     }
 
-    func get_val(name: String) -> Double {
-        let value = symbols[name]
-        var returnVal: Double = 0.0
+    ///////////////////////////////////////////
 
-        if let v = value {
-            returnVal = v 
-        }
-
-        if let p = parent {
-            returnVal = p.get_val(name: name)
-        }
-
-        return returnVal
+    func register(_ res: ParserResult) -> AbstractNode {
+        if res.error != nil { self.error = res.error }
+        return res.node ?? VariableNode()
     }
 
-    func set_val(name: String, value: Double) {
-        self.symbols[name] = value 
+    func register(_ _node: AbstractNode) -> AbstractNode {
+        return _node
     }
 
-    func remove_val(name: String) {
-        self.symbols.removeValue(forKey: name)
+    func register(_ _token: Token ) -> Token {
+        return _token 
+    }
+
+    ///////////////////////////////////////////
+
+    func success(_ node: AbstractNode) -> AbstractNode {
+        self.node = node
+        return node 
+    }
+
+    func failure(_ error: Error) -> Error {
+        self.error = error 
+        return self.error!
     }
 }/* RUNTIME RESULT */
 
@@ -1513,32 +1850,36 @@ enum TT {
     case FACTOR 
     case OPERATOR
     case GROUP
-    // case KEYWORD
+    
     case IDENTIFIER
+    case EOF
+    case INDICATOR
     
     case EQ
-    case EOF
     case EE 
     case NE 
     case LT 
     case GT 
     case LOE 
     case GOE 
-    case AND 
-    case OR 
+
     case NOT
+    case OR 
+    case AND 
 
     case IF
     case ELIF 
     case ELSE 
-
     case FOR
     case IN
     case WHILE
 
     case LCURLY 
     case RCURLY 
-    case INDICATOR
+
+    case FUNC
+    case ARROW
+    case COMMA
 }
 
 let TT_INT       = "INT"
@@ -1548,30 +1889,40 @@ let TT_MINUS     = "MINUS"
 let TT_MUL       = "MUL"
 let TT_DIV       = "DIV"
 let TT_POW       = "POW"
+
 let TT_LPAREN    = "LPAREN"
 let TT_RPAREN    = "RPAREN"
-let TT_EQ        = "EQ"
+let TT_LCURLY = "LCURLY"
+let TT_RCURLY = "RCURLY"
+
 let TT_ID        = "IDENTIFIER" // name of variables
 let TT_EOF       = "EOF"
+let TT_INDICATOR = "INDICATOR"
+
+let TT_EQ        = "EQ"
 let TT_EE        = "EQUALS"
 let TT_NE        = "NOT EQUALS"
-let TT_NOT       = "NOT"
 let TT_LT        = "LESS THAN"
 let TT_GT        = "GREATER THAN"
 let TT_LOE       = "LESS THAN OR EQUALS"
 let TT_GOE       = "GREATER THAN OR EQUALS"
+
+let TT_NOT       = "NOT"
 let TT_AND       = "AND"
 let TT_OR        = "OR"
+
 let TT_IF        = "IF" 
 let TT_ELIF      = "ELSE IF"
 let TT_ELSE      = "ELSE"
 let TT_FOR       = "FOR"
 let TT_WHILE     = "WHILE"
 let TT_IN        = "IN"
-let TT_INDICATOR = "INDICATOR"
 
-let TT_LCURLY = "LCURLY"
-let TT_RCURLY = "RCURLY"
+let TT_FUNC      = "FUNC"
+let TT_COMMA     = "COMMA"
+let TT_ARROW     = "ARROW"
+
+
 
 class Token {
     // This is is Metatype, (ex: factor, operator, etc)

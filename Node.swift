@@ -24,6 +24,10 @@ struct NumberNode: AbstractNode {
         self.direct_value = nil 
     }
 
+    func getNumber() -> Number {
+        return Number(token.value as! Double)
+    }
+
     func as_string() -> String {
         return token.as_string()
     }
@@ -127,6 +131,51 @@ struct WhileNode: AbstractNode {
         self.conditionNode = conditionNode
         self.bodyNode = bodyNode
         self.token = conditionNode.token 
+    }
+
+    func as_string() -> String {
+        return token.as_string()
+    }
+}
+
+struct FuncDefNode: AbstractNode {
+    var token: Token 
+    var arg_name_tokens: [Token]?
+    var body_node: AbstractNode
+    var description: String { return "FuncDefNode(\(token.type_name))" }
+    var classType: Int { return 9 }
+    var lambda = Token(type: .IDENTIFIER, type_name: TT_ID, value: "lambda")
+
+    init(token: Token?=nil, arg_name_tokens: [Token]?=nil, body_node: AbstractNode) {
+        if token == nil {
+            self.token = lambda 
+        }else {
+            self.token = token!
+        }
+        self.arg_name_tokens = arg_name_tokens
+        self.body_node = body_node
+    }
+
+    func as_string() -> String {
+        return token.as_string()
+    }
+}
+
+struct CallNode: AbstractNode {
+    var token: Token 
+    var node_to_call: AbstractNode
+    var arg_nodes: [AbstractNode]
+    var description: String { return "CallNode(\(token.type_name))" }
+    var classType: Int { return 10 }
+
+    init(token: Token?=nil, node_to_call: AbstractNode, arg_nodes: [AbstractNode]) {
+        if token == nil {
+            self.token = Token()
+        }else {
+            self.token = token!
+        }
+        self.node_to_call = node_to_call
+        self.arg_nodes = arg_nodes
     }
 
     func as_string() -> String {

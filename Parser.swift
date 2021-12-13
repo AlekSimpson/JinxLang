@@ -31,6 +31,56 @@ class Parser {
         return (node_result, nil)
     }
 
+    func call() -> (AbstractNode?, ParserResult) {
+        let res = ParserResult()
+
+        let (atom, atom_res) = self.atom()
+        _ = res.register(atom_res)
+        if res.error != nil { return (nil, res) }
+        
+        if self.curr_token.type_name == TT_LPAREN {
+            _ = res.register(self.advance())
+            
+            var arg_nodes:[AbstractNode] = []
+
+            if self.curr_token.type_name == TT_RPAREN {
+                _ = res.register(self.advance())
+            }else {
+                let (expr, expr_res) = self.expr()
+                if expr_res.error != nil { return (nil, expr_res) }
+                arg_nodes.append(res.register(expr!))
+                if expr_res.error != nil {
+                    var p = Position()
+                    if let unwrapped = expr!.token.pos { p = unwrapped }
+                    let err = InvalidSyntaxError(details: "Expected closing parenthese in function declaration", pos: p) 
+                    _ = res.failure(err)
+                    return (nil, res)
+                }
+
+                while self.curr_token.type_name == TT_COMMA {
+                    _ = res.register(self.advance())
+
+                    let (expr, expr_res) = self.expr()
+                    if expr_res.error != nil { return (nil, expr_res) }
+                    arg_nodes.append(res.register(expr!))
+                }
+
+                if self.curr_token.type_name != TT_RPAREN {
+                    var p = Position()
+                    if let unwrapped = expr!.token.pos { p = unwrapped }
+                    let err = InvalidSyntaxError(details: "Expected closing parenthese in function declaration", pos: p) 
+                    _ = res.failure(err)
+                    return (nil, res)
+                }
+
+                _ = res.register(self.advance())
+            }
+            return (res.success(CallNode(node_to_call: atom!, arg_nodes: arg_nodes)), res)
+        }
+        
+        return (res.success(atom!), res)
+    }
+
     func atom() -> (AbstractNode?, ParserResult) {
         let res = ParserResult()
         let tok = self.curr_token
@@ -88,13 +138,102 @@ class Parser {
                 if let unwrapped = while_expr { while_expr = unwrapped }
                 returnVal = (while_expr, res)
             }
-        }else {
+        }else if tok.type_name == "FUNC" {
+            var (func_def, func_res) = self.func_def()
+            _ = res.register(func_res)
+            if let err = res.error {
+                _ = res.failure(err)
+            }else {
+                if let unwrapped = func_def { func_def = unwrapped }
+                returnVal = (func_def, res)
+            }
+        }
+        else {
             var p = Position()
             if let position = tok.pos { p = position }
             _ = res.failure(InvalidSyntaxError(details: "Expected int, float, identifier, '+', '-', or '('", pos: p))
         }
 
         return returnVal
+    }
+
+    func func_def() -> (AbstractNode?, ParserResult) {
+        let res = ParserResult()
+
+        if !(self.curr_token.type_name == "FUNC") {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected 'method' keyword in function definition", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        var name_token = Token()
+        if self.curr_token.type_name == TT_ID { 
+            name_token = self.curr_token 
+            _ = res.register(self.advance())
+        }
+
+        if !(self.curr_token.type_name == TT_LPAREN) {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected '(' in function definition", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+        var arg_name_tokens: [Token] = []
+
+        if self.curr_token.type_name == TT_ID {
+            arg_name_tokens.append(self.curr_token)
+            _ = res.register(self.advance())
+
+            while self.curr_token.type_name == TT_COMMA {
+                _ = res.register(self.advance())
+
+                if self.curr_token.type_name != TT_ID {
+                    var p = Position()
+                    if let position = self.curr_token.pos { p = position }
+                    _ = res.failure(InvalidSyntaxError(details: "Expected identifier after comma in function definition", pos: p))
+                    return (nil, res)
+                }
+
+                arg_name_tokens.append(self.curr_token)
+                _ = res.register(self.advance())
+            }
+
+            if !(self.curr_token.type_name == TT_RPAREN) {
+                var p = Position()
+                if let position = self.curr_token.pos { p = position }
+                _ = res.failure(InvalidSyntaxError(details: "Expected ')' in function defintion", pos: p))
+                return (nil, res)
+            }
+        }else {
+            if !(self.curr_token.type_name == TT_RPAREN) {
+                var p = Position()
+                if let position = self.curr_token.pos { p = position }
+                _ = res.failure(InvalidSyntaxError(details: "Expected identifier or ')' in function defintion", pos: p))
+                return (nil, res)
+            }
+        }
+
+        _ = res.register(self.advance())
+
+        if self.curr_token.type_name != TT_ARROW {
+            var p = Position()
+            if let position = self.curr_token.pos { p = position }
+            _ = res.failure(InvalidSyntaxError(details: "Expected '->' in function defintion", pos: p))
+            return (nil, res)
+        }
+
+        _ = res.register(self.advance())
+
+        let (node_to_return, return_res) = self.expr()
+        _ = res.register(return_res)
+        if res.error != nil { return (nil, res) }
+
+        return (res.success(FuncDefNode(token: name_token, arg_name_tokens: arg_name_tokens, body_node: node_to_return!)), res)
     }
 
     func for_expr() -> (AbstractNode?, ParserResult) {
@@ -313,7 +452,8 @@ class Parser {
     }
 
     func power() -> (AbstractNode?, ParserResult) {
-        return bin_op(funcA: atom, ops: TT_POW, funcB: factor)
+        // return bin_op(funcA: atom, ops: TT_POW, funcB: factor)
+        return bin_op(funcA: call, ops: TT_POW, funcB: factor)
     }
 
     func factor() -> (AbstractNode?, ParserResult) {
@@ -448,41 +588,3 @@ class Parser {
     }
 }
 
-/* Parse Result */
-
-class ParserResult { 
-    var error: Error?
-    var node: AbstractNode? 
-
-    init() {
-        self.error = nil 
-        self.node = nil 
-    }
-
-    ///////////////////////////////////////////
-
-    func register(_ res: ParserResult) -> AbstractNode {
-        if res.error != nil { self.error = res.error }
-        return res.node ?? VariableNode()
-    }
-
-    func register(_ _node: AbstractNode) -> AbstractNode {
-        return _node
-    }
-
-    func register(_ _token: Token ) -> Token {
-        return _token 
-    }
-
-    ///////////////////////////////////////////
-
-    func success(_ node: AbstractNode) -> AbstractNode {
-        self.node = node
-        return node 
-    }
-
-    func failure(_ error: Error) -> Error {
-        self.error = error 
-        return self.error!
-    }
-}
