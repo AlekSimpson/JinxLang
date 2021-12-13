@@ -34,11 +34,22 @@ class Interpreter {
                 result = visit_FuncDefNode(node: node as! FuncDefNode, ctx: context)
             case 10:
                 result = visit_CallNode(node: node as! CallNode, ctx: context)
+            case 11: 
+                result = visit_StringNode(node: node as! StringNode, ctx: context)
             default:
                 print("no visit method found")
         }
 
         return result
+    }
+
+    func visit_StringNode(node: StringNode, ctx: Context) -> RuntimeResult {
+        let rt = RuntimeResult()
+
+        let str = string(value: (node.token.value as! String))
+        str.set_context(ctx: ctx)
+
+        return rt.success(str)
     }
 
     func visit_ForNode(node: ForNode, ctx: Context) -> RuntimeResult {

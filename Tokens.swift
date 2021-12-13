@@ -7,6 +7,8 @@ enum TT {
     case OPERATOR
     case GROUP
     
+    case STRING
+
     case IDENTIFIER
     case EOF
     case INDICATOR
@@ -40,6 +42,8 @@ enum TT {
 
 let TT_INT       = "INT"
 let TT_FLOAT     = "FLOAT"
+let TT_STRING    = "STRING"
+
 let TT_PLUS      = "PLUS"
 let TT_MINUS     = "MINUS"
 let TT_MUL       = "MUL"

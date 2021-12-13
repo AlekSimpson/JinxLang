@@ -15,13 +15,16 @@ class Lexer {
     func make_tokens() -> ([Token], Error?) {
         let items = Array(self.text).map(String.init)
         var new_items = make_numbers(items: items)
-        new_items = make_letters(items: new_items)
-        new_items = make_else_if(items: new_items)
-        new_items = make_comparison(for: "-", op: ">", items: new_items)
-        new_items = make_comparison(for: "!", items: new_items)
-        new_items = make_comparison(for: "=", items: new_items)
-        new_items = make_comparison(for: "<", items: new_items)
-        new_items = make_comparison(for: ">", items: new_items)
+        new_items = make_strings(items: new_items)
+        if new_items.count != 1 {
+            new_items = make_letters(items: new_items)
+            new_items = make_else_if(items: new_items)
+            new_items = make_comparison(for: "-", op: ">", items: new_items)
+            new_items = make_comparison(for: "!", items: new_items)
+            new_items = make_comparison(for: "=", items: new_items)
+            new_items = make_comparison(for: "<", items: new_items)
+            new_items = make_comparison(for: ">", items: new_items)
+        }
 
         var txt_col = 0
         for item in new_items {
@@ -29,13 +32,17 @@ class Lexer {
 
             let tok_pos = Position(ln: 1, col: txt_col, fn: self.filename)
 
+            // tokenize string types 
+            let string_check = tokenize_strings(item: item, pos: tok_pos)
+            if string_check { continue }
+
             // tokenize numbers
             let num_check = tokenize_number(item: item, pos: tok_pos)
             if num_check { continue }
 
             // tokenize words
             let word_check = tokenize_letters(item: item, pos: tok_pos)
-            if word_check { continue }            
+            if word_check { continue } 
 
             var token = Token()
 
@@ -103,6 +110,17 @@ class Lexer {
         return false 
     }
 
+    func tokenize_strings(item: String, pos: Position) -> Bool {
+        let characters = Array(item)
+        
+        if characters[0] == "\"" {
+            let token = Token(type: .STRING, type_name: TT_STRING, value: item, pos: pos)
+            self.tokens.append(token)
+            return true
+        }
+        return false 
+    }
+
     func tokenize_letters(item: String, pos: Position) -> Bool {
         let chars:[String] = Array(arrayLiteral: item)
         var token = Token()
@@ -156,6 +174,37 @@ class Lexer {
             return true // continue
         } 
         return false 
+    }
+
+    // Creates string type tokens 
+    func make_strings(items: [String]) -> [String] {
+        var new_items:[String] = []
+        var curr_str = ""
+        // var escape_char = false 
+        var isStr = false
+
+        for i in 0...(items.count - 1) {
+            if isStr {
+                if items[i] == "\"" { 
+                    curr_str = curr_str + items[i]
+                    new_items.append(curr_str)
+                    isStr = false 
+                    curr_str = ""
+                    continue 
+                }
+
+                curr_str = curr_str + items[i]
+                continue       
+            }
+
+            if items[i] == "\"" {
+                curr_str = curr_str + items[i]
+                isStr = true 
+            }else {
+                new_items.append(items[i])
+            }
+        }
+        return new_items
     }
 
     func make_comparison(for comparison: String, op: String="=", items: [String]) -> [String] {

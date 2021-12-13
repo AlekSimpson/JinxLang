@@ -183,6 +183,20 @@ struct CallNode: AbstractNode {
     }
 }
 
+struct StringNode: AbstractNode {
+    var token: Token 
+    var description: String { return "StringNode(\(token.type_name))" }
+    var classType: Int { return 11 }
+
+    init(token: Token) {
+        self.token = token 
+    }
+
+    func as_string() -> String {
+        return token.as_string()
+    }
+}
+
 struct BinOpNode: AbstractNode {
     let lhs: AbstractNode
     let op: AbstractNode

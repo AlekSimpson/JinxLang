@@ -204,3 +204,30 @@ class Function: Number {
         return "<function \(self.name ?? "lambda")>"
     }
 }
+
+class string: Number {
+    var str_value: String?
+
+    init(value: String?=nil) {
+        self.str_value = value
+        super.init()
+    }
+
+    func added(to other: string) -> (string?, Error?) {
+        var otherVal = ""
+        var str = ""
+        if let unwrapped = other.str_value { otherVal = unwrapped }
+        if let unwrapped = self.str_value { str = unwrapped }
+        let new_str = string(value: str + otherVal)
+        new_str.set_context(ctx: other.context)
+        return (new_str, nil)
+    }
+
+    override func is_true() -> Bool {
+        return self.str_value != nil 
+    }
+
+    override func print_self() -> String {
+        return "<string \(self.str_value ?? "")>"
+    }
+}

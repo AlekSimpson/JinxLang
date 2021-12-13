@@ -268,6 +268,33 @@ class Function: Number {
     override func print_self() -> String {
         return "<function \(self.name ?? "lambda")>"
     }
+}
+
+class string: Number {
+    var str_value: String?
+
+    init(value: String?=nil) {
+        self.str_value = value
+        super.init()
+    }
+
+    func added(to other: string) -> (string?, Error?) {
+        var otherVal = ""
+        var str = ""
+        if let unwrapped = other.str_value { otherVal = unwrapped }
+        if let unwrapped = self.str_value { str = unwrapped }
+        let new_str = string(value: str + otherVal)
+        new_str.set_context(ctx: other.context)
+        return (new_str, nil)
+    }
+
+    override func is_true() -> Bool {
+        return self.str_value != nil 
+    }
+
+    override func print_self() -> String {
+        return "<string \(self.str_value ?? "")>"
+    }
 }/* POSITION */
 
 class Position {
@@ -362,13 +389,16 @@ class Lexer {
     func make_tokens() -> ([Token], Error?) {
         let items = Array(self.text).map(String.init)
         var new_items = make_numbers(items: items)
-        new_items = make_letters(items: new_items)
-        new_items = make_else_if(items: new_items)
-        new_items = make_comparison(for: "-", op: ">", items: new_items)
-        new_items = make_comparison(for: "!", items: new_items)
-        new_items = make_comparison(for: "=", items: new_items)
-        new_items = make_comparison(for: "<", items: new_items)
-        new_items = make_comparison(for: ">", items: new_items)
+        new_items = make_strings(items: new_items)
+        if new_items.count != 1 {
+            new_items = make_letters(items: new_items)
+            new_items = make_else_if(items: new_items)
+            new_items = make_comparison(for: "-", op: ">", items: new_items)
+            new_items = make_comparison(for: "!", items: new_items)
+            new_items = make_comparison(for: "=", items: new_items)
+            new_items = make_comparison(for: "<", items: new_items)
+            new_items = make_comparison(for: ">", items: new_items)
+        }
 
         var txt_col = 0
         for item in new_items {
@@ -376,13 +406,17 @@ class Lexer {
 
             let tok_pos = Position(ln: 1, col: txt_col, fn: self.filename)
 
+            // tokenize string types 
+            let string_check = tokenize_strings(item: item, pos: tok_pos)
+            if string_check { continue }
+
             // tokenize numbers
             let num_check = tokenize_number(item: item, pos: tok_pos)
             if num_check { continue }
 
             // tokenize words
             let word_check = tokenize_letters(item: item, pos: tok_pos)
-            if word_check { continue }            
+            if word_check { continue } 
 
             var token = Token()
 
@@ -450,6 +484,17 @@ class Lexer {
         return false 
     }
 
+    func tokenize_strings(item: String, pos: Position) -> Bool {
+        let characters = Array(item)
+        
+        if characters[0] == "\"" {
+            let token = Token(type: .STRING, type_name: TT_STRING, value: item, pos: pos)
+            self.tokens.append(token)
+            return true
+        }
+        return false 
+    }
+
     func tokenize_letters(item: String, pos: Position) -> Bool {
         let chars:[String] = Array(arrayLiteral: item)
         var token = Token()
@@ -503,6 +548,37 @@ class Lexer {
             return true // continue
         } 
         return false 
+    }
+
+    // Creates string type tokens 
+    func make_strings(items: [String]) -> [String] {
+        var new_items:[String] = []
+        var curr_str = ""
+        // var escape_char = false 
+        var isStr = false
+
+        for i in 0...(items.count - 1) {
+            if isStr {
+                if items[i] == "\"" { 
+                    curr_str = curr_str + items[i]
+                    new_items.append(curr_str)
+                    isStr = false 
+                    curr_str = ""
+                    continue 
+                }
+
+                curr_str = curr_str + items[i]
+                continue       
+            }
+
+            if items[i] == "\"" {
+                curr_str = curr_str + items[i]
+                isStr = true 
+            }else {
+                new_items.append(items[i])
+            }
+        }
+        return new_items
     }
 
     func make_comparison(for comparison: String, op: String="=", items: [String]) -> [String] {
@@ -820,6 +896,20 @@ struct CallNode: AbstractNode {
     }
 }
 
+struct StringNode: AbstractNode {
+    var token: Token 
+    var description: String { return "StringNode(\(token.type_name))" }
+    var classType: Int { return 11 }
+
+    init(token: Token) {
+        self.token = token 
+    }
+
+    func as_string() -> String {
+        return token.as_string()
+    }
+}
+
 struct BinOpNode: AbstractNode {
     let lhs: AbstractNode
     let op: AbstractNode
@@ -960,6 +1050,9 @@ class Parser {
         }else if tok.type == .IDENTIFIER {
             _ = res.register(self.advance())
             return (res.success(VarAccessNode(token: tok)), res)
+        }else if tok.type_name == TT_STRING {
+            _ = res.register(self.advance())
+            return (res.success(StringNode(token: tok)), res)
         }else if tok.type_name == "LPAREN" {
             _ = res.register(self.advance())
             let recurrsion = self.expr()
@@ -1491,11 +1584,22 @@ class Interpreter {
                 result = visit_FuncDefNode(node: node as! FuncDefNode, ctx: context)
             case 10:
                 result = visit_CallNode(node: node as! CallNode, ctx: context)
+            case 11: 
+                result = visit_StringNode(node: node as! StringNode, ctx: context)
             default:
                 print("no visit method found")
         }
 
         return result
+    }
+
+    func visit_StringNode(node: StringNode, ctx: Context) -> RuntimeResult {
+        let rt = RuntimeResult()
+
+        let str = string(value: (node.token.value as! String))
+        str.set_context(ctx: ctx)
+
+        return rt.success(str)
     }
 
     func visit_ForNode(node: ForNode, ctx: Context) -> RuntimeResult {
@@ -1851,6 +1955,8 @@ enum TT {
     case OPERATOR
     case GROUP
     
+    case STRING
+
     case IDENTIFIER
     case EOF
     case INDICATOR
@@ -1884,6 +1990,8 @@ enum TT {
 
 let TT_INT       = "INT"
 let TT_FLOAT     = "FLOAT"
+let TT_STRING    = "STRING"
+
 let TT_PLUS      = "PLUS"
 let TT_MINUS     = "MINUS"
 let TT_MUL       = "MUL"

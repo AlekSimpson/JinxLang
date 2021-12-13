@@ -93,6 +93,9 @@ class Parser {
         }else if tok.type == .IDENTIFIER {
             _ = res.register(self.advance())
             return (res.success(VarAccessNode(token: tok)), res)
+        }else if tok.type_name == TT_STRING {
+            _ = res.register(self.advance())
+            return (res.success(StringNode(token: tok)), res)
         }else if tok.type_name == "LPAREN" {
             _ = res.register(self.advance())
             let recurrsion = self.expr()
