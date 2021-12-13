@@ -228,7 +228,7 @@ class Function: Number {
         if let unwrapped = body_node.token.pos { pos = unwrapped }
 
 
-        if args.count != 0 {
+        if a_nodes.count != 0 {
             if args.count > a_nodes.count {
                 let err = RuntimeError(details: "to many arguements passed into function \(String(describing: name))", context: new_context, pos: pos)
                 _ = res.failure(err)
