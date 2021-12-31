@@ -1,5 +1,6 @@
-from token import Position, Token
-import token as tk
+from tokens import Token
+from Position import Position
+import tokens as tk
 
 keywords = ["if", "else", "elif", "for", "in", "while", "method"]
 keywordTokens = [tk.TT_IF, tk.TT_ELSE, tk.TT_ELIF, tk.TT_FOR, tk.TT_IN, tk.TT_WHILE, tk.TT_FUNC]
@@ -13,6 +14,8 @@ class Lexer:
         self.items = list(self.text)
         self.curr_idx = 0
         self.item_count = len(self.items)
+        self.last_idx = 0
+        self.reached_end = False 
 
     def advance(self):
         if self.curr_idx < len(self.items) - 1:
@@ -25,16 +28,17 @@ class Lexer:
         return tk.TT_ID 
 
     def isLetter(self):
-        letters = list("abcdefghijklmnopqrstuvwxyz")
+        letters = list("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXQZ_")
         for ltr in letters:
-            if self.items[self.curr_idx] == ltr and (self.curr_idx != len(self.items) - 1):
+            if self.items[self.curr_idx] == ltr:
                 return True 
         return False 
 
-    def isNum(self):
+    def isNum(self, num=None):
         isNumber = True
+        number = self.items[self.curr_idx] if num == None else num 
         try:
-            int(self.items[self.curr_idx])
+            int(number)
         except:
             isNumber = False 
         return isNumber
@@ -42,13 +46,15 @@ class Lexer:
     def check_for_letters(self):
         if self.isLetter():
             pos = Position(0, self.curr_idx, self.filename)
-            full_word = self.items[self.curr_idx]
-            isLtr = True 
-            while isLtr:
-                isLtr = self.isLetter()
-                self.advance()
-
-                if isLtr: full_word = full_word + self.items[self.curr_idx]
+            full_word = ''
+            isLetter = True 
+            while isLetter:
+                isLetter = self.isLetter()
+                if isLetter:
+                    full_word = full_word + self.items[self.curr_idx]
+                    if self.curr_idx == len(self.items) - 1: break 
+                    self.advance()
+                    self.item_count = self.item_count - 1
             
             tokenType = self.isKeyword(full_word)
             tok = Token(tk.MT_NONFAC, tokenType, full_word, pos)
@@ -63,15 +69,17 @@ class Lexer:
                 isNumber = self.isNum()
                 if isNumber:
                     full_num = full_num + self.items[self.curr_idx]
-                    if self.curr_idx == len(self.items) - 1: break  
+                    if self.curr_idx == len(self.items) - 1: break
                     self.advance()
-
-            
+                    self.item_count = self.item_count - 1
             tok = Token(tk.MT_FACTOR, tk.TT_INT, int(full_num), pos)
             self.tokens.append(tok)
 
     def check_subsequent(self):
         pos = Position(0, self.curr_idx, self.filename)
+        # checks if at end of string 
+        if (self.curr_idx + 1) >= (len(self.items) - 1): return None 
+        
         if self.items[self.curr_idx + 1] == "=":
             if self.items[self.curr_idx] == "=":
                 return Token(tk.MT_NONFAC, tk.TT_EE, "==", pos)
@@ -81,15 +89,20 @@ class Lexer:
                 return Token(tk.MT_NONFAC, tk.TT_LOE, "<=", pos)
             elif self.items[self.curr_idx] == ">":
                 return Token(tk.MT_NONFAC, tk.TT_GOE, ">=", pos)
+        elif self.items[self.curr_idx + 1] == self.items[self.curr_idx]:
+            if self.curr_idx == "|":
+                return Token(tk.Mt_NONFAC, tk.TT_OR, "||", pos)
+            elif self.curr_idx == "&":
+                return Token(tk.MT_NONFAC, tk.TT_AND, "&&", pos)
+        
         return None 
-                
 
     def check_for_symbols(self):
-        symbols = ["+", "-", "/", "*", "^", "(", ")", "=", "!", "<", ">", "&&", "||", "{", "}", ":", ","]
-        symbolsTokens = [tk.TT_PLUS, tk.TT_MINUS, tk.TT_DIV, tk.TT_MUL, tk.TT_POW, tk.TT_LPAREN, tk.TT_RPAREN, tk.TT_EQ, tk.TT_NOT, tk.TT_LT, tk.TT_GT, tk.TT_AND, tk.TT_OR, tk.TT_LCURLY, tk.TT_RCURLY, tk.TT_COLON, tk.TT_COMMA]
+        symbols = ["+", "-", "/", "*", "^", "(", ")", "=", "!", "<", ">", "{", "}", ":", ","]
+        symbolsTokens = [tk.TT_PLUS, tk.TT_MINUS, tk.TT_DIV, tk.TT_MUL, tk.TT_POW, tk.TT_LPAREN, tk.TT_RPAREN, tk.TT_EQ, tk.TT_NOT, tk.TT_LT, tk.TT_GT, tk.TT_LCURLY, tk.TT_RCURLY, tk.TT_COLON, tk.TT_COMMA]
+        pos = Position(0, self.curr_idx, self.filename)
         for i in range(0, len(symbols) - 1):
             if self.items[self.curr_idx] == symbols[i]:
-                pos = Position(0, self.curr_idx, self.filename)
                 nilTok = Token(tk.MT_NONFAC, symbolsTokens[i], self.items[self.curr_idx], pos)
                 
                 checkSub = self.check_subsequent()
@@ -98,6 +111,28 @@ class Lexer:
                 self.tokens.append(tok)
                 self.advance()
                 if checkSub: self.advance()
+        
+        endOfLine = (self.curr_idx + 1) >= (len(self.items) - 1) 
+
+        # check for and, or symbols 
+        if self.items[self.curr_idx] == "|" and not endOfLine:
+            if self.items[self.curr_idx + 1] == "|":
+                tok = Token(tk.MT_NONFAC, tk.TT_OR, "||", pos)
+                self.tokens.append(tok)
+                self.advance()
+                self.advance()
+            else:
+                # return an error here
+                pass 
+        elif self.items[self.curr_idx] == "&" and not endOfLine:
+            if self.items[self.curr_idx + 1] == "&":
+                tok = Token(tk.MT_NONFAC, tk.TT_AND, "&&", pos)
+                self.tokens.append(tok)
+                self.advance()
+                self.advance()
+            else: 
+                # return an error here 
+                pass
 
     def check_for_arrow(self):
         if self.items[self.curr_idx] == "-":
@@ -108,7 +143,8 @@ class Lexer:
                 self.advance()
 
     def make_tokens(self):
-        while self.curr_idx < len(self.items) - 1:
+        while True:
+            self.last_idx = self.curr_idx
             if self.items[self.curr_idx] == ' ': self.advance()
             # check for numbers
             self.check_for_numbers()
@@ -118,6 +154,11 @@ class Lexer:
             self.check_for_arrow()
             # check for symbols
             self.check_for_symbols()
-        
+            # check if all tokens collected
+            if len(self.tokens) == len(self.items): break
+            self.reached_end = self.last_idx == self.curr_idx
+            if self.reached_end: 
+                self.tokens.pop()
+                break 
         for tok in self.tokens:
             print(tok.as_string())

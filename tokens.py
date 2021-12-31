@@ -51,9 +51,3 @@ class Token:
     
     def as_string(self):
         return (f'{self.type} : {self.value}')
-
-class Position:
-    def __init__(self, ln=0, col=0, fn="repl"):
-        self.ln = ln 
-        self.col = col 
-        self.fn = fn
