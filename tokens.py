@@ -43,11 +43,11 @@ TT_COMMA = "COMMA"
 TT_ARROW = "ARROW"
 
 class Token:
-    def __init__(self, metatype="", type="", value="", pos=None):
-        self.metatype = metatype
+    def __init__(self, type="", type_name="", value="", pos=None):
         self.type = type
+        self.type_name = type_name 
         self.value = value 
         self.pos = pos 
     
     def as_string(self):
-        return (f'{self.type} : {self.value}')
+        return (f'{self.type_name} : {self.value}')

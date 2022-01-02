@@ -1,6 +1,7 @@
 from tokens import Token
 from Position import Position
 import tokens as tk
+from Error import InvalidSyntaxError, IllegalCharError
 
 keywords = ["if", "else", "elif", "for", "in", "while", "method"]
 keywordTokens = [tk.TT_IF, tk.TT_ELSE, tk.TT_ELIF, tk.TT_FOR, tk.TT_IN, tk.TT_WHILE, tk.TT_FUNC]
@@ -123,7 +124,7 @@ class Lexer:
                 self.advance()
             else:
                 # return an error here
-                pass 
+                return IllegalCharError(self.items[self.curr_idx], pos) 
         elif self.items[self.curr_idx] == "&" and not endOfLine:
             if self.items[self.curr_idx + 1] == "&":
                 tok = Token(tk.MT_NONFAC, tk.TT_AND, "&&", pos)
@@ -132,13 +133,13 @@ class Lexer:
                 self.advance()
             else: 
                 # return an error here 
-                pass
+                return IllegalCharError(self.items[self.curr_idx], pos)
 
     def check_for_arrow(self):
         if self.items[self.curr_idx] == "-":
             if self.items[self.curr_idx + 1] == ">":
                 pos = Position(0, self.curr_idx, self.filename)
-                tok = Token(tk.MT_NONFAC, tk.ARROW, "->", pos)
+                tok = Token(tk.MT_NONFAC, tk.TT_ARROW, "->", pos)
                 self.tokens.append(tok)
                 self.advance()
 
@@ -156,9 +157,13 @@ class Lexer:
             self.check_for_symbols()
             # check if all tokens collected
             if len(self.tokens) == len(self.items): break
+            # Checks if it has checked everything and add EOF 
             self.reached_end = self.last_idx == self.curr_idx
             if self.reached_end: 
                 self.tokens.pop()
-                break 
-        for tok in self.tokens:
-            print(tok.as_string())
+                pos = Position(0, self.curr_idx, self.filename)
+                EOF = Token(tk.MT_NONFAC, tk.TT_EOF, "EOF", pos)
+                self.tokens.append(EOF)
+                break
+            
+        return (self.tokens, None)

@@ -1,9 +1,20 @@
 from lexer import Lexer
-
+from Parser import Parser
 
 def run(text, fn):
-    lexer = Lexer(text)
-    lexer.make_tokens()
+    lexer = Lexer(text, fn)
+    tokens, error = lexer.make_tokens()
+    
+    if error != None: return (None, error)
+
+    parser = Parser(tokens)
+    nodes, parse_error = parser.parse()
+
+    if parse_error != None: return (None, parse_error)
+
+    print(nodes)
+    for node in nodes:
+        print(node.as_string())
 
 
 while True:
@@ -11,10 +22,4 @@ while True:
     if str(textInput) == "stop":
         break 
 
-    result = run(textInput, "repl")
-
-    # if error != None:
-    #     print(error.as_string())
-    
-    if result != None:
-        print(result.print_self())
+    text = run(textInput, "repl")
