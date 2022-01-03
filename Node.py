@@ -108,7 +108,7 @@ class CallNode:
 class StringNode:
     def __init__(self, token):
         self.token = token 
-        self.description = description 
+        self.description = "StringNode" 
         self.classType = 11
 
     def as_string(self):
@@ -120,7 +120,7 @@ class BinOpNode:
         self.op = op
         self.rhs = rhs 
         self.token = Token()
-        self.description = description 
+        self.description = "BinOpNode" 
         self.classType = 0
 
     def as_string(self):

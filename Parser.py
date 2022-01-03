@@ -27,7 +27,6 @@ class Parser:
 
     def call(self):
         res = ParseResult()
-
         atom, atom_res = self.atom()
         _ = res.register(atom_res)
         if res.error != None: return (None, res)
@@ -35,7 +34,7 @@ class Parser:
         if self.curr_token.type_name == tk.TT_LPAREN:
             _ = res.register(self.advance())
             arg_nodes = []
-
+            
             if self.curr_token.type_name == tk.TT_RPAREN:
                 _ = res.register(self.advance())
             else:
@@ -62,7 +61,6 @@ class Parser:
                     return (None, res)
 
                 _ = res.register(self.advance())
-
             return (res.success(CallNode(atom, arg_nodes)), res)
         return (res.success(atom), res)
 
@@ -70,7 +68,7 @@ class Parser:
         res = ParseResult()
         tok = self.curr_token 
         returnVal = (None, res)
-
+        
         if tok.type == tk.MT_FACTOR:
             val = NumberNode(self.curr_token)
             _ = res.register(self.advance())
@@ -100,7 +98,6 @@ class Parser:
             if res.error != None:
                 _ = res.failure(res.error)
             else:
-                print("GETTING HERE")
                 returnVal = (if_expr, res)
         elif tok.type_name == "FOR":
             for_expr, expr_res = self.for_expr()
@@ -137,7 +134,7 @@ class Parser:
             return (None, res)
 
         _ = res.register(self.advance())
-
+        
         name_token = Token()
         if self.curr_token.type_name == tk.TT_ID:
             name_token = self.curr_token 
@@ -150,7 +147,7 @@ class Parser:
 
         _ = res.register(self.advance())
         arg_name_tokens = []
-
+        
         if self.curr_token.type_name == tk.TT_ID:
             arg_name_tokens.append(self.curr_token)
             _ = res.register(self.advance())
@@ -175,21 +172,21 @@ class Parser:
                 p = self.curr_token.pos 
                 _ = res.failure(InvalidSyntaxError("Expected identifier or ')' in function definition", p))
                 return (None, res)
-
+        
         _ = res.register(self.advance())
 
         if self.curr_token.type_name != tk.TT_ARROW:
             p = self.curr_token.pos 
             _ = res.failure(InvalidSyntaxError("Expected '->' in function definition", p))
             return (None, res)
-
+        
         _ = res.register(self.advance())
-
+        
         node_to_return, return_res = self.expr()
         _ = res.register(return_res)
         if res.error != None: return (None, res)
-
-        return (res.success(FuncDefNode(name_token, arg_name_tokens, node_to_return)), res)
+        
+        return (res.success(FuncDefNode(node_to_return, name_token, arg_name_tokens)), res)
 
     def for_expr(self):
         res = ParseResult()
@@ -200,7 +197,7 @@ class Parser:
             return (None, res)
         
         _ = res.register(self.advance())
-
+        
         if not (self.curr_token.type_name == "IDENTIFIER"):
             p = self.curr_token.pos 
             _ = res.failure(InvalidSyntaxError("Expected variable", p))
@@ -208,7 +205,7 @@ class Parser:
 
         iterator_token = self.curr_token
         _ = res.register(self.advance())
-
+        
         if not (self.curr_token.type_name == "IN"):
             p = self.curr_token.pos
             _ = res.failure(InvalidSyntaxError("Expected 'in' keyword", p))
@@ -221,8 +218,8 @@ class Parser:
         if res.error != None: return (None, res)
 
         iterator_var = VarAssignNode(iterator_token, start_value)
-
-        if not (self.curr_token.type_name == "INDICATOR"):
+        
+        if not (self.curr_token.type_name == "COLON"):
             p = self.curr_token.pos 
             _ = res.failure(InvalidSyntaxError("Expected ':' in range", p))
             return (None, res)
@@ -232,18 +229,18 @@ class Parser:
         end_value, end_res = self.expr()
         _ = res.register(end_res)
         if res.error != None: return (None, res)
-
+        
         if not (self.curr_token.type_name == "LCURLY"):
             p = self.curr_token.pos 
             _ = res.failure(InvalidSyntaxError("Expected '{' in for loop", p))
             return (None, res)
 
         _ = res.register(self.advance())
-
+        
         body, body_res = self.expr()
         _ = res.register(body_res)
         if res.error != None: return (None, res)
-
+        
         if not (self.curr_token.type_name == "RCURLY"):
             p = self.curr_token.pos 
             _ = res.failure(InvalidSyntaxError("Expected '}' in for loop", p))
@@ -265,7 +262,7 @@ class Parser:
         _ = res.register(cond_res)
         if res.error != None: return (None, res)
 
-        if not (self.curr_token.type_name == "RCURLY"):
+        if not (self.curr_token.type_name == "LCURLY"):
             p = self.curr_token.pos 
             _ = res.failure(InvalidSyntaxError("Expected '{' in while loop", p))
             return (None, res)
@@ -298,12 +295,12 @@ class Parser:
         condition, cond_result = self.expr()
         _ = res.register(cond_result)
         if res.error != None: return (None, res)
-        print("GETTING PAST CONDITION")
+        
         if not (self.curr_token.type_name == "LCURLY"):
             p = self.curr_token.pos 
             _ = res.register(InvalidSyntaxError("Expected '{'", p))
             return (None, res)
-
+        
         _ = res.register(self.advance())
         
         expression, expr_res = self.expr()
@@ -345,9 +342,6 @@ class Parser:
                 p = self.curr_token.pos 
                 _ = res.failure(InvalidSyntaxError("Expected '}'", p))
                 return (None, res)
-            print("END OF WHILE CHECK")
-
-        print("GOT PAST WHILE CHECK")
 
         if self.curr_token.type_name == "ELSE":
             _ = res.register(self.advance())
@@ -399,16 +393,20 @@ class Parser:
 
     def expr(self):
         res = ParseResult()
-
-        if self.curr_token.type == tk.TT_ID:
-            Next = self.tokens[self.token_idx + 1]
-
-            if Next.type == tk.TT_EQ:
+        
+        if self.curr_token.type_name == tk.TT_ID:
+            next = self.token_idx + 1 if (self.token_idx + 1) <= (len(self.tokens) - 1) else self.token_idx
+            next_tok = self.tokens[next]
+            
+            if next_tok.type_name == tk.TT_EQ:
                 var_name = self.curr_token 
-                _ = res.register(self.advance)
-                _ = res.register(self.advance)
-                va, result = self.expr()
+                
+                _ = res.register(self.advance())
+                _ = res.register(self.advance())     
+                
+                val, result = self.expr()
                 _ = res.register(result)
+                
                 if res.error != None:
                     return (None, res)
                 else: 
@@ -434,7 +432,6 @@ class Parser:
         if res.error != None:
             _ = res.failure(res.error)
             return (None, res)
-
         return (node, res)
 
     def arith_expr(self):
@@ -458,7 +455,8 @@ class Parser:
         _ = res.register(parse_result)
         if res.error != None: return (None, res)
         
-        while self.curr_token.type_name == ops:
+        loop_condition = self.check_equal_to_ops(ops, self.curr_token.type_name)
+        while loop_condition:
             op_tok = VariableNode(self.curr_token)
             _ = res.register(self.advance())
 
@@ -467,5 +465,6 @@ class Parser:
             if res.error != None: return (None, res)
 
             left = BinOpNode(left, op_tok, right)
+            loop_condition = self.check_equal_to_ops(ops, self.curr_token.type_name)
 
         return (res.success(left), res)

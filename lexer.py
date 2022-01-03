@@ -142,6 +142,7 @@ class Lexer:
                 tok = Token(tk.MT_NONFAC, tk.TT_ARROW, "->", pos)
                 self.tokens.append(tok)
                 self.advance()
+                self.advance()
 
     def make_tokens(self):
         while True:
