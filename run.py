@@ -10,11 +10,13 @@ def run(text, fn):
     parser = Parser(tokens)
     nodes, parse_error = parser.parse()
 
-    if parse_error != None: return (None, parse_error)
+    if parse_error != None: 
+        print(parse_error.as_string())
 
-    print(nodes)
-    for node in nodes:
-        print(node.as_string())
+    if parse_error == None:
+        print(nodes)
+        for node in nodes:
+            print(node.as_string())
 
 
 while True:
