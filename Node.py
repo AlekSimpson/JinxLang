@@ -27,6 +27,7 @@ class VarAssignNode:
     def __init__(self, token, value_node):
         self.token = token 
         self.value_node = value_node
+        self.classType = 5
 
     def as_string(self):
         return self.token.as_string()

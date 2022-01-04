@@ -60,7 +60,8 @@ class Lexer:
             tokenType = self.isKeyword(full_word)
             tok = Token(tk.MT_NONFAC, tokenType, full_word, pos)
             self.tokens.append(tok)
-        
+        return None 
+
     def check_for_numbers(self):
         if self.isNum():
             pos = Position(0, self.curr_idx, self.filename)
@@ -75,6 +76,7 @@ class Lexer:
                     self.item_count = self.item_count - 1
             tok = Token(tk.MT_FACTOR, tk.TT_INT, int(full_num), pos)
             self.tokens.append(tok)
+        return None 
 
     def check_subsequent(self):
         pos = Position(0, self.curr_idx, self.filename)
@@ -95,7 +97,20 @@ class Lexer:
                 return Token(tk.Mt_NONFAC, tk.TT_OR, "||", pos)
             elif self.curr_idx == "&":
                 return Token(tk.MT_NONFAC, tk.TT_AND, "&&", pos)
-        
+        return None 
+
+    def check_for_string(self):
+        full_str = ""
+        pos = Position(0, self.curr_idx, self.filename)
+        if self.items[self.curr_idx] == "\"":
+            self.advance()
+            while self.items[self.curr_idx] != "\"":
+                if (len(self.items) - 1 == self.curr_idx) and (self.items[self.curr_idx] != "\""):
+                    return InvalidSyntaxError(self.items[self.curr_idx], pos)
+                full_str = full_str + self.items[self.curr_idx]
+                self.advance()
+            tok = Token(tk.MT_NONFAC, tk.TT_STRING, full_str, pos)
+            self.tokens.append(tok)
         return None 
 
     def check_for_symbols(self):
@@ -134,6 +149,7 @@ class Lexer:
             else: 
                 # return an error here 
                 return IllegalCharError(self.items[self.curr_idx], pos)
+        return None 
 
     def check_for_arrow(self):
         if self.items[self.curr_idx] == "-":
@@ -145,17 +161,25 @@ class Lexer:
                 self.advance()
 
     def make_tokens(self):
+        error = None 
         while True:
             self.last_idx = self.curr_idx
             if self.items[self.curr_idx] == ' ': self.advance()
+            # check for string 
+            error = self.check_for_string()
+            if error != None: break 
             # check for numbers
-            self.check_for_numbers()
+            error = self.check_for_numbers()
+            if error != None: break 
             # check for strings type
-            self.check_for_letters()
+            error = self.check_for_letters()
+            if error != None: break 
             # check for arrows
-            self.check_for_arrow()
+            error = self.check_for_arrow()
+            if error != None: break 
             # check for symbols
-            self.check_for_symbols()
+            error = self.check_for_symbols()
+            if error != None: break
             # check if all tokens collected
             if len(self.tokens) == len(self.items): break
             # Checks if it has checked everything and add EOF 
@@ -167,4 +191,4 @@ class Lexer:
                 self.tokens.append(EOF)
                 break
             
-        return (self.tokens, None)
+        return (self.tokens, error)
