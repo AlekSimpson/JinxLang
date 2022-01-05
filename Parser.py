@@ -52,9 +52,9 @@ class Parser:
                     expr, expr_res = self.expr()
                     if expr_res.error != None: return (None, expr_res)
                     arg_nodes.append(res.register(expr))
-
+                
                 if self.curr_token.type_name != tk.TT_RPAREN:
-                    p = expr.token.pos 
+                    pos = expr.token.pos 
                     err = InvalidSyntaxError("Expected closing parenthese in function declaration", pos)
                     _ = res.failure(err)
                     return (None, res)

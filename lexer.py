@@ -16,7 +16,9 @@ class Lexer:
         self.curr_idx = 0
         self.item_count = len(self.items)
         self.last_idx = 0
-        self.reached_end = False 
+        self.reached_end = False
+
+        self.quoteCount = 0
 
     def advance(self):
         if self.curr_idx < len(self.items) - 1:
@@ -103,10 +105,15 @@ class Lexer:
         full_str = ""
         pos = Position(0, self.curr_idx, self.filename)
         if self.items[self.curr_idx] == "\"":
+            self.quoteCount += 1
             self.advance()
-            while self.items[self.curr_idx] != "\"":
-                if (len(self.items) - 1 == self.curr_idx) and (self.items[self.curr_idx] != "\""):
-                    return InvalidSyntaxError(self.items[self.curr_idx], pos)
+            while True:
+                if self.items[self.curr_idx] == "\"":
+                    self.quoteCount += 1
+                    self.advance()
+                    break
+                if len(self.items) - 1 == self.curr_idx:
+                    break 
                 full_str = full_str + self.items[self.curr_idx]
                 self.advance()
             tok = Token(tk.MT_NONFAC, tk.TT_STRING, full_str, pos)
@@ -188,6 +195,9 @@ class Lexer:
             # Checks if it has checked everything and add EOF 
             self.reached_end = self.last_idx == self.curr_idx
             if self.reached_end:
+                if self.quoteCount % 2 != 0:
+                    pos = Position(0, self.curr_idx, self.filename)
+                    return (None, InvalidSyntaxError(self.items[self.curr_idx], pos))
                 self.tokens.pop()
                 pos = Position(0, self.curr_idx, self.filename)
                 EOF = Token(tk.MT_NONFAC, tk.TT_EOF, "EOF", pos)

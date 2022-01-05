@@ -26,8 +26,6 @@ def run(text, fn):
     result = interpreter.visit(nodes, ctx)
 
     return (result.value, result.error)
-    
-
 
 while True:
     textInput = input("sona> ")
@@ -38,3 +36,9 @@ while True:
 
     if error != None: print(error.as_string())
     if result != None: print(result.print_self())
+
+
+
+## KNOWN ERRORS ##
+#  String interpolation does not work 
+#  Division by zero is not handled for, needs to output an error 
