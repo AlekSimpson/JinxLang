@@ -5,12 +5,67 @@ import tokens as tk
 from Context import Context 
 from Types import Number, string
 
+class Function(Number):
+    def __init__(self, name=None, body_node=None, arg_nodes=None):
+        super().__init__()
+        self.name = name 
+        self.body_node = body_node 
+        self.arg_nodes = arg_nodes 
+
+    def execute(self, args):
+        res = RuntimeResult()
+        interpreter = Interpreter()
+
+        str = self.name 
+
+        new_context = Context(str, self.context, self.pos)
+        par = new_context.parent
+
+        a_nodes = self.arg_nodes 
+
+        pos = self.body_node.token.pos 
+
+        if len(a_nodes) != 0:
+            if len(args) > len(a_nodes):
+                err = RuntimeError(f'to many arguements passed into function {name}', new_context, pos)
+                _ = res.failure(err)
+                return (None, res)
+
+            if len(args) < len(a_nodes):
+                err = RuntimeError(f'to few arguements passed into function {name}', new_context, pos)
+                _ = failure(err)
+                return (None, res)
+
+            for i in range(0, (len(a_nodes) - 1)):
+                arg_name = a_nodes[i]
+                arg_value = args[i]
+
+                arg_value.set_context(new_context)
+                sTable = new_context.symbolTable
+                sTable.set_val(arg_name, arg_value)
+
+        body_res = interpreter.visit(self.body_node, new_context)
+        _ = res.register(body_res)
+
+        value = res.value 
+        if res.error != None: return (None, res)
+        self.context = new_context 
+        return (value, res)
+
+    def copy(self):
+        copy = Function(self.name, self.body_node, self.arg_nodes)
+        copy.set_context(self.context)
+        return copy 
+
+    def print_self(self):
+        return f'<function {self.name}>'
+
 class Interpreter:
     def visit(self, node, context):
         func_index = node.classType
         result = RuntimeResult()
         table = context.symbolTable.symbols
-        print(f'given node is {node.as_string()}') 
+        
         options = [
                      self.visit_binop, 
                      self.visit_number,
@@ -44,7 +99,7 @@ class Interpreter:
 
     def visit_StringNode(self, node, ctx):
         rt = RuntimeResult()
-        print("string node visited")
+        
         str = string(node.token.value)
         str.set_context(ctx)
 
@@ -69,9 +124,9 @@ class Interpreter:
 
         table = ctx.symbolTable 
 
-        while i.value < end_value:
+        while i < end_value:
             table.set_val(iterator_name, i)
-            i.value += 1
+            i += 1
 
             _ = rt.register(self.visit(node.bodyNode, ctx))
             if rt.error != None: return rt 
@@ -109,7 +164,7 @@ class Interpreter:
         result = None 
         error = None 
         returnVal = RuntimeResult()
-        print("bin op being visited")
+        
         left_vst = self.visit(node.lhs, ctx)
         _ = rt.register(left_vst)
         if rt.error != None: return rt 
@@ -199,10 +254,10 @@ class Interpreter:
 
         error = None 
 
-        if node.token.type_name == tk.TT_MINUS:
+        if node.op_tok.type_name == tk.TT_MINUS:
             if number != None:
                 (number, error) = number.multiplied(Number(-1))
-        elif node.token.type_name == tk.TT_NOT:
+        elif node.op_tok.type_name == tk.TT_NOT:
             if number != None:
                 (number, error) = number.not_op()
 

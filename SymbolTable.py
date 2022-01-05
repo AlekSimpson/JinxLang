@@ -1,11 +1,10 @@
-from Types import Number 
-
 class SymbolTable:
     def __init__(self,  symbols={}, parent=None):
         self.symbols = symbols 
         self.parent = parent 
 
     def get_val(self, name):
+        from Types import Number
         value = self.symbols[name]
         returnVal = Number(0)
 

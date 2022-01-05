@@ -68,7 +68,7 @@ class ForNode:
 class WhileNode:
     def __init__(self, conditionNode, bodyNode):
         self.conditionNode = conditionNode 
-        self.bodyNod0e = bodyNode 
+        self.bodyNode = bodyNode 
         self.token = conditionNode.token
         self.description = "WhileNode"
         self.classType = 8
@@ -131,7 +131,7 @@ class UnaryNode:
     def __init__(self, op_tok, node):
         self.op_tok = op_tok 
         self.node = node 
-        self.description = description 
+        self.description = "UnaryNode" 
         self.classType = 3
 
     def as_string(self):

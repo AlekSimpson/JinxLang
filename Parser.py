@@ -16,10 +16,6 @@ class Parser:
             self.curr_token = self.tokens[self.token_idx]
 
     def parse(self): # returns Node, Error
-        print("--------------------------------------------")
-        for tok in self.tokens:
-            print(tok.as_string())
-        print("--------------------------------------------")
         node_result, parse_result = self.expr()
 
         if parse_result.error != None:
@@ -27,8 +23,6 @@ class Parser:
                 return (None, parse_result.failure(parse_result.error))
             return (None, parse_result.error)
         
-        print(f'parse result {parse_result.node.as_string()}')
-
         return (node_result, None)
 
     def call(self):
@@ -385,7 +379,7 @@ class Parser:
             
             if fac_node != None:
                 _ = res.register(self.factor())
-                returnVal = (res.success(UnaryOpNode(tok, fac_node)), res)
+                returnVal = (res.success(UnaryNode(tok, fac_node)), res)
             
             if fac_res.error != None: 
                 _ = res.failure(err)
