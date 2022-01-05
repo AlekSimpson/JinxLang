@@ -117,7 +117,8 @@ class Lexer:
         symbols = ["+", "-", "/", "*", "^", "(", ")", "=", "!", "<", ">", "{", "}", ":", ","]
         symbolsTokens = [tk.TT_PLUS, tk.TT_MINUS, tk.TT_DIV, tk.TT_MUL, tk.TT_POW, tk.TT_LPAREN, tk.TT_RPAREN, tk.TT_EQ, tk.TT_NOT, tk.TT_LT, tk.TT_GT, tk.TT_LCURLY, tk.TT_RCURLY, tk.TT_COLON, tk.TT_COMMA]
         pos = Position(0, self.curr_idx, self.filename)
-        for i in range(0, len(symbols) - 1):
+        
+        for i in range(0, len(symbols)):
             if self.items[self.curr_idx] == symbols[i]:
                 nilTok = Token(tk.MT_NONFAC, symbolsTokens[i], self.items[self.curr_idx], pos)
                 
@@ -180,15 +181,17 @@ class Lexer:
             # check for symbols
             error = self.check_for_symbols()
             if error != None: break
+
             # check if all tokens collected
             if len(self.tokens) == len(self.items): break
+            
             # Checks if it has checked everything and add EOF 
             self.reached_end = self.last_idx == self.curr_idx
-            if self.reached_end: 
+            if self.reached_end:
                 self.tokens.pop()
                 pos = Position(0, self.curr_idx, self.filename)
                 EOF = Token(tk.MT_NONFAC, tk.TT_EOF, "EOF", pos)
                 self.tokens.append(EOF)
                 break
-            
+
         return (self.tokens, error)

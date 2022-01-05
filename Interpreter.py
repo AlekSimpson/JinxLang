@@ -36,13 +36,12 @@ class Function(Number):
                 _ = failure(err)
                 return (None, res)
 
-            for i in range(0, (len(a_nodes) - 1)):
+            for i in range(0, len(a_nodes)):
                 arg_name = a_nodes[i]
                 arg_value = args[i]
 
                 arg_value.set_context(new_context)
-                sTable = new_context.symbolTable
-                sTable.set_val(arg_name, arg_value)
+                new_context.symbolTable.set_val(arg_name, arg_value)
 
         body_res = interpreter.visit(self.body_node, new_context)
         _ = res.register(body_res)

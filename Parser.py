@@ -17,12 +17,11 @@ class Parser:
 
     def parse(self): # returns Node, Error
         node_result, parse_result = self.expr()
-
         if parse_result.error != None:
             if self.curr_token.type != tk.TT_EOF:
                 return (None, parse_result.failure(parse_result.error))
             return (None, parse_result.error)
-        
+
         return (node_result, None)
 
     def call(self):
@@ -47,7 +46,7 @@ class Parser:
                     _ = res.failure(err)
                     return (None, res)
                 
-                while sedlf.curr_token.type_name == tk.TT_COMMA:
+                while self.curr_token.type_name == tk.TT_COMMA:
                     _ = res.register(self.advance())
 
                     expr, expr_res = self.expr()
@@ -134,7 +133,7 @@ class Parser:
             return (None, res)
 
         _ = res.register(self.advance())
-        
+
         name_token = Token()
         if self.curr_token.type_name == tk.TT_ID:
             name_token = self.curr_token 
@@ -147,7 +146,7 @@ class Parser:
 
         _ = res.register(self.advance())
         arg_name_tokens = []
-        
+
         if self.curr_token.type_name == tk.TT_ID:
             arg_name_tokens.append(self.curr_token)
             _ = res.register(self.advance())
