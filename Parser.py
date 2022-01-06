@@ -1,6 +1,6 @@
 import tokens as tk  
 from Error import InvalidSyntaxError 
-from Node import NumberNode, VarAccessNode, VarAssignNode, VariableNode, IfNode, ForNode, WhileNode, FuncDefNode, CallNode, StringNode, BinOpNode, UnaryNode
+from Node import NumberNode, VarAccessNode, VarAssignNode, VariableNode, IfNode, ForNode, WhileNode, FuncDefNode, CallNode, StringNode, BinOpNode, UnaryNode, ListNode
 from ParseResult import ParseResult
 from tokens import Token 
 
@@ -91,6 +91,10 @@ class Parser:
                     _ = res.failure(InvalidSyntaxError("Expected ')'", p))
             if err != None:
                 _ = res.register(err)
+        elif tok.type_name == tk.TT_LBRACKET:
+            list_expr = res.register(self.list_expr())
+            if res.error != None: return (None, res) 
+            return res.success(list_expr)
         elif tok.type_name == "IF":
             if_expr, expr_res = self.if_expr()
             _ = res.register(expr_res)
@@ -123,7 +127,44 @@ class Parser:
             p = tok.pos 
             _ = res.failure(InvalidSyntaxError("Expected, int, float, identifier, '+', '-', or '('", p))
         return returnVal 
+    
+    def list_expr(self):
+        res = ParseResult()
+        element_nodes = []
+        
+        if self.curr_token.type_name != tk.TT_LBRACKET:
+            return res.failure(InvalidSyntaxError("Expected '[' in list", self.curr_token.pos))
 
+        _ = res.register(self.advance())
+        
+        if self.curr_token.type_name == tk.TT_RBRACKET:
+            _ = res.register(self.advance())
+        else:
+            expr, expr_res = self.expr()
+            if expr_res.error != None: return (None, expr_res)
+            element_nodes.append(res.register(expr))
+            if expr_res.error != None:
+                p = expr.token.pos
+                err = InvalidSyntaxError("Expected closing bracket in list declaration", pos)
+                _ = res.failure(err)
+                return (None, res)
+                
+            while self.curr_token.type_name == tk.TT_COMMA:
+                _ = res.register(self.advance())
+
+                expr, expr_res = self.expr()
+                if expr_res.error != None: return (None, expr_res)
+                element_nodes.append(res.register(expr))
+                
+            if self.curr_token.type_name != tk.TT_RBRACKET:
+                pos = expr.token.pos 
+                err = InvalidSyntaxError("Expected closing bracket in list declaration", pos)
+                _ = res.failure(err)
+                return (None, res)
+
+            _ = res.register(self.advance())
+        return (res.success(ListNode(element_nodes)), res)
+ 
     def func_def(self):
         res = ParseResult()
 

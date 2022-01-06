@@ -28,7 +28,7 @@ def run(text, fn):
     return (result.value, result.error)
 
 while True:
-    textInput = input("sona> ")
+    textInput = input("aqua> ")
     if str(textInput) == "stop":
         break 
 

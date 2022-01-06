@@ -137,3 +137,12 @@ class UnaryNode:
     def as_string(self):
         return self.token.as_string()
 
+class ListNode:
+    def __init__(self, element_nodes):
+        self.element_nodes = element_nodes 
+        self.token = Token()
+        self.description = "ListNode"
+        self.classType = 12
+
+    def as_string(self):
+        return self.token.as_string()

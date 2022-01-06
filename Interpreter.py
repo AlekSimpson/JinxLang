@@ -3,7 +3,7 @@ from SymbolTable import SymbolTable
 from Error import RuntimeError 
 import tokens as tk 
 from Context import Context 
-from Types import Number, string
+from Types import Number, string, Array
 
 class Function(Number):
     def __init__(self, name=None, body_node=None, arg_nodes=None):
@@ -77,7 +77,8 @@ class Interpreter:
                      self.visit_WhileNode,
                      self.visit_FuncDefNode,
                      self.visit_CallNode,
-                     self.visit_StringNode
+                     self.visit_StringNode,
+                     self.visit_ListNode
                   ]
         
         if func_index == 4:
@@ -103,6 +104,21 @@ class Interpreter:
         str.set_context(ctx)
 
         return rt.success(str)
+    
+    def visit_ListNode(self, node, context):
+        res = RuntimeResult()
+        elements = []
+
+        for element_node in node.element_nodes:
+            el = self.visit(element_node, context)
+            _ = res.register(el)
+            elements.append(el.value)
+            if res.error != None: return res 
+
+        arr = Array(elements)
+        arr.set_context(context)
+
+        return res.success(arr)
 
     def visit_ForNode(self, node, ctx):
         rt = RuntimeResult()
@@ -127,7 +143,7 @@ class Interpreter:
             table.set_val(iterator_name, i)
             i += 1
 
-            _ = rt.register(self.visit(node.bodyNode, ctx))
+            _  = rt.register(self.visit(node.bodyNode, ctx))
             if rt.error != None: return rt 
 
         return RuntimeResult()
