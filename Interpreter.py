@@ -67,18 +67,20 @@ class Interpreter:
         
         options = [
                      self.visit_binop, 
-                     self.visit_number,
-                     "VariableNode",
-                     self.visit_unary,
-                     "VarAccessNode",
-                     self.visit_VarAssignNode,
-                     self.visit_IfNode,
-                     self.visit_ForNode,
-                     self.visit_WhileNode,
-                     self.visit_FuncDefNode,
-                     self.visit_CallNode,
-                     self.visit_StringNode,
-                     self.visit_ListNode
+                     self.visit_number,            
+                     "VariableNode",               
+                     self.visit_unary,             
+                     "VarAccessNode",              
+                     self.visit_VarAssignNode,     
+                     self.visit_IfNode,            
+                     self.visit_ForNode,           
+                     self.visit_WhileNode,         
+                     self.visit_FuncDefNode,       
+                     self.visit_CallNode,          
+                     self.visit_StringNode,        
+                     self.visit_ListNode,          
+                     self.visit_SetArrNode,        
+                     self.visit_GetArrNode         
                   ]
         
         if func_index == 4:
@@ -351,3 +353,40 @@ class Interpreter:
         if res.error != None: return res 
 
         return res.success(return_value)
+
+    def visit_GetArrNode(self, node, ctx):
+        res = RuntimeResult()
+        
+        arrayNodeRes = res.register(self.visit(node.array, ctx))
+        if res.error != None: return res 
+        arrayNode = arrayNodeRes.value 
+
+        index = res.register(self.visit(node.index, ctx))
+        if res.error != None: return res 
+        
+        return_value, return_res = arrayNode.get(index.value)
+        _ = res.register(return_res)
+        if return_res.error != None: return res 
+        
+        return res.success(return_value)
+
+    def visit_SetArrNode(self, node, ctx):
+        res = RuntimeResult() 
+
+        arrayNodeRes = res.register(self.visit(node.array, ctx))
+        if res.error != None: return res 
+        arrayNode = arrayNodeRes.value 
+
+        index = res.register(self.visit(node.index, ctx))
+        if res.error != None: return res 
+        
+        idx = index.value.value 
+
+        new_val = res.register(self.visit(node.new_val, ctx))
+        if res.error != None: return res 
+
+        set_return, set_res = arrayNode.set(idx, new_val.value)
+        _ = res.register(set_res)
+        if res.error != None: return res 
+
+        return res 

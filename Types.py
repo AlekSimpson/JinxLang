@@ -92,6 +92,7 @@ class Array(Number):
     def __init__(self, elements):
         super().__init__()
         self.elements = elements
+        self.length = len(self.elements)
 
     def print_self(self):
         new_arr = []
@@ -100,7 +101,23 @@ class Array(Number):
 
         return new_arr
 
-    ## MIGHT NEED TO ADD ARRAY FUNCTIONS HERE LATER ##
+    def get(self, index):
+        res = RuntimeResult()
+        if index.value < 0 or index.value > self.length - 1:
+            err = RuntimeError("Index out of range", self.context, self.pos)
+            return (None, err) 
+        
+        return (self.elements[index.value], res)
+
+    def set(self, index, new):
+        res = RuntimeResult()
+
+        if index < 0 or index > self.length - 1:
+            err = RuntimeError("Index out of range", self.context, self.pos)
+            return (None, err)
+
+        self.elements[index] = new
+        return (None, res)
 
 class string(Number):
     def __init__(self, str_value=None):
@@ -120,54 +137,5 @@ class string(Number):
 
     def print_self(self):
         return f'<string {self.str_value}>'
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

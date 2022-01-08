@@ -1,6 +1,6 @@
 import tokens as tk  
 from Error import InvalidSyntaxError 
-from Node import NumberNode, VarAccessNode, VarAssignNode, VariableNode, IfNode, ForNode, WhileNode, FuncDefNode, CallNode, StringNode, BinOpNode, UnaryNode, ListNode
+from Node import NumberNode, VarAccessNode, VarAssignNode, VariableNode, IfNode, ForNode, WhileNode, FuncDefNode, CallNode, StringNode, BinOpNode, UnaryNode, ListNode, ArraySetNode, ArrayGetNode 
 from ParseResult import ParseResult
 from tokens import Token 
 
@@ -41,7 +41,7 @@ class Parser:
                 if expr_res.error != None: return (None, expr_res)
                 arg_nodes.append(res.register(expr))
                 if expr_res.error != None:
-                    p = expr.token.pos
+                    pos = expr.token.pos
                     err = InvalidSyntaxError("Expected closing parenthese in function declaration", pos)
                     _ = res.failure(err)
                     return (None, res)
@@ -61,6 +61,42 @@ class Parser:
 
                 _ = res.register(self.advance())
             return (res.success(CallNode(atom, arg_nodes)), res)
+        elif self.curr_token.type_name == tk.TT_LBRACKET:
+            _ = res.register(self.advance())
+
+            if self.curr_token.type_name != tk.TT_INT:
+                pos = self.curr_token.pos
+                err = InvalidSyntaxError("Array index must be an integer", pos)
+                _ = res.failure(err)
+                return (None, res)
+            
+            index, idx_err = self.atom()
+            if idx_err.error != None: return (None, idx_err)
+
+            if self.curr_token.type_name != tk.TT_RBRACKET:
+                pos = self.curr_token.pos 
+                err = InvalidSyntaxError("Array subscripts must have a closing bracket", pos)
+                return (None, res)
+            
+            _ = res.register(self.advance())
+            
+            if self.curr_token.type_name == tk.TT_EQ: 
+                _ = res.register(self.advance())
+
+                if not self.curr_token.type_name != tk.TT_INT and not self.curr_token.type_name != tk.TT_STRING:
+                    pos = self.curr_token.pos
+                    err = InvalidSyntaxError("Array can only hold value types of int or string", pos)
+                    return (None, res)
+
+                new_val, val_res = self.atom()
+                if val_res.error != None: return (None, val_res)
+                
+                _ = res.register(self.advance())
+                
+                return (res.success(ArraySetNode(atom, index, new_val)), res)
+
+            return (res.success(ArrayGetNode(atom, index)), res)
+
         return (res.success(atom), res)
 
     def atom(self):
@@ -68,7 +104,7 @@ class Parser:
         tok = self.curr_token 
         returnVal = (None, res)
         
-        if tok.type == tk.MT_FACTOR:
+        if tok.type_name == tk.TT_INT:
             val = NumberNode(self.curr_token)
             _ = res.register(self.advance())
             returnVal = (res.success(val), res)

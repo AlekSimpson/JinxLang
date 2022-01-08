@@ -106,6 +106,29 @@ class CallNode:
     def as_string(self):
         return self.token.as_string()
 
+class ArrayGetNode:
+    def __init__(self, array, index):
+        self.token = array.token 
+        self.array = array 
+        self.index = index 
+        self.description = "ArrayGetNode"
+        self.classType = 14
+
+    def as_string(self):
+        return f'{self.description}: {self.token.as_string()}'
+
+class ArraySetNode:
+    def __init__(self, array, index, new_val):
+        self.token = array.token
+        self.array = array 
+        self.index = index 
+        self.new_val = new_val
+        self.description = "ArraySetNode"
+        self.classType = 13
+
+    def as_string(self):
+        return f'{self.description}: {self.token.as_string()}'
+
 class StringNode:
     def __init__(self, token):
         self.token = token 
