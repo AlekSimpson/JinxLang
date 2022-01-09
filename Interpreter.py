@@ -5,10 +5,56 @@ import tokens as tk
 from Context import Context 
 from Types import Number, string, Array
 
-class Function(Number):
-    def __init__(self, name=None, body_node=None, arg_nodes=None):
+class BaseFunction(Number):
+    def __init__(self, name):
         super().__init__()
-        self.name = name 
+        self.name = name
+
+    def generate_new_context(self):
+        new_context = Context(self.name, self.context, self.pos)
+
+        #table = SymbolTable()
+        #if new_context.parent.symbolTable != None: table = new_context.parent.symbolTable 
+        new_context.symbolTable = SymbolTable() 
+
+        return new_context
+
+    def check_args(self, arg_names, args):
+        res = RuntimeResult()
+        
+        if len(args) > len(arg_names):
+            err = RuntimeError(f'to many arguements passed into function {name}', new_context, self.pos)
+            _ = res.failure(err)
+            return (res)
+
+        if len(args) < len(arg_names):
+            err = RuntimeError(f'to few arguements passed into function {name}', new_context, self.pos)
+            _ = failure(err)
+            return (res)
+
+        return res.success(None)
+
+    def populate_args(self, arg_names, args, exec_ctx):
+        for i in range(0, len(arg_names)):
+            arg_name = arg_names[i]
+            arg_value = args[i]
+
+            arg_value.set_context(exec_ctx)
+            exec_ctx.symbolTable.set_val(arg_name, arg_value)
+
+    def check_and_populate_args(self, arg_names, args, exec_ctx):
+        res = RuntimeResult()
+
+        res.register(self.check_args(arg_names, args))
+        if res.error != None: return res 
+
+        self.populate_args(arg_names, args, exec_ctx)
+
+        return res.success(None)
+
+class Function(BaseFunction):
+    def __init__(self, name=None, body_node=None, arg_nodes=None):
+        super().__init__(name)
         self.body_node = body_node 
         self.arg_nodes = arg_nodes 
 
@@ -16,39 +62,17 @@ class Function(Number):
         res = RuntimeResult()
         interpreter = Interpreter()
 
-        str = self.name 
+        exec_ctx = self.generate_new_context()
 
-        new_context = Context(str, self.context, self.pos)
-        par = new_context.parent
+        res.register(self.check_and_populate_args(self.arg_nodes, args, exec_ctx))
+        if res.error != None: return (None, res)
 
-        a_nodes = self.arg_nodes 
-
-        pos = self.body_node.token.pos 
-
-        if len(a_nodes) != 0:
-            if len(args) > len(a_nodes):
-                err = RuntimeError(f'to many arguements passed into function {name}', new_context, pos)
-                _ = res.failure(err)
-                return (None, res)
-
-            if len(args) < len(a_nodes):
-                err = RuntimeError(f'to few arguements passed into function {name}', new_context, pos)
-                _ = failure(err)
-                return (None, res)
-
-            for i in range(0, len(a_nodes)):
-                arg_name = a_nodes[i]
-                arg_value = args[i]
-
-                arg_value.set_context(new_context)
-                new_context.symbolTable.set_val(arg_name, arg_value)
-
-        body_res = interpreter.visit(self.body_node, new_context)
+        body_res = interpreter.visit(self.body_node, exec_ctx)
         _ = res.register(body_res)
 
         value = res.value 
         if res.error != None: return (None, res)
-        self.context = new_context 
+        self.context = exec_ctx 
         return (value, res)
 
     def copy(self):
@@ -58,6 +82,56 @@ class Function(Number):
 
     def print_self(self):
         return f'<function {self.name}>'
+
+class BuiltinFunction(BaseFunction):
+    def __init__(self, name_id):
+        super().__init__(name_id)
+        self.name_id = name_id 
+
+    def execute(self, args):
+        res = RuntimeResult()
+        exec_ctx = self.generate_new_context()
+
+        method_arg_names = [["value"], ["array", "value"]]
+        methods = [self.execute_print, self.execute_append]
+
+        if self.name_id < 0 or self.name_id > len(methods) - 1:
+            return "built in method undefined"
+
+        method = methods[self.name_id]
+        method_a_names = method_arg_names[self.name_id]
+
+        res.register(self.check_and_populate_args(method_a_names, args, exec_ctx))
+        if res.error != None: return res 
+
+        return_value, return_res = method(exec_ctx)
+        res.register(return_res)
+
+        return (return_value, res)
+
+    def execute_print(self, exec_ctx):
+        res = RuntimeResult()
+        return (string(exec_ctx.symbolTable.get_val("value").value), res)
+   
+    def execute_append(self, exec_ctx):
+        res = RuntimeResult()
+        arr = exec_ctx.symbolTable.get_val("array").value
+        value = exec_ctx.symbolTable.get_val("value").value 
+
+        arr.append(value)
+
+        return (None, res)
+
+    def copy(self):
+        copy = BuiltinFunction(self.name_id) 
+        copy.set_context(self.context)
+        return copy 
+
+    def print_self(self):
+        return f'<function {self.name}>'
+
+BuiltinFunction.print = BuiltinFunction(0)
+BuiltinFunction.append = BuiltinFunction(1)
 
 class Interpreter:
     def visit(self, node, context):
@@ -351,7 +425,7 @@ class Interpreter:
         return_value, return_res = val_cal.execute(args)
         _ = res.register(return_res)
         if res.error != None: return res 
-
+        
         return res.success(return_value)
 
     def visit_GetArrNode(self, node, ctx):

@@ -1,5 +1,4 @@
 from RuntimeResult import RuntimeResult 
-#from Interpreter import Interpreter
 from Context import Context 
 from Error import RuntimeError
 
@@ -86,7 +85,11 @@ class Number:
         return self.value != 0
 
     def print_self(self):
-        return self.value 
+        return self.value
+
+Number.nil = Number(0)
+Number.true = Number(1)
+Number.false = Number(0)
 
 class Array(Number):
     def __init__(self, elements):
@@ -136,6 +139,6 @@ class string(Number):
         return self.str_value != None 
 
     def print_self(self):
-        return f'<string {self.str_value}>'
+        return str(self.str_value)
 
 

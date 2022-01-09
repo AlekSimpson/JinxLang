@@ -3,8 +3,15 @@ from Parser import Parser
 from Interpreter import Interpreter
 from Context import Context 
 from SymbolTable import SymbolTable 
+from Types import Number 
+from Interpreter import BuiltinFunction
 
 global_symbol_table = SymbolTable()
+global_symbol_table.set_val("nil", Number.nil)
+global_symbol_table.set_val("true", Number.true)
+global_symbol_table.set_val("false", Number.false)
+global_symbol_table.set_val("print", BuiltinFunction.print)
+global_symbol_table.set_val("append", BuiltinFunction.append)
 
 def run(text, fn):
     lexer = Lexer(text, fn)
