@@ -20,6 +20,7 @@ TT_RBRACKET = "RBRACKET"
 TT_ID = "IDENTIFIER"
 TT_EOF = "EOF"
 TT_COLON = "COLON"
+TT_NEWLINE = "NEWLINE"
 
 TT_EQ = "EQ" # This the assignment equals 
 TT_EE = "EQUALS" # This is the comparison equals 
@@ -39,6 +40,9 @@ TT_ELSE = "ELSE"
 TT_FOR = "FOR"
 TT_WHILE = "WHILE"
 TT_IN = "IN"
+TT_RETURN = "RETURN"
+TT_BREAK = "BREAK"
+TT_CONTINUE = "CONTINUE"
 
 TT_FUNC = "FUNC"
 TT_COMMA = "COMMA"

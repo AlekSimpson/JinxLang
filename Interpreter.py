@@ -53,10 +53,11 @@ class BaseFunction(Number):
         return res.success(None)
 
 class Function(BaseFunction):
-    def __init__(self, name=None, body_node=None, arg_nodes=None):
+    def __init__(self, name=None, body_node=None, arg_nodes=None, should_return_nil=False):
         super().__init__(name)
         self.body_node = body_node 
         self.arg_nodes = arg_nodes 
+        self.should_return_nil = should_return_nil 
 
     def execute(self, args):
         res = RuntimeResult()
@@ -70,13 +71,13 @@ class Function(BaseFunction):
         body_res = interpreter.visit(self.body_node, exec_ctx)
         _ = res.register(body_res)
 
-        value = res.value 
+        value = Number.nil if self.should_return_nil else res.value
         if res.error != None: return (None, res)
         self.context = exec_ctx 
         return (value, res)
 
     def copy(self):
-        copy = Function(self.name, self.body_node, self.arg_nodes)
+        copy = Function(self.name, self.body_node, self.arg_nodes, self.should_return_nil)
         copy.set_context(self.context)
         return copy 
 
@@ -111,7 +112,8 @@ class BuiltinFunction(BaseFunction):
 
     def execute_print(self, exec_ctx):
         res = RuntimeResult()
-        return (string(exec_ctx.symbolTable.get_val("value").value), res)
+        print(exec_ctx.symbolTable.get_val("value").value)
+        return (None, res)
    
     def execute_append(self, exec_ctx):
         res = RuntimeResult()
@@ -140,22 +142,22 @@ class Interpreter:
         table = context.symbolTable.symbols
         
         options = [
-                     self.visit_binop, 
-                     self.visit_number,            
-                     "VariableNode",               
-                     self.visit_unary,             
-                     "VarAccessNode",              
-                     self.visit_VarAssignNode,     
-                     self.visit_IfNode,            
-                     self.visit_ForNode,           
-                     self.visit_WhileNode,         
-                     self.visit_FuncDefNode,       
-                     self.visit_CallNode,          
-                     self.visit_StringNode,        
-                     self.visit_ListNode,          
-                     self.visit_SetArrNode,        
-                     self.visit_GetArrNode         
-                  ]
+                    self.visit_binop, 
+                    self.visit_number,            
+                    "VariableNode",               
+                    self.visit_unary,             
+                    "VarAccessNode",              
+                    self.visit_VarAssignNode,     
+                    self.visit_IfNode,            
+                    self.visit_ForNode,           
+                    self.visit_WhileNode,         
+                    self.visit_FuncDefNode,       
+                    self.visit_CallNode,          
+                    self.visit_StringNode,        
+                    self.visit_ListNode,          
+                    self.visit_SetArrNode,        
+                    self.visit_GetArrNode         
+                ]
         
         if func_index == 4:
             result = self.AccessNode(node, context, table)
@@ -193,7 +195,7 @@ class Interpreter:
 
         arr = Array(elements)
         arr.set_context(context)
-
+        
         return res.success(arr)
 
     def visit_ForNode(self, node, ctx):
@@ -218,11 +220,11 @@ class Interpreter:
         while i < end_value:
             table.set_val(iterator_name, i)
             i += 1
-
+            
             _  = rt.register(self.visit(node.bodyNode, ctx))
             if rt.error != None: return rt 
-
-        return RuntimeResult()
+        
+        return rt.success(None)
 
     def visit_WhileNode(self, node, ctx):
         rt = RuntimeResult()
@@ -237,7 +239,7 @@ class Interpreter:
             _ = rt.register(self.visit(node.bodyNode, ctx))
             if rt.error != None: return rt 
 
-        return RuntimeResult()
+        return rt.success(None)
 
     def check_for_declaration(self, table, node, context):
         access_node = node 
@@ -313,7 +315,7 @@ class Interpreter:
 
         num = Number(val, p)
         num.set_context(child_context)
-
+        
         return RuntimeResult().success(num)
 
     def visit_IfNode(self, node, ctx):
@@ -325,17 +327,20 @@ class Interpreter:
             c_value = condiion_value.value
 
             if c_value.is_true():
-                expr_value = res.register(self.visit(case_[1], ctx))
+                expr_value = self.visit(case_[1], ctx)
+                res.register(expr_value)
                 if res.error != None: return res 
-                e_value = expr_value.value
-                return res.success(e_value)
+                e_value = expr_value.value 
+                
+                return res.success(Number.nil if case_[2] else e_value)
 
         if node.else_case != None:
             else_value = res.register(self.visit(node.else_case, ctx))
             if res.error != None: return res 
             e_value = else_value.value
-            return res.success(e_value)
-        return RuntimeResult()
+            return res.success(Number.nil if node.else_case[1] else e_value)
+        #return RuntimeResult()
+        return res.success(Number.nil)
 
     def visit_unary(self, node, ctx):
         rt = RuntimeResult()
@@ -394,7 +399,7 @@ class Interpreter:
         for arg_name in a_name_tokens:
             func_arg_names.append(arg_name.value)
 
-        method = Function(func_name, body_node, func_arg_names)
+        method = Function(func_name, body_node, func_arg_names, node.should_return_nil)
         method.set_context(ctx)
 
         if func_name != None:

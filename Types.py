@@ -100,7 +100,9 @@ class Array(Number):
     def print_self(self):
         new_arr = []
         for el in self.elements:
-            new_arr.append(el.value)
+            if el != None:
+                #print(f"TESTING {el.value}")
+                new_arr.append(el.value)
 
         return new_arr
 

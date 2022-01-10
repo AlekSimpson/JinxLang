@@ -53,12 +53,13 @@ class IfNode:
         return self.token.as_string()
 
 class ForNode:
-    def __init__(self, iterator, startValue, endValue, bodyNode):
+    def __init__(self, iterator, startValue, endValue, bodyNode, should_return_nil):
         self.iterator = iterator 
         self.startValue = startValue 
         self.endValue = endValue 
         self.bodyNode = bodyNode
         self.token = startValue.token
+        self.should_return_nil = should_return_nil 
         self.description = "ForNode"
         self.classType = 7
 
@@ -66,10 +67,11 @@ class ForNode:
         return self.token.as_string()
 
 class WhileNode:
-    def __init__(self, conditionNode, bodyNode):
+    def __init__(self, conditionNode, bodyNode, should_return_nil):
         self.conditionNode = conditionNode 
         self.bodyNode = bodyNode 
         self.token = conditionNode.token
+        self.should_return_nil = should_return_nil 
         self.description = "WhileNode"
         self.classType = 8
 
@@ -77,15 +79,15 @@ class WhileNode:
         return self.token.as_string()
 
 class FuncDefNode:
-    def __init__(self, body_node, token=None, arg_name_tokens=None):
+    def __init__(self, body_node, token=None, arg_name_tokens=None, should_return_nil=False):
         if token == None: 
             lambda_ = Token(tk.MT_NONFAC, tk.TT_ID, "lambda")
             self.token = lambda_
         else:
             self.token = token 
-
         self.arg_name_tokens = arg_name_tokens 
         self.body_node = body_node
+        self.should_return_nil = should_return_nil 
         self.description = "FuncDefNode"
         self.classType = 9
 
@@ -169,3 +171,33 @@ class ListNode:
 
     def as_string(self):
         return self.token.as_string()
+
+class ReturnNode:
+    def __init__(self, node_to_return):
+        self.node_to_return = node_to_return 
+        self.token = node_to_return.token 
+        self.description = "ReturnNode"
+        self.classType = 15
+
+    def as_string(self):
+        return f'{self.description}: {self.token.as_string()}'
+
+class ContinueNode:
+    def __init__(self, token):
+        self.token = token
+        self.pos = self.token.pos
+        self.description = "ContinueNode"
+        self.classType = 16
+
+    def as_string(self):
+        return f'{self.description}: {self.token.as_string()}'
+
+class BreakNode:
+    def __init__(self, token):
+        self.token = token 
+        self.pos = self.token.pos 
+        self.description = "BreakNode"
+        self.classType = 17
+
+    def as_string(self):
+        return f'f{self.description}: {self.token.as_string()}'

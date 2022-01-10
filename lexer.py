@@ -3,8 +3,8 @@ from Position import Position
 import tokens as tk
 from Error import InvalidSyntaxError, IllegalCharError
 
-keywords = ["if", "else", "elif", "for", "in", "while", "method"]
-keywordTokens = [tk.TT_IF, tk.TT_ELSE, tk.TT_ELIF, tk.TT_FOR, tk.TT_IN, tk.TT_WHILE, tk.TT_FUNC]
+keywords = ["if", "else", "elif", "for", "in", "while", "method", "return", "break", "continue"]
+keywordTokens = [tk.TT_IF, tk.TT_ELSE, tk.TT_ELIF, tk.TT_FOR, tk.TT_IN, tk.TT_WHILE, tk.TT_FUNC, tk.TT_RETURN, tk.TT_BREAK, tk.TT_CONTINUE]
 
 class Lexer:
     def __init__(self, text, ln_pos=0, filename="repl"):
@@ -121,8 +121,10 @@ class Lexer:
         return None 
 
     def check_for_symbols(self):
-        symbols = ["+", "-", "/", "*", "^", "(", ")", "=", "!", "<", ">", "{", "}", ":", ",", "[", "]"]
-        symbolsTokens = [tk.TT_PLUS, tk.TT_MINUS, tk.TT_DIV, tk.TT_MUL, tk.TT_POW, tk.TT_LPAREN, tk.TT_RPAREN, tk.TT_EQ, tk.TT_NOT, tk.TT_LT, tk.TT_GT, tk.TT_LCURLY, tk.TT_RCURLY, tk.TT_COLON, tk.TT_COMMA, tk.TT_LBRACKET, tk.TT_RBRACKET]
+        symbols = ["+", "-", "/", "*", "^", "(", ")", "=", "!", "<", ">", "{", "}", ":", ",", "[", "]", ";"]
+        symbolsTokens = [tk.TT_PLUS, tk.TT_MINUS, tk.TT_DIV, tk.TT_MUL, tk.TT_POW, tk.TT_LPAREN, tk.TT_RPAREN, 
+                         tk.TT_EQ, tk.TT_NOT, tk.TT_LT, tk.TT_GT, tk.TT_LCURLY, tk.TT_RCURLY, tk.TT_COLON, 
+                         tk.TT_COMMA, tk.TT_LBRACKET, tk.TT_RBRACKET, tk.TT_NEWLINE]
         pos = Position(0, self.curr_idx, self.filename)
         
         for i in range(0, len(symbols)):

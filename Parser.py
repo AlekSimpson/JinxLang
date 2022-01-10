@@ -15,13 +15,21 @@ class Parser:
         if self.token_idx < len(self.tokens):
             self.curr_token = self.tokens[self.token_idx]
 
+    def reverse(self, amount=1):
+        self.token_idx -= amount 
+        self.update_current_token()
+        return self.curr_token 
+
+    def update_current_token(self):
+        if self.token_idx >= 0 and self.token_idx < len(self.tokens):
+            self.curr_token = self.tokens[self.token_idx]
+
     def parse(self): # returns Node, Error
-        node_result, parse_result = self.expr()
+        node_result, parse_result = self.statements()
         if parse_result.error != None:
             if self.curr_token.type != tk.TT_EOF:
                 return (None, parse_result.failure(parse_result.error))
             return (None, parse_result.error)
-
         return (node_result, None)
 
     def call(self):
@@ -251,18 +259,40 @@ class Parser:
         
         _ = res.register(self.advance())
 
-        if self.curr_token.type_name != tk.TT_ARROW:
-            p = self.curr_token.pos 
-            _ = res.failure(InvalidSyntaxError("Expected '->' in function definition", p))
+        if self.curr_token.type_name == tk.TT_ARROW: 
+            _ = res.register(self.advance())
+            
+            node_to_return, return_res = self.expr()
+            _ = res.register(return_res)
+            if res.error != None: return (None, res)
+        
+            return (res.success(FuncDefNode(node_to_return, name_token, arg_name_tokens, False)), res)
+
+        if self.curr_token.type_name != "LCURLY":
+            pos = self.curr_token.pos 
+            res.failure(InvalidSyntaxError("Expected '{'", pos))
             return (None, res)
         
-        _ = res.register(self.advance())
+        res.register(self.advance())
+
+        if self.curr_token.type_name != tk.TT_NEWLINE:
+            pos = self.curr_token.pos 
+            res.failure(InvalidSyntaxError("Expected '->' in function or '{'", pos))
+            return (None, res)
         
-        node_to_return, return_res = self.expr()
-        _ = res.register(return_res)
+        res.register(self.advance())
+        
+        body, body_res = self.statements()
+        res.register(body_res)
         if res.error != None: return (None, res)
-        
-        return (res.success(FuncDefNode(node_to_return, name_token, arg_name_tokens)), res)
+
+        if self.curr_token.type_name != "RCURLY":
+            pos = self.curr_token.pos 
+            res.failure(InvalidSyntaxError("Expected '}'", pos))
+            return (None, res)
+
+        res.register(self.advance())
+        return (res.success(FuncDefNode(body, name_token, arg_name_tokens, True)), res)
 
     def for_expr(self):
         res = ParseResult()
@@ -313,6 +343,21 @@ class Parser:
 
         _ = res.register(self.advance())
         
+        if self.curr_token.type_name == tk.TT_NEWLINE:
+            res.register(self.advance())
+
+            body, body_result = res.register(self.statements())
+            if res.error != None: return (None, res)
+
+            if self.curr_token.type_name != "RCURLY":
+                pos = self.curr_token.pos 
+                res.failure(InvalidSyntaxError("Expected '}'", pos))
+                return (None, res)
+            
+            res.register(self.advance())
+
+            return (res.success(ForNode(iterator_var, start_value, end_value, body, True)), res)
+
         body, body_res = self.expr()
         _ = res.register(body_res)
         if res.error != None: return (None, res)
@@ -322,7 +367,7 @@ class Parser:
             _ = res.failure(InvalidSyntaxError("Expected '}' in for loop", p))
             return (None, res)
         
-        return (res.success(ForNode(iterator_var, start_value, end_value, body)), res)
+        return (res.success(ForNode(iterator_var, start_value, end_value, body, False)), res)
 
     def while_expr(self):
         res = ParseResult()
@@ -345,6 +390,21 @@ class Parser:
 
         _ = res.register(self.advance())
 
+        if self.curr_token.type_name == tk.TT_NEWLINE:
+            res.register(self.advance())
+
+            body, body_result = res.register(self.statements())
+            if res.error != None: return (None, res)
+
+            if self.curr_token.type_name != "RCURLY":
+                pos = self.curr_token.pos 
+                res.failure(InvalidSyntaxError("Expeected '}'", pos))
+                return (None, res)
+            
+            res.register(self.advance())
+
+            return (res.success(WhileNode(cond_value, body, True)), res)
+
         body_value, body_res = self.expr()
         _ = res.register(body_res)
         if res.error != None: return (None, res)
@@ -354,92 +414,210 @@ class Parser:
             _ = res.failure(InvalidSyntaxError("Expected '}' in while loop"), p)
             return (None, res)
         
-        return (res.success(WhileNode(cond_value, body_value)), res)
+        return (res.success(WhileNode(cond_value, body_value, False)), res) 
 
     def if_expr(self):
+        res = ParseResult()
+        all_cases, cases_res = self.if_expr_cases("IF")
+        res.register(cases_res)
+        if res.error != None: return (None, res)
+        cases, else_case = all_cases 
+        
+        return (res.success(IfNode(cases, else_case)), res)
+
+    def if_expr_cases(self, case_keyword):
         res = ParseResult()
         cases = []
         else_case = None 
 
-        if not (self.curr_token.type_name == "IF"):
-            p = self.curr_token.pos 
-            _ = res.failure(InvalidSyntaxError("Expected 'if'", p))
+        if self.curr_token.type_name != case_keyword:
+            pos = self.curr_token.pos 
+            res.failure(InvalidSyntaxError("Expected 'if'", pos))
             return (None, res)
-
-        _ = res.register(self.advance())
         
+        res.register(self.advance())
+
         condition, cond_result = self.expr()
-        _ = res.register(cond_result)
+        res.register(cond_result)
         if res.error != None: return (None, res)
-        
-        if not (self.curr_token.type_name == "LCURLY"):
-            p = self.curr_token.pos 
-            _ = res.register(InvalidSyntaxError("Expected '{'", p))
-            return (None, res)
-        
-        _ = res.register(self.advance())
-        
-        expression, expr_res = self.expr()
-        _ = res.register(expr_res)
-        if res.error != None: return (None, res)
-        
-        new_element = [condition, expression]
-        cases.append(new_element)
-        
-        if not (self.curr_token.type_name == "RCURLY"):
-            p = self.curr_token.pos 
-            _ = res.failure(InvalidSyntaxError("Expected '}'", p))
+
+        if self.curr_token.type_name != "LCURLY":
+            pos = self.curr_token.pos 
+            res.register(InvalidSyntaxError("Expected '{'", pos))
             return (None, res)
 
-        _ = res.register(self.advance())
+        res.register(self.advance())
 
-        while self.curr_token.type_name == "ELSE IF":
-            _ = res.register(self.advance())
+        if self.curr_token.type_name == tk.TT_NEWLINE:
+            res.register(self.advance())
 
-            cond, result = self.expr()
-            _ = res.register(result)
+            all_statements, statements_res = self.statements()
+            res.register(statements_res)
             if res.error != None: return (None, res)
+            statements = all_statements 
+            cases.append([condition, statements, True])
 
-            if not (self.curr_token.type_name == "LCURLY"):
-                p = self.curr_token.pos 
-                _ = res.failure(InvalidSyntaxError("Expected '{'", p))
-                return (None, res)
-
-            _ = res.register(self.advance())
-
-            exp, exp_result = self.expr()
-            _ = res.register(exp_result)
+            if self.curr_token.type_name == "RCURLY":
+                res.register(self.advance())
+            else:
+                
+                all_cases, cases_res = self.if_expr_b_or_c()
+                res.register(cases_res)
+                if res.error != None: return (None, res)
+                new_cases, else_case = all_cases  
+                cases.append(new_cases)
+        else:
+            expr, expr_res = self.expr()
+            res.register(expr_res)
             if res.error != None: return (None, res)
+            cases.append([condition, expr, False])
 
-            new_element = [cond, exp]
-            cases.append(new_element)
+            all_cases, else_res = self.if_expr_b_or_c()
+            res.register(else_res)
+            if res.error != None: return (None, res)
+            new_cases, else_case = all_cases
+            cases.append(new_cases)
+        
+        res.success([cases, else_case])
 
-            if not (self.curr_token.type_name == "RCURLY"):
-                p = self.curr_token.pos 
-                _ = res.failure(InvalidSyntaxError("Expected '}'", p))
-                return (None, res)
+        return ([cases, else_case], res)
+
+    def if_expr_c(self):
+        res = ParseResult()
+        else_case = None 
 
         if self.curr_token.type_name == "ELSE":
-            _ = res.register(self.advance())
+            res.register(self.advance())
 
-            if not (self.curr_token.type_name == "LCURLY"):
-                p = self.curr_token.pos 
-                _ = res.failure(InvalidSyntaxError("Expected '{'", p))
-                return (None, res)
+            if self.curr_token.type_name == tk.TT_NEWLINE:
+                res.register(self.advance())
 
-            _ = res.register(self.advance())
+                statements, statements_res = self.statements()
+                res.register(statements_res)
+                if res.error: return res 
+                else_case = [statements, True]
 
-            e, e_result = self.expr()
-            _ = res.register(e_result)
+                if self.curr_token.type_name == "RCURLY":
+                    res.register(self.advance())
+                else:
+                    pos = self.curr_token.pos 
+                    res.failure(InvalidSyntaxError("Expected '}' in if statement", pos))
+                    return (None, res)
+            else:
+                expr, expr_res = self.expr()
+                res.register(expr_res)
+                if res.error != None: return (None, res)
+                else_case = [expr, False]
+        res.success(else_case)
+
+        return (else_case, res)
+
+    def if_expr_b_or_c(self):
+        res = ParseResult()
+        cases = []
+        else_case = None 
+
+        if self.curr_token.type_name == "ELSE IF":
+            all_cases, cases_res = self.if_expr_b()
+            res.register(cases_res)
             if res.error != None: return (None, res)
-    
-            else_case = e 
+            cases, else_case = all_cases 
+        else:
+            else_case, else_res = self.if_expr_c()
+            res.register(else_res)
+            if res.error != None: return (None, res)
+        
+        res.success([cases, else_case])
 
-            if not (self.curr_token.type_name == "RCURLY"):
-                p = self.curr_token.pos 
-                _ = res.failure(InvalidSyntaxError("Expected '}'", p))
-                return (None, res)
-        return (res.success(IfNode(cases, else_case)), res)
+        return ([cases, else_case], res)
+
+    def if_expr_b(self):
+        return self.if_expr_cases("ELSE IF")
+
+    #def if_expr(self):
+    #    res = ParseResult()
+    #    cases = []
+    #    else_case = None 
+
+    #    if not (self.curr_token.type_name == "IF"):
+    #        p = self.curr_token.pos 
+    #        _ = res.failure(InvalidSyntaxError("Expected 'if'", p))
+    #        return (None, res)
+
+    #    _ = res.register(self.advance())
+        
+    #    condition, cond_result = self.expr()
+    #    _ = res.register(cond_result)
+    #    if res.error != None: return (None, res)
+        
+    #    if not (self.curr_token.type_name == "LCURLY"):
+    #        p = self.curr_token.pos 
+    #        _ = res.register(InvalidSyntaxError("Expected '{'", p))
+    #        return (None, res)
+        
+    #    _ = res.register(self.advance())
+        
+    #    expression, expr_res = self.expr()
+    #    _ = res.register(expr_res)
+    #    if res.error != None: return (None, res)
+        
+    #    new_element = [condition, expression]
+    #    cases.append(new_element)
+        
+    #    if not (self.curr_token.type_name == "RCURLY"):
+    #        p = self.curr_token.pos 
+    #        _ = res.failure(InvalidSyntaxError("Expected '}'", p))
+    #        return (None, res)
+
+    #    _ = res.register(self.advance())
+
+    #    while self.curr_token.type_name == "ELSE IF":
+    #        _ = res.register(self.advance())
+
+    #        cond, result = self.expr()
+    #        _ = res.register(result)
+    #        if res.error != None: return (None, res)
+
+    #        if not (self.curr_token.type_name == "LCURLY"):
+    #            p = self.curr_token.pos 
+    #            _ = res.failure(InvalidSyntaxError("Expected '{'", p))
+    #            return (None, res)
+
+    #        _ = res.register(self.advance())
+
+    #        exp, exp_result = self.expr()
+    #        _ = res.register(exp_result)
+    #        if res.error != None: return (None, res)
+
+    #        new_element = [cond, exp]
+    #        cases.append(new_element)
+
+    #        if not (self.curr_token.type_name == "RCURLY"):
+    #            p = self.curr_token.pos 
+    #            _ = res.failure(InvalidSyntaxError("Expected '}'", p))
+    #            return (None, res)
+
+    #    if self.curr_token.type_name == "ELSE":
+    #        _ = res.register(self.advance())
+
+    #        if not (self.curr_token.type_name == "LCURLY"):
+    #            p = self.curr_token.pos 
+    #            _ = res.failure(InvalidSyntaxError("Expected '{'", p))
+    #            return (None, res)
+
+    #        _ = res.register(self.advance())
+
+    #        e, e_result = self.expr()
+    #        _ = res.register(e_result)
+    #        if res.error != None: return (None, res)
+    
+    #        else_case = e 
+
+    #        if not (self.curr_token.type_name == "RCURLY"):
+    #            p = self.curr_token.pos 
+    #            _ = res.failure(InvalidSyntaxError("Expected '}'", p))
+    #            return (None, res)
+    #    return (res.success(IfNode(cases, else_case)), res)
 
     def power(self):
         return self.bin_op(self.call, [tk.TT_POW], self.factor)
@@ -466,6 +644,42 @@ class Parser:
 
     def term(self):
         return self.bin_op(self.factor, [tk.TT_MUL, tk.TT_DIV])
+
+    def statements(self):
+        res = ParseResult()
+        statements = []
+        #pos_start = self.curr_token.pos 
+
+        while self.curr_token.type_name == tk.TT_NEWLINE:
+            res.register(self.advance())
+
+        statement, st_result = res.register(self.expr())
+        if res.error != None: return res 
+        statements.append(statement)
+
+        more_statements = True 
+        
+        while True:
+            newline_count = 0
+            while self.curr_token.type_name == tk.TT_NEWLINE:
+                res.register(self.advance())
+                newline_count += 1
+            if newline_count == 0:
+                more_statements = False 
+
+            if not more_statements: break
+            statement, st_result = res.register(self.expr())
+            if not statement: 
+                #self.reverse(res.to_reverse_count())
+                more_statements = False 
+                continue 
+            statements.append(statement)
+        
+        return_value = ListNode(statements)
+        res.success(return_value)
+
+        return (return_value, res) 
+
 
     def expr(self):
         res = ParseResult()

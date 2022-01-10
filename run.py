@@ -36,16 +36,26 @@ def run(text, fn):
 
 while True:
     textInput = input("aqua> ")
+    if textInput == "": continue
     if str(textInput) == "stop":
         break 
 
     result, error = run(textInput, "repl")
 
-    if error != None: print(error.as_string())
-    if result != None: print(result.print_self())
+    if error != None: 
+        print(error.as_string())
+    elif result != None:
+        if len(result.elements) == 1:
+            if result.elements[0] != None:
+                print(result.elements[0].print_self())
+        else:
+            for ele in result.elements:
+                if ele != None: 
+                    print(ele.print_self())
 
 
 
 ## KNOWN ERRORS ##
 #  String interpolation does not work 
-#  Division by zero is not handled for, needs to output an error 
+#  Division by zero is not handled for, needs to output an error
+#  Arithmetic by i in for loops does not work for some reason
