@@ -6,7 +6,7 @@ class SymbolTable:
     def get_val(self, name):
         from Types import Number
         value = self.symbols[name]
-        returnVal = Number(0)
+        returnVal = Number(0) 
 
         if value != None:
             returnVal = value 

@@ -4,6 +4,7 @@ from Error import RuntimeError
 import tokens as tk 
 from Context import Context 
 from Types import Number, string, Array
+from Position import Position
 
 class BaseFunction(Number):
     def __init__(self, name):
@@ -93,8 +94,8 @@ class BuiltinFunction(BaseFunction):
         res = RuntimeResult()
         exec_ctx = self.generate_new_context()
 
-        method_arg_names = [["value"], ["array", "value"]]
-        methods = [self.execute_print, self.execute_append]
+        method_arg_names = [["value"], ["array", "value"], ["fn"]]
+        methods = [self.execute_print, self.execute_append, self.execute_run]
 
         if self.name_id < 0 or self.name_id > len(methods) - 1:
             return "built in method undefined"
@@ -132,8 +133,38 @@ class BuiltinFunction(BaseFunction):
     def print_self(self):
         return f'<function {self.name}>'
 
-BuiltinFunction.print = BuiltinFunction(0)
+    def execute_run(self, exec_ctx):
+        res = RuntimeResult()
+        fn = exec_ctx.symbolTable.get_val("fn")
+        
+        if not isinstance(fn.value, str):
+            err = RuntimeError("Arguements must be string", Context(), Position())
+            res.failure(err)
+            return (None, res)
+
+        fn = fn.value 
+        
+        try:
+            with open(fn, "r") as f:
+                script = f.read()
+        except Exception as e:
+            err = RuntimeError("Failed to execute file" + str(e), Context(), Position())
+            res.failure(err)
+            return (None, res)
+
+        from run import run
+        return_value, error = run(script, fn)
+
+        if error != None: 
+            err = RuntimeError("Failed to finish file", Context(), Position())
+            res.failure(err)
+            return (None, res)
+        
+        return (return_value, res) 
+
+BuiltinFunction.print  = BuiltinFunction(0)
 BuiltinFunction.append = BuiltinFunction(1)
+BuiltinFunction.run    = BuiltinFunction(2)
 
 class Interpreter:
     def visit(self, node, context):
