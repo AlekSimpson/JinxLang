@@ -1,7 +1,7 @@
 from run import run
 import sys
 
-if len(sys.argv) == 0:
+if len(sys.argv) == 1:
     while True:
         textInput = input("aqua> ")
         if textInput == "": continue

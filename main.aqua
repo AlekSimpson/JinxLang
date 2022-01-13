@@ -1,1 +1,9 @@
-print("Bratula!")
+a = 5
+
+if a == 45 {
+  print("a equals 45")
+}elif a == 5 {
+  print("a equals 5")
+}
+
+

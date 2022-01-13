@@ -420,9 +420,11 @@ class Parser:
         res = ParseResult()
         all_cases, cases_res = self.if_expr_cases("IF")
         res.register(cases_res)
-        if res.error != None: return (None, res)
+        if res.error != None:  return (None, res)
         cases, else_case = all_cases 
-        
+            
+        print(f"CASES {all_cases}")
+
         return (res.success(IfNode(cases, else_case)), res)
 
     def if_expr_cases(self, case_keyword):
@@ -447,7 +449,7 @@ class Parser:
             return (None, res)
 
         res.register(self.advance())
-
+        
         if self.curr_token.type_name == tk.TT_NEWLINE:
             res.register(self.advance())
 
@@ -455,28 +457,35 @@ class Parser:
             res.register(statements_res)
             if res.error != None: return (None, res)
             statements = all_statements 
-            cases.append([condition, statements, True])
+            cases.extend([condition, statements, True])
 
             if self.curr_token.type_name == "RCURLY":
                 res.register(self.advance())
             else:
-                
                 all_cases, cases_res = self.if_expr_b_or_c()
                 res.register(cases_res)
                 if res.error != None: return (None, res)
-                new_cases, else_case = all_cases  
-                cases.append(new_cases)
+                new_cases, else_case = all_cases 
+                if len(new_cases) != 0: 
+                    cases.extend(new_cases)
         else:
             expr, expr_res = self.expr()
             res.register(expr_res)
             if res.error != None: return (None, res)
             cases.append([condition, expr, False])
 
+            if self.curr_token.type_name != "RCURLY":
+                pos = self.curr_token.pos 
+                res.register(InvalidSyntaxError("Expected '}'", pos))
+                return (None, res)
+            res.register(self.advance())
+            
             all_cases, else_res = self.if_expr_b_or_c()
             res.register(else_res)
             if res.error != None: return (None, res)
             new_cases, else_case = all_cases
-            cases.append(new_cases)
+            if len(new_cases) != 0:
+                cases.extend(new_cases)
         
         res.success([cases, else_case])
 
@@ -489,6 +498,13 @@ class Parser:
         if self.curr_token.type_name == "ELSE":
             res.register(self.advance())
 
+            if self.curr_token.type_name != "LCURLY":
+                pos = self.curr_token.pos 
+                res.register(InvalidSyntaxError("Expected '{' in else statement", pos))
+                return (None, res)
+            
+            res.register(self.advance())
+
             if self.curr_token.type_name == tk.TT_NEWLINE:
                 res.register(self.advance())
 
@@ -496,8 +512,8 @@ class Parser:
                 res.register(statements_res)
                 if res.error: return res 
                 else_case = [statements, True]
-
-                if self.curr_token.type_name == "RCURLY":
+                
+                if self.curr_token.type_name == "RCURLY": 
                     res.register(self.advance())
                 else:
                     pos = self.curr_token.pos 
@@ -507,6 +523,7 @@ class Parser:
                 expr, expr_res = self.expr()
                 res.register(expr_res)
                 if res.error != None: return (None, res)
+                
                 else_case = [expr, False]
         res.success(else_case)
 
@@ -516,8 +533,8 @@ class Parser:
         res = ParseResult()
         cases = []
         else_case = None 
-
-        if self.curr_token.type_name == "ELSE IF":
+        
+        if self.curr_token.type_name == "ELIF":
             all_cases, cases_res = self.if_expr_b()
             res.register(cases_res)
             if res.error != None: return (None, res)
@@ -532,7 +549,7 @@ class Parser:
         return ([cases, else_case], res)
 
     def if_expr_b(self):
-        return self.if_expr_cases("ELSE IF")
+        return self.if_expr_cases("ELIF")
 
     #def if_expr(self):
     #    res = ParseResult()
