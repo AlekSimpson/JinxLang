@@ -1,17 +1,9 @@
-a = 5
-
-if a == 45 {
-  print("a equals 45")
-}elif a == 5 {
-  print("a equals 5")
-  a = a + 10
-}
-
-while a == 15 {
-  a = a + 1
-  print("YO 15")
-}
+a = []
 
 for i in 1:15 {
-  
+  append(a, i)
 }
+
+print(a)
+
+## TODO: Make functions detect whether a variable or string is passed in like you did for the print function

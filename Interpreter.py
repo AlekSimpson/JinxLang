@@ -149,11 +149,12 @@ class BuiltinFunction(BaseFunction):
    
     def execute_append(self, exec_ctx):
         res = RuntimeResult()
-        arr = exec_ctx.symbolTable.get_val("array").value
+        arr_arg = exec_ctx.symbolTable.get_val("array").value
         value = exec_ctx.symbolTable.get_val("value").value 
-
-        arr.append(value)
-
+        arr = global_symbol_table.get_val(arr_arg).elements
+        
+        arr.append(Number(value))
+        
         return (None, res)
 
     def copy(self):
