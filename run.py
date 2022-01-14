@@ -39,3 +39,4 @@ def run(text, fn):
 #  String interpolation does not work 
 #  Division by zero is not handled for, needs to output an error
 #  Arithmetic by i in for loops does not work for some reason
+#  Error handling for non recognized keywords/variables is broken

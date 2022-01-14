@@ -362,13 +362,14 @@ class Interpreter:
                 res.register(expr_value)
                 if res.error != None: return res 
                 e_value = expr_value.value 
-                
+                 
                 return res.success(Number.nil if case_[2] else e_value)
 
         if node.else_case != None:
             else_value = res.register(self.visit(node.else_case[0], ctx))
             if res.error != None: return res 
             e_value = else_value.value
+            
             return res.success(Number.nil if node.else_case[1] else e_value)
         
         return res.success(Number.nil)

@@ -45,7 +45,8 @@ class IfNode:
     def __init__(self, cases, else_case=None):
         self.cases = cases 
         self.else_case = else_case
-        self.token = cases[0][0].token
+        #self.token = cases[0][0].token
+        self.token = Token()
         self.description = "IfNode"
         self.classType = 6
 

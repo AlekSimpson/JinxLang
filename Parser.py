@@ -422,8 +422,6 @@ class Parser:
         res.register(cases_res)
         if res.error != None:  return (None, res)
         cases, else_case = all_cases 
-            
-        print(f"CASES {all_cases}")
 
         return (res.success(IfNode(cases, else_case)), res)
 
@@ -457,17 +455,20 @@ class Parser:
             res.register(statements_res)
             if res.error != None: return (None, res)
             statements = all_statements 
-            cases.extend([condition, statements, True])
+            cases.append([condition, statements, True])
 
-            if self.curr_token.type_name == "RCURLY":
-                res.register(self.advance())
-            else:
-                all_cases, cases_res = self.if_expr_b_or_c()
-                res.register(cases_res)
-                if res.error != None: return (None, res)
-                new_cases, else_case = all_cases 
-                if len(new_cases) != 0: 
-                    cases.extend(new_cases)
+            if self.curr_token.type_name != "RCURLY":
+                pos = self.curr_token.pos 
+                res.register(InvalidSyntaxError("Expected '}'", pos))
+                return (None, res)
+            res.register(self.advance())
+
+            all_cases, cases_res = self.if_expr_b_or_c()
+            res.register(cases_res)
+            if res.error != None: return (None, res)
+            new_cases, else_case = all_cases 
+            if len(new_cases) != 0: 
+                cases.extend(new_cases)
         else:
             expr, expr_res = self.expr()
             res.register(expr_res)
@@ -533,7 +534,7 @@ class Parser:
         res = ParseResult()
         cases = []
         else_case = None 
-        
+         
         if self.curr_token.type_name == "ELIF":
             all_cases, cases_res = self.if_expr_b()
             res.register(cases_res)
