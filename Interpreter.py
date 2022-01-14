@@ -98,6 +98,11 @@ class BuiltinFunction(BaseFunction):
         except:
             returnVal = False 
         return returnVal 
+    
+    def check_is_var(self, value):
+        if value in global_symbol_table.symbols:
+            return True 
+        return False 
 
     def execute(self, args):
         res = RuntimeResult()
@@ -119,7 +124,7 @@ class BuiltinFunction(BaseFunction):
         res.register(return_res)
 
         return (return_value, res)
-
+    
     def execute_print(self, exec_ctx):
         res = RuntimeResult()
         value_arg = exec_ctx.symbolTable.get_val("value") 
@@ -153,6 +158,10 @@ class BuiltinFunction(BaseFunction):
         value = exec_ctx.symbolTable.get_val("value").value 
         arr = global_symbol_table.get_val(arr_arg).elements
         
+        if not self.isNum(value):
+            if self.check_is_var(value):
+                value = global_symbol_table.get_val(value)
+
         arr.append(Number(value))
         
         return (None, res)
@@ -363,7 +372,7 @@ class Interpreter:
         else:
             result, error = (Number(0), None)
 
-        if error != None: returnVal = rt.failure(errr)
+        if error != None: returnVal = rt.failure(error)
         if result != None: returnVal = rt.success(result)
 
         return returnVal 
@@ -429,6 +438,14 @@ class Interpreter:
     def visit_VarAccessNode(self, node, ctx):
         res = RuntimeResult()
         var_name = node.token.value 
+        
+        #if ctx.symbolTable != None:
+        #   if var_name in ctx.symbolTable:
+        #        value = ctx.symbolTable.get_val(var_name)
+        #    else:
+        #        p = node.tok.pos 
+        #        error = RuntimeError(f'{var_name} is not defined', ctx, p)
+        #        return res.failure(error)
 
         value = None 
         if ctx.symbolTable != None:

@@ -1,9 +1,0 @@
-a = []
-
-for i in 1:15 {
-  append(a, i)
-}
-
-print(a)
-
-## TODO: Make functions detect whether a variable or string is passed in like you did for the print function

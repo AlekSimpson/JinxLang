@@ -1,0 +1,8 @@
+a = []
+
+for i in 1:15 {
+  append(a, i)
+}
+
+print(a)
+

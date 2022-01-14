@@ -27,6 +27,11 @@ class Number:
         return (new_num, None)
 
     def divided(self, other):
+        if other.value == 0:
+            pos = other.pos
+            err = RuntimeError("Cannot divide by zero", self.context, pos)
+            return (None, err)
+
         new_num = Number(self.value / other.value)
         new_num.set_context(other.context)
         return (new_num, None)
