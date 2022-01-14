@@ -13,7 +13,7 @@ class SymbolTable:
 
         if self.parent != None:
             returnVal = parent.get_val(name)
-
+        
         return returnVal 
 
     def set_val(self, name, value):

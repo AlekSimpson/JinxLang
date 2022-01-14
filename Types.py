@@ -126,7 +126,7 @@ class Array(Number):
 
 class string(Number):
     def __init__(self, str_value=None):
-        super().__init__()
+        super().__init__(str_value)
         self.str_value = str_value 
 
     def added(self, other):

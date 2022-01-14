@@ -5,6 +5,7 @@ import tokens as tk
 from Context import Context 
 from Types import Number, string, Array
 from Position import Position
+from GlobalTable import global_symbol_table
 
 class BaseFunction(Number):
     def __init__(self, name):
@@ -90,6 +91,14 @@ class BuiltinFunction(BaseFunction):
         super().__init__(name_id)
         self.name_id = name_id 
 
+    def isNum(self, value):
+        returnVal = True 
+        try:
+            int(value)
+        except:
+            returnVal = False 
+        return returnVal 
+
     def execute(self, args):
         res = RuntimeResult()
         exec_ctx = self.generate_new_context()
@@ -113,7 +122,29 @@ class BuiltinFunction(BaseFunction):
 
     def execute_print(self, exec_ctx):
         res = RuntimeResult()
-        print(exec_ctx.symbolTable.get_val("value").value)
+        value_arg = exec_ctx.symbolTable.get_val("value") 
+        value = Number(value_arg.value)
+        isNumber = True 
+        if not self.isNum(value.value):
+            isNumber = False 
+            value = string(value)
+        
+        # Check if printing a number 
+        if isNumber:
+            print(value.value)
+        else:
+            # Check if value is a variable 
+            if value.value.value in global_symbol_table.symbols:
+                val = global_symbol_table.get_val(value.value.value)
+                # Check if variable is an array 
+                if isinstance(val, Array):
+                    print(val.print_self()) 
+                else:
+                    # print variable 
+                    print(val.value)
+            else:
+                # value is a string 
+                print(value.value.value)
         return (None, res)
    
     def execute_append(self, exec_ctx):
@@ -451,7 +482,8 @@ class Interpreter:
         func_value = Function()
         if value_to_call.value != None: func_value = value_to_call.value 
 
-        val_cal = func_value.copy()
+        #val_cal = func_value.copy()
+        val_cal = func_value
 
         for arg_node in node.arg_nodes:
             x = arg_node.token.value 
