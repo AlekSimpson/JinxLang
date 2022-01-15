@@ -2,12 +2,10 @@ from lexer import Lexer
 from Parser import Parser
 from Interpreter import Interpreter
 from Context import Context 
-#from SymbolTable import SymbolTable 
 from GlobalTable import global_symbol_table 
 from Types import Number 
 from Interpreter import BuiltinFunction
 
-#global_symbol_table = SymbolTable()
 global_symbol_table.set_val("nil", Number.nil)
 global_symbol_table.set_val("true", Number.true)
 global_symbol_table.set_val("false", Number.false)
@@ -38,5 +36,4 @@ def run(text, fn):
 
 ## KNOWN ERRORS ##
 #  String interpolation does not work 
-#  Arithmetic by i in for loops does not work for some reason
 #  Error handling for non recognized keywords/variables is broken
