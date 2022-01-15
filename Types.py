@@ -106,7 +106,6 @@ class Array(Number):
         new_arr = []
         for el in self.elements:
             if el != None:
-                #print(f"TESTING {el.value}")
                 new_arr.append(el.value)
 
         return new_arr

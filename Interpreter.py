@@ -155,14 +155,15 @@ class BuiltinFunction(BaseFunction):
     def execute_append(self, exec_ctx):
         res = RuntimeResult()
         arr_arg = exec_ctx.symbolTable.get_val("array").value
-        value = exec_ctx.symbolTable.get_val("value").value 
+        value_obj = exec_ctx.symbolTable.get_val("value") 
+        value = value_obj.value 
         arr = global_symbol_table.get_val(arr_arg).elements
         
-        if not self.isNum(value):
+        if not self.isNum(value_obj):
             if self.check_is_var(value):
-                value = global_symbol_table.get_val(value)
+                value_obj = global_symbol_table.get_val(value)
 
-        arr.append(Number(value))
+        arr.append(value_obj)
         
         return (None, res)
 
@@ -290,7 +291,7 @@ class Interpreter:
         table = ctx.symbolTable 
 
         while i < end_value:
-            table.set_val(iterator_name, i)
+            table.set_val(iterator_name, Number(i))
             i += 1
             
             _  = rt.register(self.visit(node.bodyNode, ctx))
