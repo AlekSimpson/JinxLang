@@ -1,0 +1,7 @@
+method add(a, b) {
+  new = a + b
+  print(new)
+}
+
+add(2, 3)
+

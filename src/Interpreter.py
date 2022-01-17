@@ -150,7 +150,7 @@ class BuiltinFunction(BaseFunction):
             else:
                 # value is a string 
                 print(value.value.value)
-        return (None, res)
+        return (Number(0), res)
    
     def execute_append(self, exec_ctx):
         res = RuntimeResult()
@@ -297,7 +297,7 @@ class Interpreter:
             _  = rt.register(self.visit(node.bodyNode, ctx))
             if rt.error != None: return rt 
         
-        return rt.success(None)
+        return rt.success(Number(0))
 
     def visit_WhileNode(self, node, ctx):
         rt = RuntimeResult()
@@ -312,7 +312,7 @@ class Interpreter:
             _ = rt.register(self.visit(node.bodyNode, ctx))
             if rt.error != None: return rt 
 
-        return rt.success(None)
+        return rt.success(Number(0))
 
     def check_for_declaration(self, table, node, context):
         access_node = node 
@@ -513,7 +513,7 @@ class Interpreter:
         return_value, return_res = val_cal.execute(args)
         _ = res.register(return_res)
         if res.error != None: return res 
-        
+         
         return res.success(return_value)
 
     def visit_GetArrNode(self, node, ctx):

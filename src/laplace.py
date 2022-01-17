@@ -3,7 +3,7 @@ import sys
 
 if len(sys.argv) == 1:
     while True:
-        textInput = input("aqua> ")
+        textInput = input("laplace> ")
         if textInput == "": continue
         if str(textInput) == "stop":
             break 
@@ -18,7 +18,7 @@ if len(sys.argv) == 1:
                     print(result.elements[0].print_self())
             else:
                 for ele in result.elements:
-                    if ele != None: 
+                    if ele != None:
                         print(ele.print_self())
 else:
     filename = sys.argv[1]

@@ -29,11 +29,10 @@ def run(text, fn):
     interpreter = Interpreter()
     ctx = Context("<program>")
     ctx.symbolTable = global_symbol_table
-
     result = interpreter.visit(nodes, ctx)
 
     return (result.value, result.error)
 
 ## KNOWN ERRORS ##
-#  String interpolation does not work 
 #  Error handling for non recognized keywords/variables is broken
+#  Last I checked arithmetic stopped working when there was no spaces between the characters
