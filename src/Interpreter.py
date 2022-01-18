@@ -69,14 +69,16 @@ class Function(BaseFunction):
 
         res.register(self.check_and_populate_args(self.arg_nodes, args, exec_ctx))
         if res.error != None: return (None, res)
-        print(f"EXECUTING FUNCTION {self.body_node}, Interpreter.py, 72")
+        
         body_res = interpreter.visit(self.body_node, exec_ctx)
         _ = res.register(body_res)
-
-        value = Number.nil if self.should_return_nil else res.value
+        print(f"BEFORE FINAL {res.value.elements[0]}")
+        print(f"WILL NOT RETURN {self.should_return_nil}")
+        final_value = Number.nil if self.should_return_nil else res.value.elements[0]
         if res.error != None: return (None, res)
-        self.context = exec_ctx 
-        return (value, res)
+        self.context = exec_ctx
+        print(f"FINAL VALUE {final_value.value}") 
+        return (final_value, res)
 
     def copy(self):
         copy = Function(self.name, self.body_node, self.arg_nodes, self.should_return_nil)
@@ -145,6 +147,7 @@ class BuiltinFunction(BaseFunction):
                 if isinstance(val, Array):
                     print(val.print_self()) 
                 else:
+                    print(f"PRINTING VARIABLE {val}")
                     # print variable 
                     print(val.value)
             else:
@@ -260,10 +263,8 @@ class Interpreter:
     def visit_ListNode(self, node, context):
         res = RuntimeResult()
         elements = []
-        print(f"NODE IN LIST NODE {node}")
         for element_node in node.element_nodes:
             el = self.visit(element_node, context)
-            print(f"ELEMENT {el.value.value}")
             _ = res.register(el)
             elements.append(el.value)
             if res.error != None: return res 
@@ -345,7 +346,6 @@ class Interpreter:
 
         op_node = node.op 
         name_cond = op_node.token.type_name 
-
         if name_cond == tk.TT_PLUS:
             result, error = left.added(right)
         elif name_cond == tk.TT_MINUS:
@@ -377,7 +377,6 @@ class Interpreter:
 
         if error != None: returnVal = rt.failure(error)
         if result != None: returnVal = rt.success(result)
-
         return returnVal 
 
     def visit_number(self, node, ctx):
@@ -486,13 +485,15 @@ class Interpreter:
         return res.success(method) 
 
     def visit_ReturnNode(self, node, ctx):
+        print(f"IS VISITING RETURN NODE {node.node_to_return}")
         res = RuntimeResult()
-        print(f"PRINT RETURN NODE IS VISITED node {node.as_string()}, return {node.node_to_return.as_string()}")
-        value = Number.nil 
+        value = Number.nil
+        print("APPROACHING CONDITIONAL")
         if node.node_to_return != None:
             value = res.register(self.visit(node.node_to_return, ctx))
-            return (value, res)
-
+            print(f"RETURN SUCCESSFUL {value.value.value}")
+            return res.success(value)
+        print("[] return node ending")
         return res.success(value)
 
     def visit_CallNode(self, node, ctx):

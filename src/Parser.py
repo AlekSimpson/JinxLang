@@ -286,9 +286,9 @@ class Parser:
         res.register(body_res)
         if res.error != None: return (None, res)
         
-        return_nil = True  
+        return_nil = True
         for node in body.element_nodes:
-            if node.token.type_name == "RETURN":
+            if node.classType == 15:
                 return_nil = False
                 break 
 
@@ -626,12 +626,12 @@ class Parser:
             if self.curr_token.type_name != "NEWLINE":
                 expr, expr_res = self.expr()
                 if expr_res.error != None: return (None, expr_res)
-                return_node = expr 
-            return (ReturnNode(return_node), res)
+                return_node = ReturnNode(expr)
+            return (return_node, res)
 
         expr, expr_res = self.expr()
         if expr_res.error != None: return (None, res.failure(expr_res.error))
-        return (res.success(expr), res)
+        return (expr, res)
 
     def expr(self):
         res = ParseResult()

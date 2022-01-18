@@ -151,7 +151,7 @@ class BinOpNode:
         self.classType = 0
 
     def as_string(self):
-        return self.token.as_string()
+        return f'{self.description}: {self.token.as_string()}'
 
 class UnaryNode:
     def __init__(self, op_tok, node):

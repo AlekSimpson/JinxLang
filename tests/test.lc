@@ -1,7 +1,8 @@
 method add(a, b) {
-  new = a + b
-  print(new)
+  val = a + b
+  return val 
 }
 
-add(2, 3)
-
+sum = add(200, 300)
+print("IS PRINTING")
+print(sum)
