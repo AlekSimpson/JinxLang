@@ -69,7 +69,7 @@ class Function(BaseFunction):
 
         res.register(self.check_and_populate_args(self.arg_nodes, args, exec_ctx))
         if res.error != None: return (None, res)
-
+        print(f"EXECUTING FUNCTION {self.body_node}, Interpreter.py, 72")
         body_res = interpreter.visit(self.body_node, exec_ctx)
         _ = res.register(body_res)
 
@@ -229,7 +229,8 @@ class Interpreter:
                     self.visit_StringNode,        
                     self.visit_ListNode,          
                     self.visit_SetArrNode,        
-                    self.visit_GetArrNode         
+                    self.visit_GetArrNode,
+                    self.visit_ReturnNode
                 ]
         
         if func_index == 4:
@@ -259,9 +260,10 @@ class Interpreter:
     def visit_ListNode(self, node, context):
         res = RuntimeResult()
         elements = []
-
+        print(f"NODE IN LIST NODE {node}")
         for element_node in node.element_nodes:
             el = self.visit(element_node, context)
+            print(f"ELEMENT {el.value.value}")
             _ = res.register(el)
             elements.append(el.value)
             if res.error != None: return res 
@@ -439,14 +441,6 @@ class Interpreter:
     def visit_VarAccessNode(self, node, ctx):
         res = RuntimeResult()
         var_name = node.token.value 
-        
-        #if ctx.symbolTable != None:
-        #   if var_name in ctx.symbolTable:
-        #        value = ctx.symbolTable.get_val(var_name)
-        #    else:
-        #        p = node.tok.pos 
-        #        error = RuntimeError(f'{var_name} is not defined', ctx, p)
-        #        return res.failure(error)
 
         value = None 
         if ctx.symbolTable != None:
@@ -491,6 +485,16 @@ class Interpreter:
 
         return res.success(method) 
 
+    def visit_ReturnNode(self, node, ctx):
+        res = RuntimeResult()
+        print(f"PRINT RETURN NODE IS VISITED node {node.as_string()}, return {node.node_to_return.as_string()}")
+        value = Number.nil 
+        if node.node_to_return != None:
+            value = res.register(self.visit(node.node_to_return, ctx))
+            return (value, res)
+
+        return res.success(value)
+
     def visit_CallNode(self, node, ctx):
         res = RuntimeResult()
         args = []
@@ -501,7 +505,6 @@ class Interpreter:
         func_value = Function()
         if value_to_call.value != None: func_value = value_to_call.value 
 
-        #val_cal = func_value.copy()
         val_cal = func_value
 
         for arg_node in node.arg_nodes:
