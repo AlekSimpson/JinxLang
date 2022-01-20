@@ -1,8 +1,0 @@
-method add(a, b) {
-  val = a + b
-  return val 
-}
-
-sum = add(200, 300)
-print("IS PRINTING")
-print(sum)

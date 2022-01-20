@@ -1,6 +1,0 @@
-method test() {
-  return "testing string" 
-}
-
-a = test()
-print(a)

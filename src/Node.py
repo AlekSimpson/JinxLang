@@ -12,7 +12,7 @@ class NumberNode:
         pass 
 
     def as_string(self):
-        return self.token.as_string()
+        return f"{self.description}: {self.token.as_string()}"
 
 class VarAccessNode:
     def __init__(self, token):
@@ -21,16 +21,17 @@ class VarAccessNode:
         self.classType = 4
 
     def as_string(self):
-        return self.token.as_string()
+        return f"{self.description}: {self.token.as_string()}"
 
 class VarAssignNode:
     def __init__(self, token, value_node):
         self.token = token 
         self.value_node = value_node
+        self.description = "VarAssignNode"
         self.classType = 5
 
     def as_string(self):
-        return self.token.as_string()
+        return f"{self.description}: {self.token.as_string()}"
 
 class VariableNode:
     def __init__(self, token):
@@ -39,7 +40,7 @@ class VariableNode:
         self.classType = 2
 
     def as_string(self):
-        return self.token.as_string()
+        return f"{self.description}: {self.token.as_string()}"
 
 class IfNode:
     def __init__(self, cases, else_case=None):
@@ -51,7 +52,7 @@ class IfNode:
         self.classType = 6
 
     def as_string(self):
-        return self.token.as_string()
+        return f"{self.description}: {self.token.as_string()}"
 
 class ForNode:
     def __init__(self, iterator, startValue, endValue, bodyNode, should_return_nil):
@@ -65,7 +66,7 @@ class ForNode:
         self.classType = 7
 
     def as_string(self):
-        return self.token.as_string()
+        return f"{self.description}: {self.token.as_string()}"
 
 class WhileNode:
     def __init__(self, conditionNode, bodyNode, should_return_nil):
@@ -77,7 +78,7 @@ class WhileNode:
         self.classType = 8
 
     def as_string(self):
-        return self.token.as_string()
+        return f"{self.description}: {self.token.as_string()}"
 
 class FuncDefNode:
     def __init__(self, body_node, token=None, arg_name_tokens=None, should_return_nil=False):
@@ -93,7 +94,7 @@ class FuncDefNode:
         self.classType = 9
 
     def as_string(self):
-        return self.token.as_string()
+        return f"{self.description}: {self.token.as_string()}"
 
 class CallNode:
     def __init__(self, node_to_call, arg_nodes, token=None):
@@ -107,7 +108,7 @@ class CallNode:
         self.classType = 10
     
     def as_string(self):
-        return self.token.as_string()
+        return f"{self.description}: {self.token.as_string()}"
 
 class ArrayGetNode:
     def __init__(self, array, index):
@@ -139,7 +140,7 @@ class StringNode:
         self.classType = 11
 
     def as_string(self):
-        return self.token.as_string()
+        return f"{self.description}: {self.token.as_string()}"
 
 class BinOpNode:
     def __init__(self, lhs=None, op=None, rhs=None):
@@ -161,7 +162,7 @@ class UnaryNode:
         self.classType = 3
 
     def as_string(self):
-        return self.token.as_string()
+        return f"{self.description}: {self.token.as_string()}"
 
 class ListNode:
     def __init__(self, element_nodes):
@@ -171,7 +172,7 @@ class ListNode:
         self.classType = 12
 
     def as_string(self):
-        return self.token.as_string()
+        return f"{self.description}: {self.element_nodes}"
 
 class ReturnNode:
     def __init__(self, node_to_return):

@@ -1,5 +1,5 @@
 import sys 
-sys.path.append("/Users/aleksimpson/desktop/projects/aqua/src/") 
+sys.path.append("/home/alek/Desktop/projects/aqua/src/")
 import run
 from TestSetups import *
 from termcolors import bcolors as bc 

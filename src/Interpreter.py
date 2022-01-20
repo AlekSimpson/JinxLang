@@ -62,6 +62,7 @@ class Function(BaseFunction):
         self.should_return_nil = should_return_nil 
 
     def execute(self, args):
+        #print("--------------------EXECUTING--------------------")
         res = RuntimeResult()
         interpreter = Interpreter()
 
@@ -72,12 +73,12 @@ class Function(BaseFunction):
         
         body_res = interpreter.visit(self.body_node, exec_ctx)
         _ = res.register(body_res)
-        print(f"BEFORE FINAL {res.value.elements[0]}")
-        print(f"WILL NOT RETURN {self.should_return_nil}")
+        #print(f"BEFORE FINAL {res.value.elements}")
+        #print(f"WILL NOT RETURN {self.should_return_nil}")
         final_value = Number.nil if self.should_return_nil else res.value.elements[0]
         if res.error != None: return (None, res)
         self.context = exec_ctx
-        print(f"FINAL VALUE {final_value.value}") 
+        #print(f"--------------------FINAL VALUE {final_value.value}------------------------") 
         return (final_value, res)
 
     def copy(self):
@@ -147,7 +148,6 @@ class BuiltinFunction(BaseFunction):
                 if isinstance(val, Array):
                     print(val.print_self()) 
                 else:
-                    print(f"PRINTING VARIABLE {val}")
                     # print variable 
                     print(val.value)
             else:
@@ -214,6 +214,7 @@ BuiltinFunction.run    = BuiltinFunction(2)
 class Interpreter:
     def visit(self, node, context):
         func_index = node.classType
+        #print(f"[{func_index}] - {node.as_string()}") <----- KEEP FOR DEBUG PURPOSES
         result = RuntimeResult()
         table = context.symbolTable.symbols
         
@@ -242,7 +243,7 @@ class Interpreter:
             result = options[func_index](node, context)
         elif func_index >= 0 or func_index <= 11:
             print("no visi method found")
-
+        
         return result
 
     def AccessNode(self, node, ctx, table):
@@ -485,15 +486,11 @@ class Interpreter:
         return res.success(method) 
 
     def visit_ReturnNode(self, node, ctx):
-        print(f"IS VISITING RETURN NODE {node.node_to_return}")
         res = RuntimeResult()
         value = Number.nil
-        print("APPROACHING CONDITIONAL")
         if node.node_to_return != None:
             value = res.register(self.visit(node.node_to_return, ctx))
-            print(f"RETURN SUCCESSFUL {value.value.value}")
-            return res.success(value)
-        print("[] return node ending")
+            return res.success(value.value)
         return res.success(value)
 
     def visit_CallNode(self, node, ctx):
