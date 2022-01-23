@@ -1,0 +1,8 @@
+method add() {
+  return "YES"
+  print("*******HELLO TESTING******")
+  return "NO"
+}
+
+sum = add()
+print(sum)

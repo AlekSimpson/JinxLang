@@ -1,0 +1,6 @@
+method test() {
+  print("brrrrr")
+  return "NO"
+}
+val = test()
+print(val)
