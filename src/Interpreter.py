@@ -62,7 +62,7 @@ class Function(BaseFunction):
         self.should_return_nil = should_return_nil 
 
     def execute(self, args):
-        #print("--------------------EXECUTING--------------------")
+        print("--------------------EXECUTING--------------------")
         res = RuntimeResult()
         interpreter = Interpreter()
 
@@ -74,11 +74,11 @@ class Function(BaseFunction):
         body_res = interpreter.visit(self.body_node, exec_ctx)
         _ = res.register(body_res)
         #print(f"BEFORE FINAL {res.value.elements}")
-        #print(f"WILL NOT RETURN {self.should_return_nil}")
-        final_value = Number.nil if self.should_return_nil else res.value.elements[0]
+        print(f"WILL NOT RETURN {self.should_return_nil}")
+        final_value = Number() if self.should_return_nil else res.value.elements[0]
         if res.error != None: return (None, res)
         self.context = exec_ctx
-        #print(f"--------------------FINAL VALUE {final_value.value}------------------------") 
+        print(f"--------------------FINAL VALUE {final_value.value}------------------------")
         return (final_value, res)
 
     def copy(self):
@@ -153,7 +153,7 @@ class BuiltinFunction(BaseFunction):
             else:
                 # value is a string 
                 print(value.value.value)
-        return (Number(0), res)
+        return (Number(42069), res)
    
     def execute_append(self, exec_ctx):
         res = RuntimeResult()
@@ -214,10 +214,11 @@ BuiltinFunction.run    = BuiltinFunction(2)
 class Interpreter:
     def visit(self, node, context):
         func_index = node.classType
-        #print(f"[{func_index}] - {node.as_string()}") <----- KEEP FOR DEBUG PURPOSES
+        print(f"[{func_index}] - {node.as_string()}") 
+        # ^^^^ Keep for debugging purposes ^^^^
         result = RuntimeResult()
         table = context.symbolTable.symbols
-        
+
         options = [
                     self.visit_binop, 
                     self.visit_number,            
@@ -268,7 +269,9 @@ class Interpreter:
             el = self.visit(element_node, context)
             _ = res.register(el)
             elements.append(el.value)
-            if res.error != None: return res 
+            if res.error != None: return res
+            if element_node.classType == 15:
+                break
 
         arr = Array(elements)
         arr.set_context(context)
@@ -487,7 +490,7 @@ class Interpreter:
 
     def visit_ReturnNode(self, node, ctx):
         res = RuntimeResult()
-        value = Number.nil
+        value = Number.nil 
         if node.node_to_return != None:
             value = res.register(self.visit(node.node_to_return, ctx))
             return res.success(value.value)
