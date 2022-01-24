@@ -49,12 +49,12 @@ mcCorrectInline = 2
 # Newline Method Call Tests
 mcSampleNewline    = ["method test() {; 1 + 1; }; test()"]
 mcTestNamesNewline = ["Newline Method Calls"]
-mcCorrectNewline   = 0
+mcCorrectNewline   = None 
 
 # Method Arguements Tests 
 maSamples = ["method add(a, b) {; new = a + b; }; add(2, 2)"]
 maTests   = ["Method Arguemnts"]
-maCorrect = 0
+maCorrect = None 
 
 # Array Tests 
 arraySamples = ["a = [1,2,3,4]", "a = [1,2,3,4]; a", "a = [1,2,3]; append(a, 123)"]

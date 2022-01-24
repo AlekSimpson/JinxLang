@@ -62,7 +62,6 @@ class Function(BaseFunction):
         self.should_return_nil = should_return_nil 
 
     def execute(self, args):
-        print("--------------------EXECUTING--------------------")
         res = RuntimeResult()
         interpreter = Interpreter()
 
@@ -73,12 +72,13 @@ class Function(BaseFunction):
         
         body_res = interpreter.visit(self.body_node, exec_ctx)
         _ = res.register(body_res)
-        #print(f"BEFORE FINAL {res.value.elements}")
-        print(f"WILL NOT RETURN {self.should_return_nil}")
-        final_value = Number() if self.should_return_nil else res.value.elements[0]
+
+        final_value = res.value  
+        if not isinstance(res.value, Number): 
+            final_value = Number() if self.should_return_nil else res.value.elements[-1]
         if res.error != None: return (None, res)
+        
         self.context = exec_ctx
-        print(f"--------------------FINAL VALUE {final_value.value}------------------------")
         return (final_value, res)
 
     def copy(self):
@@ -153,7 +153,7 @@ class BuiltinFunction(BaseFunction):
             else:
                 # value is a string 
                 print(value.value.value)
-        return (Number(42069), res)
+        return (Number(0), res)
    
     def execute_append(self, exec_ctx):
         res = RuntimeResult()
@@ -214,7 +214,7 @@ BuiltinFunction.run    = BuiltinFunction(2)
 class Interpreter:
     def visit(self, node, context):
         func_index = node.classType
-        print(f"[{func_index}] - {node.as_string()}") 
+        #print(f"[{func_index}] - {node.as_string()}") 
         # ^^^^ Keep for debugging purposes ^^^^
         result = RuntimeResult()
         table = context.symbolTable.symbols
