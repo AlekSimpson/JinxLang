@@ -3,11 +3,11 @@ from SymbolTable import SymbolTable
 from Error import RuntimeError 
 import tokens as tk 
 from Context import Context 
-from Types import Number, string, Array
+from Types import Number, string, Array, Type
 from Position import Position
 from GlobalTable import global_symbol_table
 
-class BaseFunction(Number):
+class BaseFunction(Type):
     def __init__(self, name):
         super().__init__()
         self.name = name

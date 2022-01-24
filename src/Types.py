@@ -2,7 +2,7 @@ from RuntimeResult import RuntimeResult
 from Context import Context 
 from Error import RuntimeError
 
-# Any (Supertype for all)
+# Type (Supertype for all)
 # Number
 #   Real?
 #   Integer
@@ -13,46 +13,27 @@ from Error import RuntimeError
 #      Bool
 #   AbstractFloat
 #      Float64, 32, 16
-# String
+# String 
 
-class Number:
+# Probably should watch that video about compiling python to assembly
+# Because I am not sure how that will work with other python libraries like numpy
+# And I need numpy to to create Int64, 32, etc
+
+class Type:
     def __init__(self, value=None, pos=None):
         self.value = value 
         self.pos = pos 
-        self.context = None 
+        self.context = None
 
     def set_context(self, ctx):
         self.context = ctx
 
-    def added(self, other):
-        new_num = Number(self.value + other.value)
-        new_num.set_context(other.context)
-        return (new_num, None)
+    def print_self():
+        return self.value
 
-    def subtracted(self, other):
-        new_num = Number(self.value - other.value)
-        new_num.set_context(other.context)
-        return (new_num, None)
-
-    def multiplied(self, other):
-        new_num = Number(self.value * other.value)
-        new_num.set_context(other.context)
-        return (new_num, None)
-
-    def divided(self, other):
-        if other.value == 0:
-            pos = other.pos
-            err = RuntimeError("Cannot divide by zero", self.context, pos)
-            return (None, err)
-
-        new_num = Number(self.value / other.value)
-        new_num.set_context(other.context)
-        return (new_num, None)
-
-    def power(self, other):
-        new_num = Number(pow(self.value, other.value))
-        new_num.set_context(other.context)
-        return (new_num, None)
+class Natural(Type):
+    def __init__(self, value=None, pos=None):
+        super().__init__(value, pos)
 
     def comp_eq(self, other):
         new_num = Number(1 if self.value == other.value else 0)
@@ -99,17 +80,64 @@ class Number:
         new_num.set_context(self.context)
         return (new_num, None)
 
+class Number(Natural):
+    def __init__(self, value=None, pos=None):
+        super().__init__(value, pos)
+
+    def added(self, other):
+        new_num = Number(self.value + other.value)
+        new_num.set_context(other.context)
+        return (new_num, None)
+
+    def subtracted(self, other):
+        new_num = Number(self.value - other.value)
+        new_num.set_context(other.context)
+        return (new_num, None)
+
+    def multiplied(self, other):
+        new_num = Number(self.value * other.value)
+        new_num.set_context(other.context)
+        return (new_num, None)
+
+    def divided(self, other):
+        if other.value == 0:
+            pos = other.pos
+            err = RuntimeError("Cannot divide by zero", self.context, pos)
+            return (None, err)
+
+        new_num = Number(self.value / other.value)
+        new_num.set_context(other.context)
+        return (new_num, None)
+
+    def power(self, other):
+        new_num = Number(pow(self.value, other.value))
+        new_num.set_context(other.context)
+        return (new_num, None)
+
     def is_true(self):
         return self.value != 0
 
     def print_self(self):
         return self.value
 
-Number.nil = Number(0)
-Number.true = Number(1)
-Number.false = Number(0)
+class Integer(Number):
+    def __init__(self, value=None, pos=None):
+        super().__init__(value, pos)
 
-class Array(Number):
+class UInt(Integer):
+    def __init__(self, value=None, pos=None):
+        super().__init__(value, pos)
+
+class Int(Integer):
+    def __init__(self, value=None, pos=None):
+        super().__init__(value, pos)
+
+class Float(Number):
+    def __init__(self, value=None, pos=None):
+        super().__init__(value, pos)
+    # Need 64 bit floats and stuff
+
+class Array(Type):
     def __init__(self, elements):
         super().__init__()
         self.elements = elements
@@ -141,7 +169,7 @@ class Array(Number):
         self.elements[index] = new
         return (None, res)
 
-class string(Number):
+class string(Natural):
     def __init__(self, str_value=None):
         super().__init__(str_value)
         self.str_value = str_value 
@@ -149,7 +177,7 @@ class string(Number):
     def added(self, other):
         otherVal = other.str_value 
         str = self.str_value 
-        print("is called")
+        
         new_str = string(str + otherVal)
         new_str.set_context(other.context)
         return (new_str, None)
@@ -160,4 +188,7 @@ class string(Number):
     def print_self(self):
         return str(self.str_value)
 
+Number.nil = Number(0)
+Number.true = Number(1)
+Number.false = Number(0)
 
