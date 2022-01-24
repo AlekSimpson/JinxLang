@@ -2,6 +2,19 @@ from RuntimeResult import RuntimeResult
 from Context import Context 
 from Error import RuntimeError
 
+# Any (Supertype for all)
+# Number
+#   Real?
+#   Integer
+#      Signed
+#         Int8, 16, 32, 64, 128
+#      Unsigned 
+#         UInt8, 16, 32, 64, 128
+#      Bool
+#   AbstractFloat
+#      Float64, 32, 16
+# String
+
 class Number:
     def __init__(self, value=None, pos=None):
         self.value = value 
