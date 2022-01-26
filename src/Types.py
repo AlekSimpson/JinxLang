@@ -1,5 +1,5 @@
-from RuntimeResult import RuntimeResult 
-from Context import Context 
+from RuntimeResult import RuntimeResult
+from Context import Context
 from Error import RuntimeError
 
 # Type (Supertype for all)
@@ -8,22 +8,22 @@ from Error import RuntimeError
 #   Integer
 #      Signed
 #         Int8, 16, 32, 64, 128
-#      Unsigned 
+#      Unsigned
 #         UInt8, 16, 32, 64, 128
 #      Bool
 #   AbstractFloat
 #      Float64, 32, 16
-# String 
+# String
 
 class Type:
     def __init__(self, value=None, pos=None):
-        self.value = value 
-        self.pos = pos 
+        self.value = value
+        self.pos = pos
         self.context = None
 
     def set_context(self, ctx):
-        self.context = ctx 
-        
+        self.context = ctx
+
     def print_self():
         return self.value
 
@@ -127,7 +127,7 @@ class Number(Real):
 class Integer(Number):
     def __init__(self, bitsize, value=None, pos=None):
         super().__init__(value, pos)
-        self.bitsize = bitsize 
+        self.bitsize = bitsize
 
 #class UInt(Integer):
 #    def __init__(self, value=None, pos=None, bitsize=64):
@@ -143,7 +143,7 @@ class Float(Number):
         self.bitsize = bitsize
 
 class Array(Type):
-    def __init__(self, elements):
+    def __init__(self, elements=[]):
         super().__init__()
         self.elements = elements
         self.length = len(self.elements)
@@ -160,8 +160,8 @@ class Array(Type):
         res = RuntimeResult()
         if index.value < 0 or index.value > self.length - 1:
             err = RuntimeError("Index out of range", self.context, self.pos)
-            return (None, err) 
-        
+            return (None, err)
+
         return (self.elements[index.value], res)
 
     def set(self, index, new):
@@ -177,18 +177,18 @@ class Array(Type):
 class string(Real):
     def __init__(self, str_value=None):
         super().__init__(str_value)
-        self.str_value = str_value 
+        self.str_value = str_value
 
     def added(self, other):
-        otherVal = other.str_value 
-        str = self.str_value 
-        
+        otherVal = other.str_value
+        str = self.str_value
+
         new_str = string(str + otherVal)
         new_str.set_context(other.context)
         return (new_str, None)
 
     def is_true(self):
-        return self.str_value != None 
+        return self.str_value != None
 
     def print_self(self):
         return str(self.str_value)

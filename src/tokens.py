@@ -22,8 +22,8 @@ TT_EOF = "EOF"
 TT_COLON = "COLON"
 TT_NEWLINE = "NEWLINE"
 
-TT_EQ = "EQ" # This the assignment equals 
-TT_EE = "EQUALS" # This is the comparison equals 
+TT_EQ = "EQ" # This the assignment equals
+TT_EE = "EQUALS" # This is the comparison equals
 TT_NE = "NOT EQUALS"
 TT_LT = "LESS THAN"
 TT_GT = "GREATER THAN"
@@ -49,11 +49,12 @@ TT_COMMA = "COMMA"
 TT_ARROW = "ARROW"
 
 class Token:
-    def __init__(self, type="", type_name="", value="", type_dec=None, pos=None):
+    def __init__(self, type="", type_name="", value="", pos=None, type_dec=None):
         self.type = type
-        self.type_name = type_name 
-        self.value = value 
-        self.pos = pos 
-    
+        self.type_name = type_name
+        self.value = value
+        self.pos = pos
+        self.type_dec = type_dec
+
     def as_string(self):
         return (f'{self.type_name} : {self.value}')
