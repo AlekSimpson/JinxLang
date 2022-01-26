@@ -15,10 +15,6 @@ from Error import RuntimeError
 #      Float64, 32, 16
 # String 
 
-# Probably should watch that video about compiling python to assembly
-# Because I am not sure how that will work with other python libraries like numpy
-# And I need numpy to to create Int64, 32, etc
-
 class Type:
     def __init__(self, value=None, pos=None):
         self.value = value 
@@ -26,15 +22,23 @@ class Type:
         self.context = None
 
     def set_context(self, ctx):
-        self.context = ctx
-
+        self.context = ctx 
+        
     def print_self():
         return self.value
 
-class Natural(Type):
+class Void:
+    def __init__(self, pos=None):
+        self.pos = pos
+        self.context = None
+
+    def print_self():
+        return "Void"
+
+class Real(Type):
     def __init__(self, value=None, pos=None):
         super().__init__(value, pos)
-
+    ### NEED TO ADD CHECK FOR THE TYPE BEING THE SAME AND NOT JUST THE VALUE ###
     def comp_eq(self, other):
         new_num = Number(1 if self.value == other.value else 0)
         new_num.set_context(other.context)
@@ -80,7 +84,7 @@ class Natural(Type):
         new_num.set_context(self.context)
         return (new_num, None)
 
-class Number(Natural):
+class Number(Real):
     def __init__(self, value=None, pos=None):
         super().__init__(value, pos)
 
@@ -121,21 +125,22 @@ class Number(Natural):
         return self.value
 
 class Integer(Number):
-    def __init__(self, value=None, pos=None):
+    def __init__(self, bitsize, value=None, pos=None):
         super().__init__(value, pos)
+        self.bitsize = bitsize 
 
-class UInt(Integer):
-    def __init__(self, value=None, pos=None):
-        super().__init__(value, pos)
+#class UInt(Integer):
+#    def __init__(self, value=None, pos=None, bitsize=64):
+#        super().__init__(value, pos, bitsize)
 
-class Int(Integer):
-    def __init__(self, value=None, pos=None):
-        super().__init__(value, pos)
+#class Int(Integer):
+#    def __init__(self, value=None, pos=None, bitsize=64):
+#        super().__init__(value, pos, bitsize)
 
 class Float(Number):
-    def __init__(self, value=None, pos=None):
+    def __init__(self, bitsize, value=None, pos=None):
         super().__init__(value, pos)
-    # Need 64 bit floats and stuff
+        self.bitsize = bitsize
 
 class Array(Type):
     def __init__(self, elements):
@@ -169,7 +174,7 @@ class Array(Type):
         self.elements[index] = new
         return (None, res)
 
-class string(Natural):
+class string(Real):
     def __init__(self, str_value=None):
         super().__init__(str_value)
         self.str_value = str_value 

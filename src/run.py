@@ -13,6 +13,9 @@ global_symbol_table.set_val("print", BuiltinFunction.print)
 global_symbol_table.set_val("append", BuiltinFunction.append)
 global_symbol_table.set_val("run", BuiltinFunction.run)
 
+# Built in types here??
+# global_symbol_table.set_val("Int", 
+
 def run(text, fn):
     lexer = Lexer(text, fn)
     tokens, error = lexer.make_tokens()

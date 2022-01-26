@@ -49,7 +49,7 @@ TT_COMMA = "COMMA"
 TT_ARROW = "ARROW"
 
 class Token:
-    def __init__(self, type="", type_name="", value="", pos=None):
+    def __init__(self, type="", type_name="", value="", type_dec=None, pos=None):
         self.type = type
         self.type_name = type_name 
         self.value = value 

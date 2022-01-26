@@ -24,9 +24,10 @@ class VarAccessNode:
         return f"{self.description}: {self.token.as_string()}"
 
 class VarAssignNode:
-    def __init__(self, token, value_node):
+    def __init__(self, token, value_node, type):
         self.token = token 
         self.value_node = value_node
+        self.type = type
         self.description = "VarAssignNode"
         self.classType = 5
 

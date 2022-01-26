@@ -2,9 +2,26 @@ from tokens import Token
 from Position import Position
 import tokens as tk
 from Error import InvalidSyntaxError, IllegalCharError
+from Types import Float, Integer, String, Void
 
-keywords = ["if", "else", "elif", "for", "in", "while", "method", "return", "break", "continue"]
-keywordTokens = [tk.TT_IF, tk.TT_ELSE, tk.TT_ELIF, tk.TT_FOR, tk.TT_IN, tk.TT_WHILE, tk.TT_FUNC, tk.TT_RETURN, tk.TT_BREAK, tk.TT_CONTINUE]
+keywords = ["if", "else", "elif", 
+            "for", "in", "while", 
+            "method", "return", "break", 
+            "continue"]
+keywordTokens = [tk.TT_IF, tk.TT_ELSE, tk.TT_ELIF, 
+                 tk.TT_FOR, tk.TT_IN, tk.TT_WHILE, 
+                 tk.TT_FUNC, tk.TT_RETURN, tk.TT_BREAK, 
+                 tk.TT_CONTINUE]
+
+type_keywords = ["Int", "Int64", "Int32", "Int16", "Int8",
+                 "Float", "Float64", "Float32", "Float16", "Float8",
+                 "String", "Bool", "Void",
+                 "UInt", "UInt64", "UInt32", "UInt16", "UInt8"]
+
+type_values = [Integer, Integer, Integer, Integer, Integer,
+               Float, Float, Float, Float, Float, 
+               String, Integer, Void, 
+               Integer, Integer, Integer, Integer, Integer]
 
 class Lexer:
     def __init__(self, text, ln_pos=0, filename="repl"):
@@ -24,10 +41,21 @@ class Lexer:
         if self.curr_idx < len(self.items) - 1:
             self.curr_idx = self.curr_idx + 1
 
+    def isTypeRef(self, word):
+        for i in range(0, len(type_keywords)):
+            if type_keywords[i] == word:
+                return types_values[i] 
+        return None
+
     def isKeyword(self, word):
+        val = None
         for i in range(0, len(keywords)):
             if keywords[i] == word:
                 return keywordTokens[i]
+        
+        val = isTypeRef(word)
+        if val != None: return val
+
         return tk.TT_ID 
 
     def isLetter(self):

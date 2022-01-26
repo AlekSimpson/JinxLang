@@ -1,6 +1,10 @@
 import sys 
-#sys.path.append("/home/alek/Desktop/projects/aqua/src/")
-sys.path.append("/Users/aleksimpson/desktop/projects/aqua/src/")
+from sys import platform 
+if platform == "linux" or platform == "linux2":
+    sys.path.append("/home/alek/Desktop/projects/aqua/src/")
+elif platform == "darwin":
+    sys.path.append("/Users/aleksimpson/desktop/projects/aqua/src/")
+
 import run
 from TestSetups import *
 from termcolors import bcolors as bc 
