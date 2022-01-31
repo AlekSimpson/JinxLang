@@ -4,5 +4,5 @@ method add() {
   return "NO"
 }
 
-sum = add()
+sum:String = add()
 print(sum)

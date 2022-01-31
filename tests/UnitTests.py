@@ -1,5 +1,6 @@
-import sys 
-from sys import platform 
+import sys
+from sys import platform
+
 if platform == "linux" or platform == "linux2":
     sys.path.append("/home/alek/Desktop/projects/aqua/src/")
 elif platform == "darwin":
@@ -7,43 +8,46 @@ elif platform == "darwin":
 
 import run
 from TestSetups import *
-from termcolors import bcolors as bc 
+from termcolors import bcolors as bc
+
 
 class Validator:
     def process_result(self, result, error):
-        returnVal = None 
+        returnVal = None
         if error != None:
             returnVal = error.as_string()
         else:
             if len(result.elements) == 1 and len(result.elements) != 0:
                 if result.elements[0] != None:
-                    returnVal = result.elements[0].value 
+                    returnVal = result.elements[0].value
             else:
                 for ele in result.elements:
                     if ele != None:
                         returnVal = ele.value
-        return returnVal 
-    
+        return returnVal
+
     def run_tests(self):
         passed = []
         failed = []
-        
+
         print("\n")
         for i in range(0, len(setups)):
             s = setups[i][0]
             n = setups[i][1]
             c = setups[i][2]
             res = self.run_test(s, n, c)
-            
+
             for r in res:
                 if r:
                     passed.append(r)
                 else:
                     failed.append(r)
-        print(f"------------------------- {len(passed)} Passed, {len(failed)} failed -------------------------")
+        print(
+            f"------------------------- {len(passed)} Passed, {len(failed)} failed -------------------------"
+        )
 
     def run_test(self, codeSamples, testNames, correct):
-        # Run tests 
+        # Run tests
         results = []
 
         for i in range(0, len(codeSamples)):
@@ -59,9 +63,12 @@ class Validator:
             if res == correct:
                 print(f"{bc.OKGREEN}[ PASSED ] - {name}\n{bc.ENDC}")
             else:
-                print(f"{bc.FAIL}[ FAILED ] - {name}, with results:\n\t{res}\n{bc.ENDC}")
+                print(
+                    f"{bc.FAIL}[ FAILED ] - {name}, with results:\n\t{res}\n{bc.ENDC}"
+                )
             test_results.append(res == correct)
         return test_results
+
 
 validator = Validator()
 validator.run_tests()

@@ -3,5 +3,5 @@ method test() {
   return "NO"
   print("test")
 }
-val = test()
+val:String = test()
 print(val)
