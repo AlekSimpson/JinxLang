@@ -15,6 +15,7 @@ from Error import RuntimeError
 #      Float64, 32, 16
 # String
 
+
 class Type:
     def __init__(self, value=None, pos=None):
         self.value = value
@@ -24,20 +25,23 @@ class Type:
     def set_context(self, ctx):
         self.context = ctx
 
-    def print_self():
+    def print_self(self):
         return self.value
+
 
 class Void:
     def __init__(self, pos=None):
         self.pos = pos
         self.context = None
 
-    def print_self():
+    def print_self(self):
         return "Void"
+
 
 class Real(Type):
     def __init__(self, value=None, pos=None):
         super().__init__(value, pos)
+
     ### NEED TO ADD CHECK FOR THE TYPE BEING THE SAME AND NOT JUST THE VALUE ###
     def comp_eq(self, other):
         new_num = Number(1 if self.value == other.value else 0)
@@ -84,6 +88,7 @@ class Real(Type):
         new_num.set_context(self.context)
         return (new_num, None)
 
+
 class Number(Real):
     def __init__(self, value=None, pos=None):
         super().__init__(value, pos)
@@ -124,23 +129,27 @@ class Number(Real):
     def print_self(self):
         return self.value
 
+
 class Integer(Number):
     def __init__(self, bitsize, value=None, pos=None):
         super().__init__(value, pos)
         self.bitsize = bitsize
 
-#class UInt(Integer):
+
+# class UInt(Integer):
 #    def __init__(self, value=None, pos=None, bitsize=64):
 #        super().__init__(value, pos, bitsize)
 
-#class Int(Integer):
+# class Int(Integer):
 #    def __init__(self, value=None, pos=None, bitsize=64):
 #        super().__init__(value, pos, bitsize)
+
 
 class Float(Number):
     def __init__(self, bitsize, value=None, pos=None):
         super().__init__(value, pos)
         self.bitsize = bitsize
+
 
 class Array(Type):
     def __init__(self, elements=[]):
@@ -174,6 +183,7 @@ class Array(Type):
         self.elements[index] = new
         return (None, res)
 
+
 class string(Real):
     def __init__(self, str_value=None):
         super().__init__(str_value)
@@ -193,7 +203,7 @@ class string(Real):
     def print_self(self):
         return str(self.str_value)
 
+
 Number.nil = Number(0)
 Number.true = Number(1)
 Number.false = Number(0)
-

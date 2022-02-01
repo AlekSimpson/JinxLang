@@ -1,48 +1,40 @@
 from run import run
 import sys
+from Context import Context
+from Position import Position
+from Error import RuntimeError
 
 if len(sys.argv) == 1:
     while True:
         textInput = input("laplace> ")
-        if textInput == "": continue
+        if textInput == "":
+            continue
         if str(textInput) == "stop":
-            break 
+            break
 
         result, error = run(textInput, "repl")
 
-        if error != None: 
+        if error is not None:
             print(error.as_string())
-        elif result != None:
+        elif result is not None:
             if len(result.elements) == 1 and len(result.elements) != 0:
-                if result.elements[0] != None:
+                if result.elements[0] is not None:
                     print(result.elements[0].print_self())
             else:
                 for ele in result.elements:
-                    if ele != None:
+                    if ele is not None:
                         print(ele.print_self())
 else:
     filename = sys.argv[1]
-    script = None 
+    script = None
     try:
         with open(filename, "r") as f:
             script = f.read()
     except Exception as e:
         err = RuntimeError("Failed to execute file" + str(e), Context(), Position())
-        res.failure(err)
         print(err.as_string())
-    
+
     result, error = run(script, filename)
 
-    if error != None: 
+    if error is not None:
         print(error.as_string())
-    #elif result != None:
-    #    if len(result.elements) == 1 and len(result.elements) != 0:
-    #        if result.elements[0] != None:
-    #            print(result.elements[0].print_self())
-    #    else:
-    #        for ele in result.elements:
-    #            if ele != None: 
-    #                print(ele.print_self())
-   
-
-
