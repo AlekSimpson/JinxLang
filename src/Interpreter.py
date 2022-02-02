@@ -238,7 +238,7 @@ BuiltinFunction.run = BuiltinFunction(2)
 class Interpreter:
     def visit(self, node, context):
         func_index = node.classType
-        print(f"[{func_index}] - {node.as_string()}")
+        # print(f"[{func_index}] - {node.as_string()}")
         # ^^^^ Keep for debugging purposes ^^^^
         result = RuntimeResult()
         table = context.symbolTable.symbols
@@ -520,7 +520,6 @@ class Interpreter:
         value = None
         if ctx.symbolTable is not None:
             value = ctx.symbolTable.get_val(var_name)
-            print(value.returnType.value)
         if value is not None:
             return res.success(value)
         else:
@@ -598,9 +597,21 @@ class Interpreter:
             args.append(new)
 
         return_value, return_res = val_cal.execute(args)
-        _ = res.register(return_res)
-        if res.error != None:
+        res.register(return_res)
+        if res.error is not None:
             return res
+
+        # Check if return value and declared return value match
+        if not isinstance(
+            return_value.value, type(value_to_call.value.returnType.type_dec[0])
+        ):
+            pos = node.token.pos
+            error = RuntimeError(
+                f"type of return value does not match return type of function {value_to_call.value.name}()",
+                ctx,
+                pos,
+            )
+            return res.failure(error)
 
         return res.success(return_value)
 
