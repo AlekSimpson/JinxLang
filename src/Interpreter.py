@@ -92,7 +92,7 @@ class Function(BaseFunction):
         final_value = res.value
         if not isinstance(res.value, Number):
             final_value = Number() if self.should_return_nil else res.value.elements[-1]
-        if res.error != None:
+        if res.error is not None:
             return (None, res)
 
         self.context = exec_ctx
@@ -602,12 +602,10 @@ class Interpreter:
             return res
 
         # Check if return value and declared return value match
-        if not isinstance(
-            return_value.value, type(value_to_call.value.returnType.type_dec[0])
-        ):
+        if not isinstance(return_value.value, type(func_value.returnType.type_dec[0])):
             pos = node.token.pos
             error = RuntimeError(
-                f"type of return value does not match return type of function {value_to_call.value.name}()",
+                f"type of return value does not match return type of function {func_value.name}()",
                 ctx,
                 pos,
             )
