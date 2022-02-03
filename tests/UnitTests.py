@@ -13,18 +13,18 @@ from termcolors import bcolors as bc
 
 class Validator:
     def process_result(self, result, error):
-        returnVal = None
-        if error != None:
-            returnVal = error.as_string()
+        return_val = None
+        if error is not None:
+            return_val = error.as_string()
         else:
             if len(result.elements) == 1 and len(result.elements) != 0:
-                if result.elements[0] != None:
-                    returnVal = result.elements[0].value
+                if result.elements[0] is not None:
+                    return_val = result.elements[0].value
             else:
                 for ele in result.elements:
-                    if ele != None:
-                        returnVal = ele.value
-        return returnVal
+                    if ele is not None:
+                        return_val = ele.value
+        return return_val
 
     def run_tests(self):
         passed = []
@@ -46,19 +46,19 @@ class Validator:
             f"------------------------- {len(passed)} Passed, {len(failed)} failed -------------------------"
         )
 
-    def run_test(self, codeSamples, testNames, correct):
+    def run_test(self, code_samples, test_names, correct):
         # Run tests
         results = []
 
-        for i in range(0, len(codeSamples)):
-            result, error = run.run(codeSamples[i], testNames[i])
+        for i in range(0, len(code_samples)):
+            result, error = run.run(code_samples[i], test_names[i])
             results.append(self.process_result(result, error))
 
         # Process results
         test_results = []
-        for i in range(0, len(codeSamples)):
+        for i in range(0, len(code_samples)):
             res = results[i]
-            name = testNames[i]
+            name = test_names[i]
 
             if res == correct:
                 print(f"{bc.OKGREEN}[ PASSED ] - {name}\n{bc.ENDC}")

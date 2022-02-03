@@ -602,15 +602,17 @@ class Interpreter:
             return res
 
         # Check if return value and declared return value match
-        if not isinstance(return_value.value, type(func_value.returnType.type_dec[0])):
-            pos = node.token.pos
-            error = RuntimeError(
-                f"type of return value does not match return type of function {func_value.name}()",
-                ctx,
-                pos,
-            )
-            return res.failure(error)
-
+        if not isinstance(func_value, BuiltinFunction):
+            if not isinstance(
+                return_value.value, type(func_value.returnType.type_dec[0])
+            ):
+                pos = node.token.pos
+                error = RuntimeError(
+                    f"type of return value does not match return type of function {func_value.name}()",
+                    ctx,
+                    pos,
+                )
+                return res.failure(error)
         return res.success(return_value)
 
     def visit_GetArrNode(self, node, ctx):
