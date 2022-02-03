@@ -33,10 +33,6 @@ class Validator:
         print("\n")
         for i in range(0, len(setups)):
             res = self.run_package(setups[i])
-            # s = setups[i][0]
-            # n = setups[i][1]
-            # c = setups[i][2]
-            # res = self.run_test(s, n, c)
 
             for r in res:
                 if r:
@@ -44,46 +40,29 @@ class Validator:
                 else:
                     failed.append(r)
         print(
-            f"------------------------- {len(passed)} Passed, {len(failed)} failed -------------------------"
+            f"------------------------- {len(passed)} Passed, {len(failed)} Failed -------------------------"
         )
 
-    def run_package(self, full_package):
-        package = full_package[0]
+    def run_package(self, package):
         package_results = []
-        messages = []
+        msgs = []
 
-        print(f"{full_package[1]}:")
-        for test in package:
+        for test in package[0]:
             res = self.run_test(test[0], test[1], test[2])
             package_results.extend(res[0])
-            messages.extend(res[1])
+            msgs.extend(res[1])
 
-        output = []
-        even = len(messages) % 2 == 0
-        half = int(len(messages) / 2)
-        if len(messages) != 1:
-            if even:
-                output.append(messages[0:half])
-                output.append(messages[half : len(messages)])
-            else:
-                i = 0
-                while True:
-                    if not i + 2 > len(messages):
-                        output.append([messages[i], messages[i + 1]])
-                        i += 2
-                        continue
-                    output.append(messages[i])
-                    break
-            # print(output)
+        product = 1
+        for i in package_results:
+            product = product * int(i)
 
-            for out in output:
-                if len(out) > 1:
-                    print(f"{out[0]}   {out[1]}")
-                else:
-                    print(out[0])
+        if product == 1:
+            print(f"{bc.OKGREEN}[\u2713] - {package[1]}\n{bc.ENDC}")
+        else:
+            print(f"{bc.FAIL}[X] - {package[1]}:\n{bc.ENDC}")
+            for m in msgs:
+                print(f"\t{m}")
 
-            return package_results
-        print(messages[0])
         return package_results
 
     def run_test(self, code_samples, test_names, correct):
@@ -96,19 +75,15 @@ class Validator:
 
         # Process results
         test_results = []
-        print_results = []
+        msg = []
         for i in range(0, len(code_samples)):
             res = results[i]
             name = test_names[i]
 
-            msg = ""
-            if res == correct:
-                msg = f"{bc.OKGREEN}\t[\u2713] {name}\n{bc.ENDC}"
-            else:
-                msg = f"{bc.FAIL}\t[!!] {name}, with results:\n\t{res}\n{bc.ENDC}"
+            if res != correct:
+                msg.append(f"{bc.FAIL}[!!] {name}, with results:\n\t\t{res}\n{bc.ENDC}")
             test_results.append(res == correct)
-            print_results.append(msg)
-        return [test_results, print_results]
+        return [test_results, msg]
 
 
 validator = Validator()

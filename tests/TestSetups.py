@@ -18,7 +18,7 @@ newlineSamples = [
     "if 1 == 23 {; 1 + 2; } elif 1 == 23 {; 1 + 2; } else {; 1 + 1; }",
 ]
 newlineTestNames = [
-    "Newline IfStatements",
+    "Newline If Statements",
     "Newline Elif Statements",
     "Newline Else Statements",
 ]
@@ -108,16 +108,3 @@ setups = [
     [methodsPackage, "Methods"],
     [arraysPackage, "Arrays"],
 ]
-
-# setups = [
-#    [inlineSamples, inlineTestNames, inlineCorrect],
-#    [newlineSamples, newlineTestNames, newlineCorrect],
-#    [variableSamples, testNames, variablesCorrect],
-#    [arithSamples, arithTestNames, arithCorrect],
-#    [loopSamples, loopTestNames, loopsCorrect],
-#    [mdSample, mdTestNames, mdCorrect],
-#    [mcSampleInline, mcTestNamesInline, mcCorrectInline],
-#    [mcSampleNewline, mcTestNamesNewline, mcCorrectNewline],
-#    [maSamples, maTests, maCorrect],
-#    [arraySamples, arrayTests, arrayCorrect],
-# ]

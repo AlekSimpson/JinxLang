@@ -1,0 +1,6 @@
+method add(a, b):Int {
+    return "test"
+}
+
+num:Int = "test"
+print(num)
