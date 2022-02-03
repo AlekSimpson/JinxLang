@@ -35,17 +35,19 @@ arithTestNames = ["Addition", "Subtraction", "Multiplication", "Division", "Powe
 arithCorrect = 4
 
 # For Loops
-forSamples = ["for i in 1:5 { 1 + 1 }", "for i in 1:5 {; 1 + 1; }"]
-forTestNames = ["Inline For Loops", "Newline For Loops"]
-forCorrect = 0
-
-# While Loops
-whileSample = [
+loopSamples = [
+    "for i in 1:5 { 1 + 1 }",
+    "for i in 1:5 {; 1 + 1; }",
     "a:Int = 0; while a < 5 { a = a + 1 }",
-    "a:Int = 0; while a < 5 {; a = a + 1; }",
+    "a:Int = 0; while a < 5 {; a = a + 1 }",
 ]
-whileTestNames = ["Inline While Loops", "Newline While Loops"]
-whileCorrect = 0
+loopTestNames = [
+    "Inline For Loops",
+    "Newline For Loops",
+    "Inline While Loops",
+    "Newline While Loops",
+]
+loopsCorrect = 0
 
 # Method Defintion Tests
 mdSample = ["method test():Int -> 1 + 1", "method test():Int {; 1 + 1; }"]
@@ -76,16 +78,46 @@ arraySamples = [
 arrayTests = ["Array Declaration", "Array Reference", "Array Append"]
 arrayCorrect = None
 
-setups = [
+# Package Related Tests
+conditionalsPackage = [
     [inlineSamples, inlineTestNames, inlineCorrect],
     [newlineSamples, newlineTestNames, newlineCorrect],
-    [variableSamples, testNames, variablesCorrect],
-    [arithSamples, arithTestNames, arithCorrect],
-    [forSamples, forTestNames, forCorrect],
-    [whileSample, whileTestNames, whileCorrect],
+]
+
+variablesPackage = [[variableSamples, testNames, variablesCorrect]]
+
+arithmeticPackage = [[arithSamples, arithTestNames, arithCorrect]]
+
+loopsPackage = [[loopSamples, loopTestNames, loopsCorrect]]
+
+methodsPackage = [
     [mdSample, mdTestNames, mdCorrect],
     [mcSampleInline, mcTestNamesInline, mcCorrectInline],
     [mcSampleNewline, mcTestNamesNewline, mcCorrectNewline],
     [maSamples, maTests, maCorrect],
-    [arraySamples, arrayTests, arrayCorrect],
 ]
+
+arraysPackage = [[arraySamples, arrayTests, arrayCorrect]]
+
+# Meta array to send to unit tests file
+setups = [
+    [conditionalsPackage, "Conditionals"],
+    [variablesPackage, "Variables"],
+    [arithmeticPackage, "Arithmetic"],
+    [loopsPackage, "Loops"],
+    [methodsPackage, "Methods"],
+    [arraysPackage, "Arrays"],
+]
+
+# setups = [
+#    [inlineSamples, inlineTestNames, inlineCorrect],
+#    [newlineSamples, newlineTestNames, newlineCorrect],
+#    [variableSamples, testNames, variablesCorrect],
+#    [arithSamples, arithTestNames, arithCorrect],
+#    [loopSamples, loopTestNames, loopsCorrect],
+#    [mdSample, mdTestNames, mdCorrect],
+#    [mcSampleInline, mcTestNamesInline, mcCorrectInline],
+#    [mcSampleNewline, mcTestNamesNewline, mcCorrectNewline],
+#    [maSamples, maTests, maCorrect],
+#    [arraySamples, arrayTests, arrayCorrect],
+# ]
