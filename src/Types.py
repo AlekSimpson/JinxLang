@@ -92,6 +92,7 @@ class Real(Type):
 class Number(Real):
     def __init__(self, value=None, pos=None):
         super().__init__(value, pos)
+        self.ID = "NUMBER_TYPE"
 
     def added(self, other):
         new_num = Number(self.value + other.value)
@@ -134,6 +135,7 @@ class Integer(Number):
     def __init__(self, bitsize, value=None, pos=None):
         super().__init__(value, pos)
         self.bitsize = bitsize
+        self.ID = "NUMBER_TYPE"
 
 
 # class UInt(Integer):
@@ -149,6 +151,7 @@ class Float(Number):
     def __init__(self, bitsize, value=None, pos=None):
         super().__init__(value, pos)
         self.bitsize = bitsize
+        self.ID = "NUMBER_TYPE"
 
 
 class Array(Type):
@@ -156,6 +159,7 @@ class Array(Type):
         super().__init__()
         self.elements = elements
         self.length = len(self.elements)
+        self.ID = "ARRAY_TYPE"
 
     def print_self(self):
         new_arr = []
@@ -188,6 +192,7 @@ class string(Real):
     def __init__(self, str_value=None):
         super().__init__(str_value)
         self.str_value = str_value
+        self.ID = "STRING_TYPE"
 
     def added(self, other):
         otherVal = other.str_value

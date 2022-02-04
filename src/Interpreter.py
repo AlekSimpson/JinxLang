@@ -499,16 +499,13 @@ class Interpreter:
         if res.error is not None:
             return res
 
-        if not isinstance(new_val.value, type(value)):
-            pos = node.token.pos
-            _ = res.failure(
-                RuntimeError(
-                    f"Cannot assign {type(new_val.value)} value to {type(value)} type {var_name}",
-                    ctx,
-                    pos,
-                )
-            )
-            return res
+        # Check if types match
+        new = new_val.value
+        previous_value = value
+        types_match = self.check_types_match(new, previous_value, var_name, ctx, node)
+        if types_match is not None:
+            return res.failure(types_match)
+
         # update
         ctx.symbolTable.set_val(var_name, new_val.value)
         return res.success(new_val.value)
@@ -534,18 +531,13 @@ class Interpreter:
         if res.error is not None:
             return res
 
-        if (not isinstance(value.value, type(node.type[1]))) and (
-            issubclass(type(value.value), type(node.type[1]))
-        ):
-            pos = node.token.pos
-            res.failure(
-                RuntimeError(
-                    f"Cannot assign {type(value.value)} to {type(node.type[1])} type {var_name}",
-                    ctx,
-                    pos,
-                )
-            )
-            return res
+        value_type = value.value
+        variable_type = node.type[1]
+        types_match = self.check_types_match(
+            value_type, variable_type, var_name, ctx, node
+        )
+        if types_match is not None:
+            return res.failure(types_match)
 
         ctx.symbolTable.set_val(var_name, value.value)
         return res.success(value.value)
@@ -616,19 +608,26 @@ class Interpreter:
 
         # Check if return value and declared return value match
         _return = return_value
-        func_return = type(func_value.returnType.type_dec[1])
+        func_return = func_value.returnType.type_dec[1]
         if not isinstance(func_value, BuiltinFunction):
-            if not isinstance(_return, func_return) and (
-                issubclass(type(_return), func_return)
-            ):
+            types_match = self.check_types_match(
+                _return, func_return, func_value.name, ctx, node
+            )
+            if types_match is not None:
+                return res.failure(types_match)
+        return res.success(return_value)
+
+    def check_types_match(self, a, b, name, ctx, node):
+        if not isinstance(a, type(b)):
+            if a.ID != b.ID:
                 pos = node.token.pos
                 error = RuntimeError(
-                    f"type of return value does not match return type of function {func_value.name}()",
+                    f"Cannot assign value of {type(a)} to type {type(b)} {name}",
                     ctx,
                     pos,
                 )
-                return res.failure(error)
-        return res.success(return_value)
+                return error
+        return None
 
     def visit_GetArrNode(self, node, ctx):
         res = RuntimeResult()
