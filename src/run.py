@@ -1,10 +1,9 @@
 from lexer import Lexer
 from Parser import Parser
-from Interpreter import Interpreter
 from Context import Context
 from GlobalTable import global_symbol_table
 from Types import Number
-from Interpreter import BuiltinFunction
+from Interpreter import BuiltinFunction, Interpreter
 
 global_symbol_table.set_val("nil", Number.nil)
 global_symbol_table.set_val("true", Number.true)
@@ -13,22 +12,19 @@ global_symbol_table.set_val("print", BuiltinFunction.print)
 global_symbol_table.set_val("append", BuiltinFunction.append)
 global_symbol_table.set_val("run", BuiltinFunction.run)
 
-# Built in types here??
-# global_symbol_table.set_val("Int",
-
 
 def run(text, fn):
     lexer = Lexer(text, fn)
     tokens, error = lexer.make_tokens()
 
-    if error != None:
+    if error is not None:
         return (None, error)
 
     # Generate AST
     parser = Parser(tokens)
     nodes, parse_error = parser.parse()
 
-    if parse_error != None:
+    if parse_error is not None:
         return (None, error)
 
     # Run program
@@ -40,11 +36,12 @@ def run(text, fn):
     return (result.value, result.error)
 
 
-## KNOWN ERRORS ##
+## BUG - KNOWN ##
 #  Error handling for non recognized keywords/variables is broken
 #  Last I checked arithmetic stopped working when there was no spaces between the characters
-
 
 # TODO:
 # Function arguements do not require type declaration and they should
 # When an array is declared the types stored in the array must also be included in the type declaration
+# Update and add tests
+#    - Things like tests for variable type checks (ex: a:Int = "test" should return an error)
