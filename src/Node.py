@@ -103,6 +103,7 @@ class FuncDefNode:
         returnType,
         token=None,
         arg_name_tokens=None,
+        arg_type_tokens=None,
         should_return_nil=False,
     ):
         if token is None:
@@ -111,6 +112,7 @@ class FuncDefNode:
         else:
             self.token = token
         self.arg_name_tokens = arg_name_tokens
+        self.arg_type_tokens = arg_type_tokens
         self.body_node = body_node
         self.should_return_nil = should_return_nil
         self.returnType = returnType
@@ -189,6 +191,7 @@ class UnaryNode:
     def __init__(self, op_tok, node):
         self.op_tok = op_tok
         self.node = node
+        self.token = node.token
         self.description = "UnaryNode"
         self.classType = 3
 

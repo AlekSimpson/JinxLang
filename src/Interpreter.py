@@ -68,11 +68,13 @@ class Function(BaseFunction):
         returnType=None,
         body_node=None,
         arg_nodes=None,
+        arg_types=None,
         should_return_nil=False,
     ):
         super().__init__(name)
         self.body_node = body_node
         self.arg_nodes = arg_nodes
+        self.arg_types = arg_types
         self.returnType = returnType
         self.should_return_nil = should_return_nil
 
@@ -489,7 +491,7 @@ class Interpreter:
 
         # check if variable exsits
         isDeclaredErr = self.check_for_declaration(ctx.symbolTable.symbols, node, ctx)
-        if isDeclaredErr != None:
+        if isDeclaredErr is not None:
             return isDeclaredErr
 
         # check if types match
@@ -548,26 +550,37 @@ class Interpreter:
         func_name = node.token.value
         body_node = node.body_node
         func_arg_names = []
+        func_arg_types = []
 
+        # Checks if arguements exist
         a_name_tokens = []
-        if node.arg_name_tokens != None:
+        if node.arg_name_tokens is not None:
             a_name_tokens = node.arg_name_tokens
 
+        a_type_tokens = []
+        if node.arg_type_tokens is not None:
+            a_type_tokens = node.arg_type_tokens
+
+        # Populates arguement arrays with arg types and names
         for arg_name in a_name_tokens:
             func_arg_names.append(arg_name.value)
+
+        for arg_type in a_type_tokens:
+            func_arg_types.append(arg_type.type_dec[1])
 
         method = Function(
             func_name,
             node.returnType,
             body_node,
             func_arg_names,
+            func_arg_types,
             node.should_return_nil,
         )
         method.set_context(ctx)
 
-        if func_name != None:
+        if func_name is not None:
             sTable = SymbolTable()
-            if ctx.symbolTable != None:
+            if ctx.symbolTable is not None:
                 sTable = ctx.symbolTable
             sTable.set_val(func_name, method)
 
@@ -595,11 +608,19 @@ class Interpreter:
 
         val_cal = func_value
 
+        i = 0
         for arg_node in node.arg_nodes:
             x = arg_node.token.value
-            new = Number(x)
+            new = Number(x) if arg_node.token.type_name == "INT" else string(x)
+            types_match = self.check_types_match(
+                new, func_value.arg_types[i], func_value.name, ctx, node
+            )
+            if types_match is not None:
+                return res.failure(types_match)
 
+            # BUG new is always a number type regardless of what is passed in? Probably going to have to change that
             args.append(new)
+            i += 1
 
         return_value, return_res = val_cal.execute(args)
         res.register(return_res)

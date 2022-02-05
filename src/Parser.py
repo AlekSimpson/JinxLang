@@ -26,10 +26,16 @@ class Parser:
             self.curr_token = self.tokens[self.token_idx]
 
     def parse(self):  # returns Node, Error
+        # print("--------------------------------")
+        # for token in self.tokens:
+        #    print(token.as_string())
+        # print("--------------------------------")
+
         node_result, parse_result = self.statements()
         if parse_result.error is not None:
             if self.curr_token.type != tk.TT_EOF:
                 return (None, parse_result.failure(parse_result.error))
+            print(parse_result.error.as_string())
             return (None, parse_result.error)
 
         return (node_result, None)
@@ -267,48 +273,73 @@ class Parser:
 
         _ = res.register(self.advance())
         arg_name_tokens = []
+        arg_type_tokens = []
 
         if self.curr_token.type_name == tk.TT_ID:
-            arg_name_tokens.append(self.curr_token)
-            _ = res.register(self.advance())
-
-            while self.curr_token.type_name == tk.TT_COMMA:
-                _ = res.register(self.advance())
-
+            look_for_args = True
+            while look_for_args:
                 if self.curr_token.type_name != tk.TT_ID:
-                    p = self.curr_token.pos
+                    pos = self.curr_token.pos
                     _ = res.failure(
                         InvalidSyntaxError(
-                            "Expected identifier after comma in function definition", p
+                            "Expected identifier after comma in function definition",
+                            pos,
                         )
                     )
                     return (None, res)
-
                 arg_name_tokens.append(self.curr_token)
-                _ = res.register(self.advance())
+                res.register(self.advance())
+
+                if self.curr_token.type_name != tk.TT_COLON:
+                    pos = self.curr_token.pos
+                    res.failure(
+                        InvalidSyntaxError(
+                            "Expected ':' in arguement type declaration in function {name_token.value}",
+                            pos,
+                        )
+                    )
+                    return (None, res)
+                res.register(self.advance())
+
+                if self.curr_token.type_dec is None:
+                    pos = self.curr_token.pos
+                    res.failure(
+                        InvalidSyntaxError(
+                            f"Expected arguement {arg_name_tokens[-1].value} to have a type declaration in function {name_token.value}",
+                            pos,
+                        )
+                    )
+                    return (None, res)
+                arg_type_tokens.append(self.curr_token)
+                res.register(self.advance())
+
+                look_for_args = self.curr_token.type_name == tk.TT_COMMA
+                if not look_for_args:
+                    break
+                res.register(self.advance())
 
             if not (self.curr_token.type_name == tk.TT_RPAREN):
-                p = self.curr_token.pos
+                pos = self.curr_token.pos
                 _ = res.failure(
-                    InvalidSyntaxError("Expected ')' in function defintion", p)
+                    InvalidSyntaxError("Expected ')' in function defintion", pos)
                 )
                 return (None, res)
         else:
+            # BUG The check for RPAREN could probably just be moved into one check if statement instead of having one in an else
             if not (self.curr_token.type_name == tk.TT_RPAREN):
-                p = self.curr_token.pos
+                pos = self.curr_token.pos
                 _ = res.failure(
                     InvalidSyntaxError(
-                        "Expected identifier or ')' in function definition", p
+                        "Expected identifier or ')' in function definition", pos
                     )
                 )
                 return (None, res)
 
         _ = res.register(self.advance())
 
-        # Checks for return type, ALSO THE RPAREN CHECK COULD JUST BE PLACED ABOVE THIS CHECK INSTEAD OF BEING RE-WRRITTEN TWICE *i think*
         if self.curr_token.type_name != tk.TT_COLON:
-            p = self.curr_token.pos
-            res.failure(InvalidSyntaxError("Expected ':' in function declaration", p))
+            pos = self.curr_token.pos
+            res.failure(InvalidSyntaxError("Expected ':' in function declaration", pos))
             return (None, res)
 
         _ = res.register(self.advance())
@@ -316,7 +347,7 @@ class Parser:
         if self.curr_token.type_dec is None:
             pos = self.curr_token.pos
             res.failure(
-                InvalidSyntaxError("Expected return type in function declaration", p)
+                InvalidSyntaxError("Expected return type in function declaration", pos)
             )
             return (None, res)
         returnType = self.curr_token
@@ -334,7 +365,12 @@ class Parser:
             return (
                 res.success(
                     FuncDefNode(
-                        node_to_return, returnType, name_token, arg_name_tokens, False
+                        node_to_return,
+                        returnType,
+                        name_token,
+                        arg_name_tokens,
+                        arg_type_tokens,
+                        False,
                     )
                 ),
                 res,
@@ -371,12 +407,20 @@ class Parser:
             return (None, res)
 
         res.register(self.advance())
-        return (
+        returnVal = (
             res.success(
-                FuncDefNode(body, returnType, name_token, arg_name_tokens, return_nil)
+                FuncDefNode(
+                    body,
+                    returnType,
+                    name_token,
+                    arg_name_tokens,
+                    arg_type_tokens,
+                    return_nil,
+                )
             ),
             res,
         )
+        return returnVal
 
     def for_expr(self):
         res = ParseResult()
