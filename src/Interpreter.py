@@ -612,11 +612,12 @@ class Interpreter:
         for arg_node in node.arg_nodes:
             x = arg_node.token.value
             new = Number(x) if arg_node.token.type_name == "INT" else string(x)
-            types_match = self.check_types_match(
-                new, func_value.arg_types[i], func_value.name, ctx, node
-            )
-            if types_match is not None:
-                return res.failure(types_match)
+            if not isinstance(func_value, BuiltinFunction):
+                types_match = self.check_types_match(
+                    new, func_value.arg_types[i], func_value.name, ctx, node
+                )
+                if types_match is not None:
+                    return res.failure(types_match)
 
             # BUG new is always a number type regardless of what is passed in? Probably going to have to change that
             args.append(new)
@@ -628,14 +629,15 @@ class Interpreter:
             return res
 
         # Check if return value and declared return value match
-        _return = return_value
-        func_return = func_value.returnType.type_dec[1]
         if not isinstance(func_value, BuiltinFunction):
-            types_match = self.check_types_match(
-                _return, func_return, func_value.name, ctx, node
-            )
-            if types_match is not None:
-                return res.failure(types_match)
+            _return = return_value
+            func_return = func_value.returnType.type_dec[1]
+            if not isinstance(func_value, BuiltinFunction):
+                types_match = self.check_types_match(
+                    _return, func_return, func_value.name, ctx, node
+                )
+                if types_match is not None:
+                    return res.failure(types_match)
         return res.success(return_value)
 
     def check_types_match(self, a, b, name, ctx, node):

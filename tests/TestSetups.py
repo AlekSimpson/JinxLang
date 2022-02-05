@@ -65,7 +65,7 @@ mcTestNamesNewline = ["Newline Method Calls"]
 mcCorrectNewline = 2
 
 # Method Arguements Tests
-maSamples = ["method add(a, b):Int {; return a + b; }; add(2, 2)"]
+maSamples = ["method add(a:Int, b:Int):Int {; return a + b; }; add(2, 2)"]
 maTests = ["Method Arguemnts"]
 maCorrect = 4
 

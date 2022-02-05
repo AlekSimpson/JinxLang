@@ -1,4 +1,5 @@
 import tokens as tk
+from Types import Integer
 from Error import InvalidSyntaxError
 from Node import *
 from ParseResult import ParseResult
@@ -26,11 +27,6 @@ class Parser:
             self.curr_token = self.tokens[self.token_idx]
 
     def parse(self):  # returns Node, Error
-        # print("--------------------------------")
-        # for token in self.tokens:
-        #    print(token.as_string())
-        # print("--------------------------------")
-
         node_result, parse_result = self.statements()
         if parse_result.error is not None:
             if self.curr_token.type != tk.TT_EOF:
@@ -452,7 +448,7 @@ class Parser:
         if res.error is not None:
             return (None, res)
 
-        iterator_var = VarAssignNode(iterator_token, start_value, 1)
+        iterator_var = VarAssignNode(iterator_token, start_value, [1, Integer(64)])
 
         if not (self.curr_token.type_name == "COLON"):
             p = self.curr_token.pos

@@ -4,24 +4,75 @@ import tokens as tk
 from Error import InvalidSyntaxError, IllegalCharError
 from Types import Float, Integer, string, Void, Array
 
-keywords = ["if", "else", "elif",
-            "for", "in", "while",
-            "method", "return", "break",
-            "continue"]
-keywordTokens = [tk.TT_IF, tk.TT_ELSE, tk.TT_ELIF,
-                 tk.TT_FOR, tk.TT_IN, tk.TT_WHILE,
-                 tk.TT_FUNC, tk.TT_RETURN, tk.TT_BREAK,
-                 tk.TT_CONTINUE]
+keywords = [
+    "if",
+    "else",
+    "elif",
+    "for",
+    "in",
+    "while",
+    "method",
+    "return",
+    "break",
+    "continue",
+]
+keywordTokens = [
+    tk.TT_IF,
+    tk.TT_ELSE,
+    tk.TT_ELIF,
+    tk.TT_FOR,
+    tk.TT_IN,
+    tk.TT_WHILE,
+    tk.TT_FUNC,
+    tk.TT_RETURN,
+    tk.TT_BREAK,
+    tk.TT_CONTINUE,
+]
 
-type_keywords = ["Int", "Int64", "Int32", "Int16", "Int8",
-                 "Float", "Float64", "Float32", "Float16", "Float8",
-                 "String", "Bool", "Void", "Array",
-                 "UInt", "UInt64", "UInt32", "UInt16", "UInt8"]
+type_keywords = [
+    "Int",
+    "Int64",
+    "Int32",
+    "Int16",
+    "Int8",
+    "Float",
+    "Float64",
+    "Float32",
+    "Float16",
+    "Float8",
+    "String",
+    "Bool",
+    "Void",
+    "Array",
+    "UInt",
+    "UInt64",
+    "UInt32",
+    "UInt16",
+    "UInt8",
+]
 
-type_values = [(1, Integer(64)), (1, Integer(64)), (1, Integer(32)), (1, Integer(16)), (1, Integer(8)),
-               (2, Float(64)), (2, Float(64)), (2, Float(32)), (2, Float(16)), (2, Float(8)),
-               (11, string()), (1, Integer(8)), (404, Void()), (12, Array()),
-               (1, Integer(64)), (1, Integer(64)), (1, Integer(32)), (1, Integer(16)), (1, Integer(8))]
+type_values = [
+    (1, Integer(64)),
+    (1, Integer(64)),
+    (1, Integer(32)),
+    (1, Integer(16)),
+    (1, Integer(8)),
+    (2, Float(64)),
+    (2, Float(64)),
+    (2, Float(32)),
+    (2, Float(16)),
+    (2, Float(8)),
+    (11, string()),
+    (1, Integer(8)),
+    (404, Void()),
+    (12, Array()),
+    (1, Integer(64)),
+    (1, Integer(64)),
+    (1, Integer(32)),
+    (1, Integer(16)),
+    (1, Integer(8)),
+]
+
 
 class Lexer:
     def __init__(self, text, ln_pos=0, filename="repl"):
@@ -72,13 +123,14 @@ class Lexer:
     def check_for_letters(self):
         if self.isLetter():
             pos = Position(0, self.curr_idx, self.filename)
-            full_word = ''
+            full_word = ""
             isLetter = True
             while isLetter:
                 isLetter = self.isLetter()
                 if isLetter:
                     full_word = full_word + self.items[self.curr_idx]
-                    if self.curr_idx == len(self.items) - 1: break
+                    if self.curr_idx == len(self.items) - 1:
+                        break
                     self.advance()
                     self.item_count = self.item_count - 1
 
@@ -91,13 +143,14 @@ class Lexer:
     def check_for_numbers(self):
         if self.isNum():
             pos = Position(0, self.curr_idx, self.filename)
-            full_num = ''
+            full_num = ""
             isNumber = True
             while isNumber:
                 isNumber = self.isNum()
                 if isNumber:
                     full_num = full_num + self.items[self.curr_idx]
-                    if self.curr_idx == len(self.items) - 1: break
+                    if self.curr_idx == len(self.items) - 1:
+                        break
                     self.advance()
                     self.item_count = self.item_count - 1
             tok = Token(tk.MT_FACTOR, tk.TT_INT, int(full_num), pos)
@@ -107,7 +160,8 @@ class Lexer:
     def check_subsequent(self):
         pos = Position(0, self.curr_idx, self.filename)
         # checks if at end of string
-        if (self.curr_idx + 1) >= (len(self.items) - 1): return None
+        if (self.curr_idx + 1) >= (len(self.items) - 1):
+            return None
 
         if self.items[self.curr_idx + 1] == "=":
             if self.items[self.curr_idx] == "=":
@@ -128,11 +182,11 @@ class Lexer:
     def check_for_string(self):
         full_str = ""
         pos = Position(0, self.curr_idx, self.filename)
-        if self.items[self.curr_idx] == "\"":
+        if self.items[self.curr_idx] == '"':
             self.quoteCount += 1
             self.advance()
             while True:
-                if self.items[self.curr_idx] == "\"":
+                if self.items[self.curr_idx] == '"':
                     self.quoteCount += 1
                     self.advance()
                     break
@@ -145,22 +199,63 @@ class Lexer:
         return None
 
     def check_for_symbols(self):
-        symbols = ["+", "-", "/", "*", "^", "(", ")", "=", "!", "<", ">", "{", "}", ":", ",", "[", "]", ";", "\n"]
-        symbolsTokens = [tk.TT_PLUS, tk.TT_MINUS, tk.TT_DIV, tk.TT_MUL, tk.TT_POW, tk.TT_LPAREN, tk.TT_RPAREN,
-                         tk.TT_EQ, tk.TT_NOT, tk.TT_LT, tk.TT_GT, tk.TT_LCURLY, tk.TT_RCURLY, tk.TT_COLON,
-                         tk.TT_COMMA, tk.TT_LBRACKET, tk.TT_RBRACKET, tk.TT_NEWLINE, tk.TT_NEWLINE]
+        symbols = [
+            "+",
+            "-",
+            "/",
+            "*",
+            "^",
+            "(",
+            ")",
+            "=",
+            "!",
+            "<",
+            ">",
+            "{",
+            "}",
+            ":",
+            ",",
+            "[",
+            "]",
+            ";",
+            "\n",
+        ]
+        symbolsTokens = [
+            tk.TT_PLUS,
+            tk.TT_MINUS,
+            tk.TT_DIV,
+            tk.TT_MUL,
+            tk.TT_POW,
+            tk.TT_LPAREN,
+            tk.TT_RPAREN,
+            tk.TT_EQ,
+            tk.TT_NOT,
+            tk.TT_LT,
+            tk.TT_GT,
+            tk.TT_LCURLY,
+            tk.TT_RCURLY,
+            tk.TT_COLON,
+            tk.TT_COMMA,
+            tk.TT_LBRACKET,
+            tk.TT_RBRACKET,
+            tk.TT_NEWLINE,
+            tk.TT_NEWLINE,
+        ]
         pos = Position(0, self.curr_idx, self.filename)
 
         for i in range(0, len(symbols)):
             if self.items[self.curr_idx] == symbols[i]:
-                nilTok = Token(tk.MT_NONFAC, symbolsTokens[i], self.items[self.curr_idx], pos)
+                nilTok = Token(
+                    tk.MT_NONFAC, symbolsTokens[i], self.items[self.curr_idx], pos
+                )
 
                 checkSub = self.check_subsequent()
                 tok = nilTok if checkSub == None else checkSub
 
                 self.tokens.append(tok)
                 self.advance()
-                if checkSub: self.advance()
+                if checkSub:
+                    self.advance()
 
         endOfLine = (self.curr_idx + 1) >= (len(self.items) - 1)
 
@@ -204,27 +299,35 @@ class Lexer:
         error = None
         while True:
             self.last_idx = self.curr_idx
-            if self.items[self.curr_idx] == ' ': self.advance()
-            if self.items[self.curr_idx] == "#": self.skip_comment()
+            if self.items[self.curr_idx] == " ":
+                self.advance()
+            if self.items[self.curr_idx] == "#":
+                self.skip_comment()
 
             # check for string
             error = self.check_for_string()
-            if error != None: break
+            if error is not None:
+                break
             # check for numbers
             error = self.check_for_numbers()
-            if error != None: break
+            if error is not None:
+                break
             # check for strings type
             error = self.check_for_letters()
-            if error != None: break
+            if error is not None:
+                break
             # check for arrows
             error = self.check_for_arrow()
-            if error != None: break
+            if error is not None:
+                break
             # check for symbols
             error = self.check_for_symbols()
-            if error != None: break
+            if error is not None:
+                break
 
             # check if all tokens collected
-            if len(self.tokens) == len(self.items): break
+            if len(self.tokens) == len(self.items):
+                break
 
             # Checks if it has checked everything and add EOF
             self.reached_end = self.last_idx == self.curr_idx

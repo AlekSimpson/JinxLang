@@ -7,6 +7,7 @@ elif platform == "darwin":
     sys.path.append("/Users/aleksimpson/desktop/projects/aqua/src/")
 
 import run
+import Error
 from TestSetups import *
 from termcolors import bcolors as bc
 
