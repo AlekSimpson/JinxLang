@@ -7,7 +7,6 @@ elif platform == "darwin":
     sys.path.append("/Users/aleksimpson/desktop/projects/aqua/src/")
 
 import run
-import Error
 from TestSetups import *
 from termcolors import bcolors as bc
 
@@ -32,14 +31,14 @@ class Validator:
         failed = []
 
         print("\n")
-        for i in range(0, len(setups)):
-            res = self.run_package(setups[i])
+        for setup in setups:
+            results = self.run_package(setup)
 
-            for r in res:
-                if r:
-                    passed.append(r)
+            for res in results:
+                if res:
+                    passed.append(res)
                 else:
-                    failed.append(r)
+                    failed.append(res)
         print(
             f"------------------------- {len(passed)} Passed, {len(failed)} Failed -------------------------"
         )
@@ -49,9 +48,9 @@ class Validator:
         msgs = []
 
         for test in package[0]:
-            res = self.run_test(test[0], test[1], test[2])
-            package_results.extend(res[0])
-            msgs.extend(res[1])
+            res = self.execute_test(test)
+            package_results.append(res[0])
+            msgs.append(res[1])
 
         product = 1
         for i in package_results:
@@ -62,29 +61,16 @@ class Validator:
         else:
             print(f"{bc.FAIL}[X] - {package[1]}:\n{bc.ENDC}")
             for m in msgs:
-                print(f"\t{m}")
+                if m is not None:
+                    print(f"\t{m}")
 
         return package_results
 
-    def run_test(self, code_samples, test_names, correct):
-        # Run tests
-        results = []
-
-        for i in range(0, len(code_samples)):
-            result, error = run.run(code_samples[i], test_names[i])
-            results.append(self.process_result(result, error))
-
-        # Process results
-        test_results = []
-        msg = []
-        for i in range(0, len(code_samples)):
-            res = results[i]
-            name = test_names[i]
-
-            if res != correct:
-                msg.append(f"{bc.FAIL}[!!] {name}, with results:\n\t\t{res}\n{bc.ENDC}")
-            test_results.append(res == correct)
-        return [test_results, msg]
+    def execute_test(self, test):
+        output, error = run.run(test.sample, test.name)
+        result = self.process_result(output, error)
+        eval, msg = test.evaluate(result)
+        return [eval, msg]
 
 
 validator = Validator()

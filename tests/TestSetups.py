@@ -1,103 +1,157 @@
-# Inline Contional Tests
-inlineSamples = [
-    "if 1 == 1 { 1 + 1 }",
-    "if 1 == 23 { 1 + 1 } elif 1 == 1 { 1 + 1 }",
-    "if 1 == 23 { 1 + 1 } elif 1 == 234 { 1 + 1 } else { 1 + 1 }",
-]
-inlineTestNames = [
-    "Inline If Statements",
-    "Inline Elif Statements",
+import sys
+from sys import platform
+
+if platform == "linux" or platform == "linux2":
+    sys.path.append("/home/alek/Desktop/projects/aqua/src/")
+elif platform == "darwin":
+    sys.path.append("/Users/aleksimpson/desktop/projects/aqua/src/")
+
+from Error import RuntimeError
+from termcolors import bcolors as color
+
+
+class Test:
+    def __init__(self, sample, test_name, correct_value):
+        self.sample = sample
+        self.name = test_name
+        self.correct_value = correct_value
+
+    def evaluate(self, value):
+        if value != self.correct_value:
+            return [
+                False,
+                f"{color.FAIL}[!!] {self.name}, with results:\n\t\t{value}\n{color.ENDC}",
+            ]
+        return [True, None]
+
+
+class CrashTest(Test):
+    def __init__(self, sample, test_name, correct_value):
+        super().__init__(sample, test_name, correct_value)
+
+    def evaluate(self, value):
+        if isinstance(value, RuntimeError):
+            return [
+                False,
+                f"{color.FAIL}[!!] [self.name], with results:\n\t\t{value}\n{color.ENDC}",
+            ]
+        return [True, None]
+
+
+# Inline Conditional Tests
+InlineConditionalOne = Test("if 1 == 1 { 1 + 1 }", "Inline If Statements", 2)
+InlineConditionalTwo = Test(
+    "if 1 == 23 { 1 + 2 } elif 1 == 1 { 1 + 1 }", "Inline Elif Statements", 2
+)
+InlineCondtionalThree = Test(
+    "if 1 == 23 { 1 + 2 } elif 1 == 234 { 1 + 2 } else { 1 + 1 }",
     "Inline Else Statements",
-]
-inlineCorrect = 2
+    2,
+)
 
 # Newline Conditional Tests
-newlineSamples = [
-    "if 1 == 1 {; 1 + 1; }",
-    "if 1 == 23 {; 1 + 2; } elif 1 == 1 {; 1 + 1; }",
-    "if 1 == 23 {; 1 + 2; } elif 1 == 23 {; 1 + 2; } else {; 1 + 1; }",
-]
-newlineTestNames = [
-    "Newline If Statements",
-    "Newline Elif Statements",
+NewlineConditionalOne = Test("if 1 == 1 {; 1 + 1; }", "Newline If Statements", 0)
+NewlineConditionalTwo = Test(
+    "if 1 == 23 {; 1 + 2; } elif 1 == 1 {; 1 + 1; }", "Newline Elif Statements", 0
+)
+NewlineConditionalThree = Test(
+    "if 1 == 23 {; 1 + 2; } elif 1 == 234 {; 1 + 2; } else {; 1 + 1; }",
     "Newline Else Statements",
-]
-newlineCorrect = 0
+    0,
+)
 
 # Variable Tests
-variableSamples = ["a:Int = 5", "a:Int = 5; a"]
-testNames = ["Variable Declaration", "Variable Reference"]
-variablesCorrect = 5
+VariableTestOne = Test("a:Int = 5", "Variable Declaration", 5)
+VariableTestTwo = Test("a:Int = 5; a", "Variable Reference", 5)
+
+VariableErrorOne = CrashTest(
+    'a:Int = "test"', "Assigning String to Int", RuntimeError()
+)
+VariableErrorTwo = CrashTest("a:String = 45", "Assigning Int to String", RuntimeError())
+VariableErrorThree = CrashTest(
+    'a:Int = 4; a = "test"', "Updating String to Int", RuntimeError()
+)
+VariableErrorFour = CrashTest(
+    'a:String = "test"; a = 45', "Updating String to Int", RuntimeError()
+)
 
 # Arithmetic Tests
-arithSamples = ["3 + 1", "6 - 2", "2 * 2", "8 / 2", "2 ^ 2"]
-arithTestNames = ["Addition", "Subtraction", "Multiplication", "Division", "Power"]
-arithCorrect = 4
+AdditionTest = Test("3 + 1", "Addition", 4)
+SubtractionTest = Test("6 - 2", "Subtraction", 4)
+MultiplicationTest = Test("2 * 2", "Multiplication", 4)
+DivisionTest = Test("8 / 2", "Division", 4)
+ExponentialTest = Test("2 ^ 2", "Exponents", 4)
 
 # For Loops
-loopSamples = [
-    "for i in 1:5 { 1 + 1 }",
-    "for i in 1:5 {; 1 + 1; }",
-    "a:Int = 0; while a < 5 { a = a + 1 }",
-    "a:Int = 0; while a < 5 {; a = a + 1 }",
-]
-loopTestNames = [
-    "Inline For Loops",
-    "Newline For Loops",
-    "Inline While Loops",
-    "Newline While Loops",
-]
-loopsCorrect = 0
+InlineForTest = Test("for i in 1:5 { 1 + 1 }", "Inline For Loops", 0)
+NewlineForTest = Test("for i in 1:5 {; 1 + 1; }", "Newline For Loops", 0)
+InlineWhileTest = Test("a:Int = 0; while a < 5 { a = a + 1 }", "Inline While Loops", 0)
+NewlineWhileTest = Test(
+    "a:Int = 0; while a < 5 {; a = a + 1; }", "Newline While Loops", 0
+)
 
 # Method Defintion Tests
-mdSample = ["method test():Int -> 1 + 1", "method test():Int {; 1 + 1; }"]
-mdTestNames = ["Inline Method Definition", "Newline Method Definition"]
-mdCorrect = None
+InlineMethodDef = Test("method test():Int -> 1 + 1", "Inline Method Definition", None)
+NewlineMethodDef = Test(
+    "method test():Int {; return 1 + 1; }", "Newline Method Definition", None
+)
 
 # Inline Method Call Tests
-mcSampleInline = ["method test():Int -> 1 + 1; test()"]
-mcTestNamesInline = ["Inline Method Calls"]
-mcCorrectInline = 2
+InlineMethodCall = Test("method test(): Int -> 1 + 1; test()", "Inline Method Calls", 2)
 
 # Newline Method Call Tests
-mcSampleNewline = ["method test():Int {; return 1 + 1; }; test()"]
-mcTestNamesNewline = ["Newline Method Calls"]
-mcCorrectNewline = 2
+NewlineMethodCall = Test(
+    "method test():Int {; return 1 + 1; }; test()", "Newline Method Calls", 2
+)
 
 # Method Arguements Tests
-maSamples = ["method add(a:Int, b:Int):Int {; return a + b; }; add(2, 2)"]
-maTests = ["Method Arguemnts"]
-maCorrect = 4
+MethodArguements = Test(
+    "method add(a:Int, b:Int):Int {; return a + b; }; add(2, 2)", "Method Arguements", 4
+)
 
 # Array Tests
-arraySamples = [
-    "a:Array = [1,2,3,4]",
-    "a:Array = [1,2,3,4]; a",
-    "a:Array = [1,2,3]; append(a, 123)",
-]
-arrayTests = ["Array Declaration", "Array Reference", "Array Append"]
-arrayCorrect = None
+ArrayDec = Test("a:Array = [1,2,3,4]", "ArrayDeclaration", None)
+ArrayRef = Test("a:Array = [1,2,3,4]; a", "Array Reference", None)
+ArrayApp = Test("a:Array = [1,2,3]; append(a, 123)", "Array Append", None)
 
 # Package Related Tests
 conditionalsPackage = [
-    [inlineSamples, inlineTestNames, inlineCorrect],
-    [newlineSamples, newlineTestNames, newlineCorrect],
+    InlineConditionalOne,
+    InlineConditionalTwo,
+    InlineCondtionalThree,
+    NewlineConditionalOne,
+    NewlineConditionalTwo,
+    NewlineConditionalThree,
 ]
 
-variablesPackage = [[variableSamples, testNames, variablesCorrect]]
+variablesPackage = [
+    VariableTestOne,
+    VariableTestTwo,
+    VariableErrorOne,
+    VariableErrorTwo,
+    VariableErrorThree,
+    VariableErrorFour,
+]
 
-arithmeticPackage = [[arithSamples, arithTestNames, arithCorrect]]
+arithmeticPackage = [
+    AdditionTest,
+    SubtractionTest,
+    MultiplicationTest,
+    DivisionTest,
+    ExponentialTest,
+]
 
-loopsPackage = [[loopSamples, loopTestNames, loopsCorrect]]
+loopsPackage = [InlineForTest, NewlineForTest, InlineWhileTest, NewlineWhileTest]
 
 methodsPackage = [
-    [mdSample, mdTestNames, mdCorrect],
-    [mcSampleInline, mcTestNamesInline, mcCorrectInline],
-    [mcSampleNewline, mcTestNamesNewline, mcCorrectNewline],
-    [maSamples, maTests, maCorrect],
+    InlineMethodDef,
+    NewlineMethodDef,
+    InlineMethodCall,
+    NewlineMethodCall,
+    MethodArguements,
 ]
 
-arraysPackage = [[arraySamples, arrayTests, arrayCorrect]]
+arraysPackage = [ArrayDec, ArrayRef, ArrayApp]
 
 # Meta array to send to unit tests file
 setups = [

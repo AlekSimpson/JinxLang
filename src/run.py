@@ -41,7 +41,6 @@ def run(text, fn):
 #  Last I checked arithmetic stopped working when there was no spaces between the characters
 
 # TODO:
-# Function arguements do not require type declaration and they should
 # When an array is declared the types stored in the array must also be included in the type declaration
 # Update and add tests
 #    - Things like tests for variable type checks (ex: a:Int = "test" should return an error)
