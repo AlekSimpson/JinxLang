@@ -1,6 +1,6 @@
-method add(a, b):Int {
-    return "test"
+method add(a:Int, b:Int):Int {
+	return a + b
 }
 
-num:Int = "test"
+num:String = add(10, 10)
 print(num)

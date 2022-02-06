@@ -63,6 +63,8 @@ NewlineConditionalThree = Test(
 # Variable Tests
 VariableTestOne = Test("a:Int = 5", "Variable Declaration", 5)
 VariableTestTwo = Test("a:Int = 5; a", "Variable Reference", 5)
+VariableDecString = Test('a:String = "test"', "String Variable Declaration", "test")
+VariableRefString = Test('a:String = "test"; a', "String Variable Reference", "test")
 
 VariableErrorOne = CrashTest(
     'a:Int = "test"', "Assigning String to Int", RuntimeError()
@@ -131,6 +133,8 @@ variablesPackage = [
     VariableErrorTwo,
     VariableErrorThree,
     VariableErrorFour,
+    VariableDecString,
+    VariableRefString,
 ]
 
 arithmeticPackage = [

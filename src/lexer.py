@@ -85,7 +85,6 @@ class Lexer:
         self.item_count = len(self.items)
         self.last_idx = 0
         self.reached_end = False
-
         self.quoteCount = 0
 
     def advance(self):
@@ -300,6 +299,8 @@ class Lexer:
         while True:
             self.last_idx = self.curr_idx
             if self.items[self.curr_idx] == " ":
+                self.advance()
+            if self.items[self.curr_idx] == "\t":
                 self.advance()
             if self.items[self.curr_idx] == "#":
                 self.skip_comment()
