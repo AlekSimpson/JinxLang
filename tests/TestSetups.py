@@ -65,6 +65,8 @@ VariableTestOne = Test("a:Int = 5", "Variable Declaration", 5)
 VariableTestTwo = Test("a:Int = 5; a", "Variable Reference", 5)
 VariableDecString = Test('a:String = "test"', "String Variable Declaration", "test")
 VariableRefString = Test('a:String = "test"; a', "String Variable Reference", "test")
+VariableRefBool = Test("a:Bool = true", "Bool Variable Reference", 1)
+VariableDecBool = Test("a:Bool = true; a", "Bool Variable Declaration", 1)
 
 VariableErrorOne = CrashTest(
     'a:Int = "test"', "Assigning String to Int", RuntimeError()
@@ -111,10 +113,30 @@ MethodArguements = Test(
     "method add(a:Int, b:Int):Int {; return a + b; }; add(2, 2)", "Method Arguements", 4
 )
 
+# Method Return Tests
+MethodReturnOne = Test(
+    "method test():Int {; return 1 + 1; }; test()", "Method Return Statements", 2
+)
+MethodReturnTwo = Test(
+    "method test():Int {; new:Int = 23 + 321; return 323; }; test()",
+    "Method Returns One Value",
+    323,
+)
+MethodReturnThree = Test(
+    'method test():Int {; new:Int = 20 + 20; return 20; print("SHOULD NOT PRINT"); }; test()',
+    "Method Return Control Flow",
+    20,
+)
+
 # Array Tests
 ArrayDec = Test("a:Array = [1,2,3,4]", "ArrayDeclaration", None)
 ArrayRef = Test("a:Array = [1,2,3,4]; a", "Array Reference", None)
 ArrayApp = Test("a:Array = [1,2,3]; append(a, 123)", "Array Append", None)
+
+# Print Tests
+PrintTestOne = Test('print("Hello World")', "Print Statements", "Hello World")
+PrintTestTwo = Test("print(404)", "Printing Numbers", 404)
+PrintTestThree = Test('new:String = "Hello World"', "Printing Variables", "Hello World")
 
 # Package Related Tests
 conditionalsPackage = [
@@ -135,6 +157,8 @@ variablesPackage = [
     VariableErrorFour,
     VariableDecString,
     VariableRefString,
+    VariableDecBool,
+    VariableRefBool,
 ]
 
 arithmeticPackage = [
@@ -153,6 +177,9 @@ methodsPackage = [
     InlineMethodCall,
     NewlineMethodCall,
     MethodArguements,
+    MethodReturnOne,
+    MethodReturnTwo,
+    MethodReturnThree,
 ]
 
 arraysPackage = [ArrayDec, ArrayRef, ArrayApp]

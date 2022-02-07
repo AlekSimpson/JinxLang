@@ -138,6 +138,12 @@ class Integer(Number):
         self.ID = "NUMBER_TYPE"
 
 
+class Bool(Number):
+    def __init__(self, value):
+        self.value = value
+        self.ID = "BOOL_TYPE"
+
+
 # class UInt(Integer):
 #    def __init__(self, value=None, pos=None, bitsize=64):
 #        super().__init__(value, pos, bitsize)
@@ -210,5 +216,5 @@ class string(Real):
 
 
 Number.nil = Number(0)
-Number.true = Number(1)
-Number.false = Number(0)
+Number.true = Bool(1)
+Number.false = Bool(0)

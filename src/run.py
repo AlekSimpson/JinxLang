@@ -39,6 +39,7 @@ def run(text, fn):
 ## BUG - KNOWN ##
 #  Error handling for non recognized keywords/variables is broken
 #  Last I checked arithmetic stopped working when there was no spaces between the characters
+#  Binary operations with unary nodes do not work, the unary nodes must be mistaken for multiple operators in one operation
 
 # TODO:
 # When an array is declared the types stored in the array must also be included in the type declaration

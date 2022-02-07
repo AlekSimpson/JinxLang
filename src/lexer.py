@@ -2,7 +2,7 @@ from tokens import Token
 from Position import Position
 import tokens as tk
 from Error import InvalidSyntaxError, IllegalCharError
-from Types import Float, Integer, string, Void, Array
+from Types import Float, Integer, string, Void, Array, Bool
 
 keywords = [
     "if",
@@ -63,7 +63,7 @@ type_values = [
     (2, Float(16)),
     (2, Float(8)),
     (11, string()),
-    (1, Integer(8)),
+    (1, Bool(1)),
     (404, Void()),
     (12, Array()),
     (1, Integer(64)),

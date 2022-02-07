@@ -40,7 +40,7 @@ class Validator:
                 else:
                     failed.append(res)
         print(
-            f"------------------------- {len(passed)} Passed, {len(failed)} Failed -------------------------"
+            f"-------------------------[ {len(passed)} Passed | {len(failed)} Failed ]-------------------------"
         )
 
     def run_package(self, package):
