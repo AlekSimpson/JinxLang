@@ -3,7 +3,7 @@ from SymbolTable import SymbolTable
 from Error import RuntimeError
 import tokens as tk
 from Context import Context
-from Types import Number, string, Array, Type
+from Types import Number, string, Array, Type, Integer
 from Position import Position
 from GlobalTable import global_symbol_table
 
@@ -133,8 +133,14 @@ class BuiltinFunction(BaseFunction):
         res = RuntimeResult()
         exec_ctx = self.generate_new_context()
 
-        method_arg_names = [["value"], ["array", "value"], ["fn"]]
-        methods = [self.execute_print, self.execute_append, self.execute_run]
+        method_arg_names = [
+            ["value"], ["array", "value"], ["fn"],
+            ["array"]
+        ]
+        methods = [
+            self.execute_print, self.execute_append, self.execute_run,
+            self.execute_length
+        ]
 
         if self.name_id < 0 or self.name_id > len(methods) - 1:
             return "built in method undefined"
@@ -193,6 +199,12 @@ class BuiltinFunction(BaseFunction):
 
         return (None, res)
 
+    def execute_length(self, exec_ctx):
+        res = RuntimeResult()
+        arr_arg = exec_ctx.symbolTable.get_val("array").value
+        length = global_symbol_table.get_val(arr_arg).length
+        return (Integer(64, length), res)
+
     def copy(self):
         copy = BuiltinFunction(self.name_id)
         copy.set_context(self.context)
@@ -231,10 +243,10 @@ class BuiltinFunction(BaseFunction):
 
         return (return_value, res)
 
-
 BuiltinFunction.print = BuiltinFunction(0)
 BuiltinFunction.append = BuiltinFunction(1)
 BuiltinFunction.run = BuiltinFunction(2)
+BuiltinFunction.length = BuiltinFunction(3)
 
 
 class Interpreter:
