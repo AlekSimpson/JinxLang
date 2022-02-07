@@ -83,7 +83,7 @@ class Parser:
         elif self.curr_token.type_name == tk.TT_LBRACKET:
             _ = res.register(self.advance())
 
-            if self.curr_token.type_name != tk.TT_INT:
+            if self.curr_token.type_name != tk.TT_INT and self.curr_token.type_name != tk.TT_ID:
                 pos = self.curr_token.pos
                 err = InvalidSyntaxError("Array index must be an integer", pos)
                 _ = res.failure(err)
