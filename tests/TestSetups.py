@@ -7,6 +7,7 @@ elif platform == "darwin":
     sys.path.append("/Users/aleksimpson/desktop/projects/aqua/src/")
 
 from Error import RuntimeError
+from Types import *
 from termcolors import bcolors as color
 
 
@@ -132,6 +133,7 @@ MethodReturnThree = Test(
 ArrayDec = Test("a:Array = [1,2,3,4]", "ArrayDeclaration", None)
 ArrayRef = Test("a:Array = [1,2,3,4]; a", "Array Reference", None)
 ArrayApp = Test("a:Array = [1,2,3]; append(a, 123)", "Array Append", None)
+ArrayVarRef = Test("a:Array = [1,2,3]; i:Int = 0; a[i]", "Array Variable Index Reference", 1)
 
 # Print Tests
 PrintTestOne = Test('print("Hello World")', "Print Statements", "Hello World")
@@ -182,7 +184,7 @@ methodsPackage = [
     MethodReturnThree,
 ]
 
-arraysPackage = [ArrayDec, ArrayRef, ArrayApp]
+arraysPackage = [ArrayDec, ArrayRef, ArrayApp, ArrayVarRef]
 
 # Meta array to send to unit tests file
 setups = [
