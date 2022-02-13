@@ -1,6 +1,6 @@
 from RuntimeResult import RuntimeResult
 from SymbolTable import SymbolTable
-from Error import RuntimeError
+from Error import *
 import tokens as tk
 from Context import Context
 from Types import Number, string, Array, Type, Integer
@@ -29,15 +29,13 @@ class BaseFunction(Type):
             err = RuntimeError(
                 f"to many arguements passed into function {name}", new_context, self.pos
             )
-            _ = res.failure(err)
-            return res
+            return res.failure(err)
 
         if len(args) < len(arg_names):
             err = RuntimeError(
                 f"to few arguements passed into function {name}", new_context, self.pos
             )
-            _ = res.failure(err)
-            return res
+            return res.failure(err)
 
         return res.success(None)
 
@@ -53,7 +51,7 @@ class BaseFunction(Type):
         res = RuntimeResult()
 
         res.register(self.check_args(arg_names, args))
-        if res.error != None:
+        if res.error is not None:
             return res
 
         self.populate_args(arg_names, args, exec_ctx)
@@ -250,7 +248,17 @@ BuiltinFunction.length = BuiltinFunction(3)
 
 
 class Interpreter:
+    def check_for_error(self, node):
+        if isinstance(node, Error):
+            return node
+        return None
+
     def visit(self, node, context):
+        res = RuntimeResult()
+        err_check = self.check_for_error(node)
+        if err_check is not None:
+            return res.failure(err_check)
+
         func_index = node.classType
         # print(f"[{func_index}] - {node.as_string()}")
         # ^^^^ Keep for debugging purposes ^^^^
@@ -547,9 +555,7 @@ class Interpreter:
 
         value_type = value.value
         variable_type = node.type[1]
-        types_match = self.check_types_match(
-            value_type, variable_type, var_name, ctx, node
-        )
+        types_match = self.check_types_match(value_type, variable_type, var_name, ctx, node)
         if types_match is not None:
             return res.failure(types_match)
 
