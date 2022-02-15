@@ -2,7 +2,7 @@ from run import run
 import sys
 from Context import Context
 from Position import Position
-from Error import RuntimeError
+from Error import *
 
 if len(sys.argv) == 1:
     while True:
@@ -12,11 +12,15 @@ if len(sys.argv) == 1:
         if str(textInput) == "stop":
             break
 
-        result, error = run(textInput, "repl")
+        result = run(textInput, "repl")
+        print(result)
 
-        if error is not None:
-            print(error.as_string())
+        if isinstance(result, Error):
+            print("BRUH")
+            print(result)
+            print(result.as_string())
         elif result is not None:
+            print(result)
             if len(result.elements) == 1 and len(result.elements) != 0:
                 if result.elements[0] is not None:
                     print(result.elements[0].print_self())
@@ -34,7 +38,7 @@ else:
         err = RuntimeError("Failed to execute file" + str(e), Context(), Position())
         print(err.as_string())
 
-    result, error = run(script, filename)
+    result = run(script, filename)
 
-    if error is not None:
-        print(error.as_string())
+    if isinstance(result, Error):
+        print(result.as_string())

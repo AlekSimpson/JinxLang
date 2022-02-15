@@ -1,8 +1,7 @@
 import tokens as tk
 from Types import Integer
-from Error import InvalidSyntaxError
+from Error import *
 from Node import *
-from ParseResult import ParseResult
 from tokens import Token
 
 class Parser:
@@ -25,9 +24,9 @@ class Parser:
         if self.token_idx >= 0 and self.token_idx < len(self.tokens):
             self.curr_token = self.tokens[self.token_idx]
 
-    def throw_error(self, res, msg, token=None):
+    def throw_error(self, msg, token=None):
         pos = self.curr_token if token is None else token.pos
-        return res.failure(InvalidSyntaxError(msg, pos))
+        return InvalidSyntaxError(msg, pos)
 
     def parse(self):
         AST = self.statements()
@@ -35,188 +34,176 @@ class Parser:
         return AST
 
     def call(self):
-        res = ParseResult()
-
         atom = self.atom()
-        if isinstance(atom, ParseResult):
-            res.register(atom)
-            return res.failure(atom.error)
+        if isinstance(atom, Error):
+            #res.register(atom)
+            return atom.error
 
         if self.curr_token.type_name == tk.TT_LPAREN:
-            res.register(self.advance())
+            self.advance()
             arg_nodes = []
 
             if self.curr_token.type_name == tk.TT_RPAREN:
-                res.register(self.advance())
+                self.advance()
             else:
                 expr = self.expr()
-                if isinstance(expr, ParseResult):
-                    return self.throw_error(res, "Expected closing parenthese in function declaration", expr.token)
-                arg_nodes.append(res.register(expr))
+                if isinstance(expr, Error):
+                    return self.throw_error("Expected closing parenthese in function declaration", expr.token)
+                arg_nodes.append(expr)
 
                 while self.curr_token.type_name == tk.TT_COMMA:
-                    res.register(self.advance())
+                    self.advance()
 
                     expr = self.expr()
-                    if isinstance(expr, ParseResult):
-                        return self.throw_error(res, expr.token, expr.error.details)
-                    arg_nodes.append(res.register(expr))
+                    if isinstance(expr, Error):
+                        return self.throw_error(expr.token, expr.error.details)
+                    arg_nodes.append(expr)
 
                 if self.curr_token.type_name != tk.TT_RPAREN:
-                    return self.throw_error(res, "Expected closing parenthese in function declaration", expr.token)
+                    return self.throw_error("Expected closing parenthese in function declaration", expr.token)
 
-                res.register(self.advance())
+                self.advance()
 
-            return res.success(CallNode(atom, arg_nodes))
+            return CallNode(atom, arg_nodes)
         elif self.curr_token.type_name == tk.TT_LBRACKET:
-            res.register(self.advance())
+            self.advance()
 
             if (self.curr_token.type_name != tk.TT_INT and self.curr_token.type_name != tk.TT_ID):
-                return self.throw_error(res, "Array index must be an integer")
+                return self.throw_error("Array index must be an integer")
 
             index = self.atom()
-            if isinstance(index, ParseResult):
-                return self.throw_error(res, index.error.details)
+            if isinstance(index, Error):
+                return self.throw_error(index.error.details)
 
             if self.curr_token.type_name != tk.TT_RBRACKET:
-                return self.throw_error(res, "Array subscripts must have a closing bracket")
+                return self.throw_error("Array subscripts must have a closing bracket")
 
-            res.register(self.advance())
+            self.advance()
             if self.curr_token.type_name == tk.TT_EQ:
-                res.register(self.advance())
+                self.advance()
 
                 # BUG: Probably should make it so that this is not the case, arrays should be able to hold any theoretical value
                 if (not self.curr_token.type_name != tk.TT_INT and not self.curr_token.type_name != tk.TT_STRING):
-                    return self.throw_error(res, "Array can only hold value types of int or string")
+                    return self.throw_error("Array can only hold value types of int or string")
 
                 new_val = self.atom()
-                if isinstance(new_val, ParseResult):
-                    return self.throw_error(res, new_val.error.details)
+                if isinstance(new_val, Error):
+                    return self.throw_error(new_val.error.details)
 
-                res.register(self.advance())
+                self.advance()
 
-                return res.success(ArraySetNode(atom, index, new_val))
-            return res.success(ArrayGetNode(atom, index))
-        return res.success(atom)
+                return ArraySetNode(atom, index, new_val)
+            return ArrayGetNode(atom, index)
+        return atom
 
     def atom(self):
-        res = ParseResult()
         tok = self.curr_token
 
         if tok.type_name == tk.TT_INT:
             val = NumberNode(self.curr_token)
-            res.register(self.advance())
-            return res.success(val)
+            self.advance()
+            return val
 
         elif tok.type_name == tk.TT_ID:
-            res.register(self.advance())
-            return res.success(VarAccessNode(tok))
+            self.advance()
+            return VarAccessNode(tok)
 
         elif tok.type_name == tk.TT_STRING:
-            res.register(self.advance())
-            return res.success(StringNode(tok))
+            self.advance()
+            return StringNode(tok)
 
         elif tok.type_name == "LPAREN":
-            res.register(self.advance())
+            self.advance()
             expr = self.expr()
             if expr is not None:
-                res.register(expr)
                 if self.curr_token.type_name == "RPAREN":
-                    res.register(self.advance())
-                    return res.success(expr)
+                    self.advance()
+                    return expr
                 else:
-                    return self.throw_error(res, "Expected ')'", tok.pos)
+                    return self.throw_error("Expected ')'", tok.pos)
 
-            if isinstance(expr, ParseResult):
-                return self.throw_error(res, expr.error.details)
+            elif isinstance(expr, Error):
+                return self.throw_error(expr.error.details)
 
         elif tok.type_name == tk.TT_LBRACKET:
-            list_expr = res.register(self.list_expr())
-            if isinstance(list_expr, ParseResult):
-                res.register(list_expr)
-                return self.throw_error(res, res.error.details)
-            return res.success(list_expr)
+            list_expr = self.list_expr()
+            if isinstance(list_expr, Error):
+                return self.throw_error(list_expr.error.details)
+            return list_expr
 
         elif tok.type_name == "IF":
             if_expr = self.if_expr()
-            if isinstance(if_expr, ParseResult):
-                res.register(expr)
-                return self.throw_error(res, res.error.details)
-            return res.success(if_expr)
+            if isinstance(if_expr, Error):
+                return self.throw_error(if_expr.error.details)
+            return if_expr
 
         elif tok.type_name == "FOR":
             for_expr = self.for_expr()
-            if isinstance(for_expr, ParseResult):
-                res.register(expr)
-                return self.throw_error(res, res.error.details)
-            return res.success(for_expr)
+            if isinstance(for_expr, Error):
+                return self.throw_error(for_expr.error.details)
+            return for_expr
 
         elif tok.type_name == "WHILE":
             while_expr = self.while_expr()
-            if isinstance(while_expr, ParseResult):
-                res.register(expr)
-                return self.throw_error(res, res.error.details)
-            return res.success(while_expr)
+            if isinstance(while_expr, Error):
+                return self.throw_error(while_expr.error.details)
+            return while_expr
 
         elif tok.type_name == "FUNC":
             func_def = self.func_def()
-            if isinstance(func_def, ParseResult):
-                res.register(func_def)
-                return self.throw_error(res, res.error.details)
-            return res.success(func_def)
+            if isinstance(func_def, Error):
+                return self.throw_error(func_def.error.details)
+            return func_def
 
     def list_expr(self):
-        res = ParseResult()
         element_nodes = []
 
         if self.curr_token.type_name != tk.TT_LBRACKET:
-            return self.throw_error(res, "Expected '[' in list")
+            return self.throw_error("Expected '[' in list")
 
-        res.register(self.advance())
+        self.advance()
 
         if self.curr_token.type_name == tk.TT_RBRACKET:
-            res.register(self.advance())
+            self.advance()
         else:
             expr = self.expr()
-            if isinstance(expr, ParseResult):
-                return self.throw_error(res, expr.error.details)
+            if isinstance(expr, Error):
+                return self.throw_error(expr.error.details)
 
-            element_nodes.append(res.register(expr))
+            element_nodes.append(expr)
             #if expr_res.error is not None:
             #    err = self.throw_error(res, "Expected closing bracket in list declaration")
             #    return (None, err)
 
             while self.curr_token.type_name == tk.TT_COMMA:
-                res.register(self.advance())
+                self.advance()
 
                 expr = self.expr()
-                if isinstance(expr, ParseResult):
-                    return self.throw_error(res, expr.error.details)
-                element_nodes.append(res.register(expr))
+                if isinstance(expr, Error):
+                    return self.throw_error(expr.error.details)
+                element_nodes.append(expr)
 
             if self.curr_token.type_name != tk.TT_RBRACKET:
-                return self.throw_error(res, "Expected closing bracket in list declaration")
+                return self.throw_error("Expected closing bracket in list declaration")
 
-            res.register(self.advance())
-        return res.success(ListNode(element_nodes))
+            self.advance()
+        return ListNode(element_nodes)
 
     def func_def(self):
-        res = ParseResult()
-
         if not (self.curr_token.type_name == "FUNC"):
-            return self.throw_error(res, "Expected 'method' keyword in function declaration")
+            return self.throw_error("Expected 'method' keyword in function declaration")
 
-        res.register(self.advance())
+        self.advance()
 
         name_token = Token()
         if self.curr_token.type_name == tk.TT_ID:
             name_token = self.curr_token
-            res.register(self.advance())
+            self.advance()
 
         if not (self.curr_token.type_name == tk.TT_LPAREN):
-            return self.throw_error(res, "Expected '(' in function defintion")
+            return self.throw_error("Expected '(' in function defintion")
 
-        res.register(self.advance())
+        self.advance()
         arg_name_tokens = []
         arg_type_tokens = []
 
@@ -224,82 +211,80 @@ class Parser:
             look_for_args = True
             while look_for_args:
                 if self.curr_token.type_name != tk.TT_ID:
-                    err = self.throw_error(res, "Expected value after comma in function defintion")
-                    return res.failure(err)
+                    err = self.throw_error("Expected value after comma in function defintion")
+                    return err
 
                 arg_name_tokens.append(self.curr_token)
-                res.register(self.advance())
+                self.advance()
 
                 if self.curr_token.type_name != tk.TT_COLON:
-                    err = self.throw_error(res, f"Expected ':' in argument type declaration in function {name_token.value}")
-                    return res.failure(err)
-                res.register(self.advance())
+                    err = self.throw_error(f"Expected ':' in argument type declaration in function {name_token.value}")
+                    return err
+                self.advance()
 
                 if self.curr_token.type_dec is None:
-                    err = self.throw_error(res, f"Expected argument {arg_name_tokens[-1].value} to have a tyhpe declaration in function {name_token.value}")
-                    return res.failure(err)
+                    err = self.throw_error(f"Expected argument {arg_name_tokens[-1].value} to have a tyhpe declaration in function {name_token.value}")
+                    return err
 
                 arg_type_tokens.append(self.curr_token)
-                res.register(self.advance())
+                self.advance()
 
                 look_for_args = self.curr_token.type_name == tk.TT_COMMA
                 if not look_for_args:
                     break
-                res.register(self.advance())
+                self.advance()
 
             if not (self.curr_token.type_name == tk.TT_RPAREN):
-                err = self.throw_error(res, "Expected ')' in function defintion")
-                return res.failure(err)
+                err = self.throw_error("Expected ')' in function defintion")
+                return err
         else:
             # BUG The check for RPAREN could probably just be moved into one check if statement instead of having one in an else
             if not (self.curr_token.type_name == tk.TT_RPAREN):
-                err = self.throw_error(res, "Expected value or ')' in function definition")
-                return res.failure(err)
+                err = self.throw_error("Expected value or ')' in function definition")
+                return err
 
-        res.register(self.advance())
+        self.advance()
 
         if self.curr_token.type_name != tk.TT_COLON:
-            err = self.throw_error(res, "Expected ':' in function defintion")
-            return res.failure(err)
+            err = self.throw_error("Expected ':' in function defintion")
+            return err
 
-        res.register(self.advance())
+        self.advance()
 
         if self.curr_token.type_dec is None:
-            err = self.throw_error(res, "Expected return type in function declaration")
-            return res.failure(err)
+            err = self.throw_error("Expected return type in function declaration")
+            return err
 
         returnType = self.curr_token
 
-        res.register(self.advance())
+        self.advance()
 
         if self.curr_token.type_name == tk.TT_ARROW:
-            res.register(self.advance())
+            self.advance()
 
             node_to_return = self.expr()
-            if isinstance(node_to_return, ParseResult):
-                res.register(node_to_return)
-                err = self.throw_error(res, res.error.details)
-                return res.failure(err)
+            if isinstance(node_to_return, Error):
+                err = self.throw_error(node_to_return.error.details)
+                return err
 
-            return res.success(FuncDefNode(node_to_return, returnType, name_token, arg_name_tokens, arg_type_tokens, False))
+            return FuncDefNode(node_to_return, returnType, name_token, arg_name_tokens, arg_type_tokens, False)
 
         if self.curr_token.type_name != "LCURLY":
-            err = self.throw_error(res, "Expected '{'")
-            return res.failure(err)
+            err = self.throw_error("Expected '{'")
+            return err
 
-        res.register(self.advance())
+        self.advance()
 
         if self.curr_token.type_name != tk.TT_NEWLINE:
-            err = self.throw_error(res, "Expected '->' in function or '{'")
-            return res.failure(err)
+            err = self.throw_error("Expected '->' in function or '{'")
+            return err
 
-        res.register(self.advance())
+        self.advance()
 
         body = self.statements()
-        if isinstance(body, ParseResult):
-            res.register(body)
-            err = self.throw_error(res, res.error.details)
-            return res.failure(err)
+        if isinstance(body, Error):
+            err = self.throw_error(body.error.details)
+            return err
 
         return_nil = True
         for node in body.element_nodes:
@@ -308,205 +293,177 @@ class Parser:
                 break
 
         if self.curr_token.type_name != "RCURLY":
-            err = self.throw_error(res, "Expected '}'")
-            return res.failure(err)
+            err = self.throw_error("Expected '}'")
+            return err
 
-        res.register(self.advance())
-        returnVal = res.success(FuncDefNode(body, returnType, name_token, arg_name_tokens, arg_type_tokens, return_nil))
+        self.advance()
+        returnVal = FuncDefNode(body, returnType, name_token, arg_name_tokens, arg_type_tokens, return_nil)
         return returnVal
 
     def for_expr(self):
-        res = ParseResult()
-
         if not (self.curr_token.type_name == "FOR"):
-            err = self.throw_error(res, "Expected 'for'")
-            return res.failure(err)
+            err = self.throw_error("Expected 'for'")
+            return err
 
-        res.register(self.advance())
+        self.advance()
 
         if not (self.curr_token.type_name == "IDENTIFIER"):
-            err = self.throw_error(res, "Expected variable")
-            return res.failure(err)
+            err = self.throw_error("Expected variable")
+            return err
 
         iterator_token = self.curr_token
-        res.register(self.advance())
+        self.advance()
 
         if not (self.curr_token.type_name == "IN"):
-            err = self.throw_error(res, "Expected 'in' keyword")
-            return res.failure(err)
+            err = self.throw_error("Expected 'in' keyword")
+            return err
 
-        res.register(self.advance())
+        self.advance()
 
         start_value = self.expr()
-        if isinstance(start_value, ParseResult):
-            res.register(start_value)
-            err = self.throw_error(res, res.error.details)
-            return res.failure(err)
+        if isinstance(start_value, Error):
+            err = self.throw_error(start_value.error.details)
+            return err
 
         iterator_var = VarAssignNode(iterator_token, start_value, [1, Integer(64)])
 
         if not (self.curr_token.type_name == "COLON"):
-            err = self.throw_error(res, "Expected ':' in range")
-            return res.failure(err)
+            err = self.throw_error("Expected ':' in range")
+            return err
 
-        res.register(self.advance())
+        self.advance()
 
         end_value = self.expr()
-        if isinstance(end_value, ParseResult):
-            res.register(end_value)
-            err = self.throw_error(res, res.error.details)
-            return res.failure(err)
+        if isinstance(end_value, Error):
+            err = self.throw_error(end_value.error.details)
+            return err
 
         if not (self.curr_token.type_name == "LCURLY"):
-            err = self.throw_error(res, "Expected '{' in for loop")
-            return res.failure(err)
+            err = self.throw_error("Expected '{' in for loop")
+            return err
 
-        res.register(self.advance())
+        self.advance()
 
         if self.curr_token.type_name == tk.TT_NEWLINE:
-            res.register(self.advance())
+            self.advance()
 
-            body = res.register(self.statements())
-            if isinstance(body, ParseResult):
-                res.register(body)
-                return res.failure(body.error)
+            body = self.statements()
+            if isinstance(body, Error):
+                return self.throw_error(body.error.details)
 
             if self.curr_token.type_name != "RCURLY":
-                err = self.throw_error(res, "Expected '}'")
-                return res.failure(err)
+                return self.throw_error("Expected '}'")
 
-            res.register(self.advance())
+            self.advance()
 
-            return res.success(ForNode(iterator_var, start_value, end_value, body, True))
+            return ForNode(iterator_var, start_value, end_value, body, True)
 
         body = self.expr()
-        if isinstance(body, ParseResult):
-            res.register(body)
-            return res.failure(body.error)
+        if isinstance(body, Error):
+            return self.throw_error(body.error.details)
 
         if not (self.curr_token.type_name == "RCURLY"):
-            err = self.throw_error(res, "Expected '}' in for loop")
-            return res.failure(err)
+            return self.throw_error("Expected '}' in for loop")
 
-        return res.success(ForNode(iterator_var, start_value, end_value, body, False))
+        return ForNode(iterator_var, start_value, end_value, body, False)
 
     def while_expr(self):
-        res = ParseResult()
-
         if not (self.curr_token.type_name == "WHILE"):
-            err = self.throw_error(res, "Expected 'while' keyword in while loop")
-            return res.failure(err)
+            return self.throw_error("Expected 'while' keyword in while loop")
 
-        res.register(self.advance())
+        self.advance()
 
         cond_value = self.expr()
-        if isinstance(cond_value, ParseResult):
-            res.register(cond_value)
-            return res.failure(cond_value.error)
+        if isinstance(cond_value, Error):
+            return self.throw_error(cond_value.error.details)
 
         if not (self.curr_token.type_name == "LCURLY"):
-            err = self.throw_error(res, "Expected '{' in while loop")
-            return res.failure(err)
+            return self.throw_error("Expected '{' in while loop")
 
-        res.register(self.advance())
+        self.advance()
 
         if self.curr_token.type_name == tk.TT_NEWLINE:
-            res.register(self.advance())
+            self.advance()
 
-            body = res.register(self.statements())
-            if isinstance(body, ParseResult):
-                return res.failure(body.error)
+            body = self.statements()
+            if isinstance(body, Error):
+                return self.throw_error(body.error.details)
 
             if self.curr_token.type_name != "RCURLY":
-                err = self.throw_error(res, "Expected '}'")
-                return res.failure(err)
+                return self.throw_error("Expected '}'")
 
-            res.register(self.advance())
+            self.advance()
 
-            return res.success(WhileNode(cond_value, body, True))
+            return WhileNode(cond_value, body, True)
 
         body_value = self.expr()
-        if isinstance(body_value, ParseResult):
-            res.register(body_value)
-            return res.failure(body_value.error)
+        if isinstance(body_value, Error):
+            return self.throw_error(body_value.error.details)
 
         if not (self.curr_token.type_name == "RCURLY"):
-            err = self.throw_error(res, "Expected '}' in while loop")
-            return res.failure(err)
+            return self.throw_error("Expected '}' in while loop")
 
-        return res.success(WhileNode(cond_value, body_value, False))
+        return WhileNode(cond_value, body_value, False)
 
     def if_expr(self):
-        res = ParseResult()
         all_cases = self.if_expr_cases("IF")
-        if isinstance(all_cases, ParseResult):
-            res.register(all_cases)
-            return res.failure(all_cases.error)
+        if isinstance(all_cases, Error):
+            return self.throw_error(all_cases.error.details)
         cases, else_case = all_cases
 
-        return res.success(IfNode(cases, else_case))
+        return IfNode(cases, else_case)
 
     def if_expr_cases(self, case_keyword):
-        res = ParseResult()
         cases = []
         else_case = None
 
         if self.curr_token.type_name != case_keyword:
-            err = self.throw_error(res, "Expected 'if'")
-            return res.failure(err)
+            return self.throw_error("Expected 'if'")
 
-        res.register(self.advance())
+        self.advance()
 
         condition = self.expr()
-        if isinstance(condition, ParseResult):
-            res.register(condition)
-            return res.failure(condition.error)
+        if isinstance(condition, Error):
+            return self.throw_error(condition.error.details)
 
         if self.curr_token.type_name != "LCURLY":
-            err = self.throw_error(res, "Expected '{'")
-            return res.failure(err)
+            return self.throw_error("Expected '{'")
 
-        res.register(self.advance())
+        self.advance()
 
         if self.curr_token.type_name == tk.TT_NEWLINE:
-            res.register(self.advance())
+            self.advance()
 
             all_statements = self.statements()
-            if isinstance(all_statements, ParseResult):
-                res.register(all_statements)
-                return res.failure(all_statements.error)
+            if isinstance(all_statements, Error):
+                return self.throw_error(all_statements.error.details)
             statements = all_statements
             cases.append([condition, statements, True])
 
             if self.curr_token.type_name != "RCURLY":
-                err = self.throw_error(res, "Expected '}'")
-                return res.failure(err)
-            res.register(self.advance())
+                return self.throw_error("Expected '}'")
+            self.advance()
 
             all_cases = self.if_expr_b_or_c()
-            if isinstance(all_cases, ParseResult):
-                res.register(all_cases)
-                return res.failure(all_cases.error)
+            if isinstance(all_cases, Error):
+                return self.throw_error(all_cases.error.details)
 
             new_cases, else_case = all_cases
             if len(new_cases) != 0:
                 cases.extend(new_cases)
         else:
             expr = self.expr()
-            if isinstance(expr, ParseResult):
-                res.register(expr)
-                return res.failure(expr.error)
+            if isinstance(expr, Error):
+                return self.throw_error(expr.error.details)
             cases.append([condition, expr, False])
 
             if self.curr_token.type_name != "RCURLY":
-                err = self.throw_error(res, "Expected '}'")
-                return res.failure(err)
-            res.register(self.advance())
+                return self.throw_error("Expected '}'")
+            self.advance()
 
             all_cases = self.if_expr_b_or_c()
-            if isinstance(all_cases, ParseResult):
-                res.register(all_cases)
-                return res.failure(res)
+            if isinstance(all_cases, Error):
+                return self.throw_error(all_cases.error.details)
             new_cases, else_case = all_cases
             if len(new_cases) != 0:
                 cases.extend(new_cases)
@@ -514,61 +471,52 @@ class Parser:
         return [cases, else_case]
 
     def if_expr_c(self):
-        res = ParseResult()
         else_case = None
 
         if self.curr_token.type_name == "ELSE":
-            res.register(self.advance())
+            self.advance()
 
             if self.curr_token.type_name != "LCURLY":
-                err = self.throw_error(res, "Expected '{'in else statement")
-                return res.failure(err)
+                return self.throw_error("Expected '{'in else statement")
 
-            res.register(self.advance())
+            self.advance()
 
             if self.curr_token.type_name == tk.TT_NEWLINE:
-                res.register(self.advance())
+                self.advance()
 
                 statements = self.statements()
-                if isinstance(statements, ParseResult):
-                    res.register(statements)
-                    return res.failure(statements.error)
+                if isinstance(statements, Error):
+                    return self.throw_error(statements.error.details)
                 else_case = [statements, True]
 
                 if self.curr_token.type_name == "RCURLY":
-                    res.register(self.advance())
+                    self.advance()
                 else:
-                    err = self.throw_error(res, "Expected '}' in if statement")
-                    return res.failure(err)
+                    return self.throw_error("Expected '}' in if statement")
             else:
                 expr = self.expr()
-                if isinstance(expr, ParseResult):
-                    res.register(expr)
-                    return res.failure(expr.error)
+                if isinstance(expr, Error):
+                    return self.throw_error(expr.error.details)
 
                 else_case = [expr, False]
-        res.success(else_case)
 
         return else_case
 
     def if_expr_b_or_c(self):
-        res = ParseResult()
         cases = []
         else_case = None
 
         if self.curr_token.type_name == "ELIF":
             all_cases = self.if_expr_b()
-            if isinstance(all_cases, ParseResult):
-                res.register(all_cases)
-                return res.failure(all_cases.error)
+            if isinstance(all_cases, Error):
+                return self.throw_error(all_cases.error)
             cases, else_case = all_cases
         else:
             else_case = self.if_expr_c()
-            if isinstance(else_case, ParseResult):
-                res.register(else_case)
-                return res.failure(else_case.error)
+            if isinstance(else_case, Error):
+                return self.throw_error(else_case.error)
 
-        return res.success([cases, else_case])
+        return [cases, else_case]
 
     def if_expr_b(self):
         return self.if_expr_cases("ELIF")
@@ -577,18 +525,16 @@ class Parser:
         return self.bin_op(self.call, [tk.TT_POW], self.factor)
 
     def factor(self):
-        res = ParseResult()
         tok = self.curr_token
-        return_val = res
+        return_val = tok
 
         if tok.type_name == "PLUS" or tok.type_name == "MINUS":
-            res.register(self.advance())
+            self.advance()
             fac_node = self.factor()
-            if isinstance(fac_node, ParseResult):
-                res.register(self.factor())
-                return_val = res.failure(fac_node.error)
+            if isinstance(fac_node, Error):
+                return self.throw_error(fac_node.error)
 
-            return_val = res.success(UnaryNode(tok, fac_node))
+            return_val = UnaryNode(tok, fac_node)
         else:
             return_val = self.power()
 
@@ -598,15 +544,14 @@ class Parser:
         return self.bin_op(self.factor, [tk.TT_MUL, tk.TT_DIV])
 
     def statements(self):
-        res = ParseResult()
         statements = []
 
         while self.curr_token.type_name == tk.TT_NEWLINE:
-            res.register(self.advance())
+            self.advance()
 
-        statement = res.register(self.statement())
-        if res.error is not None:
-            return res
+        statement = self.statement()
+        if isinstance(statement, Error):
+            return self.throw_error(statement.error.details)
 
         statements.append(statement)
 
@@ -615,78 +560,74 @@ class Parser:
         while True:
             newline_count = 0
             while self.curr_token.type_name == tk.TT_NEWLINE:
-                res.register(self.advance())
+                self.advance()
                 newline_count += 1
             if newline_count == 0:
                 more_statements = False
 
             if not more_statements:
                 break
-            statement = res.register(self.statement())
+            statement = self.statement()
             if not statement:
                 more_statements = False
                 continue
             statements.append(statement)
 
         return_value = ListNode(statements)
-        res.success(return_value)
 
         return return_value
 
     def statement(self):
-        res = ParseResult()
         return_node = None
 
         if self.curr_token.type_name == "RETURN":
-            res.register(self.advance())
+            self.advance()
             if self.curr_token.type_name != "NEWLINE":
                 expr = self.expr()
-                if isinstance(expr, ParseResult):
-                    return res.failure(expr.error)
+                if isinstance(expr, Error):
+                    return self.throw_error(expr.details)
                 return_node = ReturnNode(expr)
             return return_node
 
         expr = self.expr()
-        if isinstance(expr, ParseResult):
-            return res.failure(expr.error)
+        if isinstance(expr, Error):
+            return self.throw_error(expr.details)
 
         return expr
 
     def expr(self):
-        res = ParseResult()
         jump_back = self.token_idx
 
         if self.curr_token.type_name == tk.TT_ID:
             var_name = self.curr_token
-            res.register(self.advance())
+            self.advance()
 
             if self.curr_token.type_name == tk.TT_COLON:
-                res.register(self.advance())
+                self.advance()
 
                 if self.curr_token.type_dec is None:
-                    err = self.throw_error(res, "Variable declaration must have a type")
-                    return res.failure(err)
+                    return self.throw_error("Variable declaration must have a type")
 
                 type_tok = self.curr_token
-                res.register(self.advance())
+                self.advance()
 
                 if self.curr_token.type_name == tk.TT_EQ:
-                    res.register(self.advance())
+                    self.advance()
 
                     val = self.expr()
-                    if isinstance(val, ParseResult):
-                        return res.failure(val)
+                    if isinstance(val, Error):
+                        return self.throw_error(val.details)
 
-                    return res.success(VarAssignNode(var_name, val, type_tok.type_dec))
+                    return VarAssignNode(var_name, val, type_tok.type_dec)
 
             if self.curr_token.type_name == tk.TT_EQ:
-                res.register(self.advance())
+                self.advance()
 
                 val = self.expr()
-                if isinstance(val, ParseResult):
-                    return res.failure(val)
+                if isinstance(val, Error):
+                    return self.throw_erro(val.details)
 
-                return res.success(VarUpdateNode(var_name, val))
+                return VarUpdateNode(var_name, val)
 
         self.token_idx = jump_back
         self.curr_token = self.tokens[self.token_idx]
@@ -694,26 +635,20 @@ class Parser:
         return self.bin_op(self.comp_expr, [tk.TT_AND, tk.TT_OR])
 
     def comp_expr(self):
-        res = ParseResult()
-
         if self.curr_token.type_name == "NOT" or self.curr_token.type_name == "AND":
             op_tok = self.curr_token
-            res.register(self.advance())
+            self.advance()
 
             node = self.comp_expr()
-            if isinstance(node, ParseResult):
-                res.register(node)
-                err = self.throw_error(res, res.error.details)
-                return err
+            if isinstance(node, Error):
+                return self.throw_error(node.error.details)
 
             # BUG: Is this why unary ops don't work??
             return UnaryOpNode(op_tok, node)
 
         node = self.bin_op(self.arith_expr, [tk.TT_EE, tk.TT_NE, tk.TT_LT, tk.TT_GT, tk.TT_LOE, tk.TT_GOE])
-        if isinstance(node, ParseResult):
-            res.register(node)
-            err = self.throw_error(res, res.error.details)
-            return res.failure(err)
+        if isinstance(node, Error):
+            return self.throw_error(node.details)
 
         return node
 
@@ -728,26 +663,24 @@ class Parser:
         return False
 
     def bin_op(self, functionA, ops, functionB=None):
-        res = ParseResult()
-
         func = functionB
         if functionB is None:
             func = functionA
 
         left = functionA()
-        if isinstance(left, ParseResult):
-            return res.failure(left)
+        if isinstance(left, Error):
+            return self.throw_error(left.details)
 
         loop_condition = self.check_equal_to_ops(ops, self.curr_token.type_name)
         while loop_condition:
             op_tok = VariableNode(self.curr_token)
-            res.register(self.advance())
+            self.advance()
 
             right = func()
-            if isinstance(right, ParseResult):
-                return res.failure(right)
+            if isinstance(right, Error):
+                return self.throw_error(right.details)
 
             left = BinOpNode(left, op_tok, right)
             loop_condition = self.check_equal_to_ops(ops, self.curr_token.type_name)
 
-        return res.success(left)
+        return left

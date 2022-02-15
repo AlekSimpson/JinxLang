@@ -4,7 +4,6 @@ from Context import Context
 from GlobalTable import global_symbol_table
 from Types import Number
 from Interpreter import BuiltinFunction, Interpreter
-from ParseResult import ParseResult
 from Node import *
 from Error import *
 
@@ -48,7 +47,7 @@ def run(text, fn):
     ctx.symbolTable = global_symbol_table
     result = interpreter.visit(nodes, ctx)
 
-    return (result.value, result.error)
+    return result
 
 # XXX: Converge Error return value and result value into one value. Basically so that parser parser.parse() returns only one value and that value is either a return or just an error.
 

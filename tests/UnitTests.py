@@ -7,24 +7,25 @@ elif platform == "darwin":
     sys.path.append("/Users/aleksimpson/desktop/projects/aqua/src/")
 
 import run
+from Error import *
 from TestSetups import *
 from termcolors import bcolors as bc
 
 
 class Validator:
-    def process_result(self, result, error):
-        return_val = None
-        if error is not None:
-            return_val = error.as_string()
+    def process_result(self, result):
+        if result is None:
+            return None
+        if isinstance(result, Error):
+            return result.as_string()
+
+        if len(result.elements) == 1:
+            if result.elements[0] is not None:
+                return result.elements[0].value
         else:
-            if len(result.elements) == 1 and len(result.elements) != 0:
-                if result.elements[0] is not None:
-                    return_val = result.elements[0].value
-            else:
-                for ele in result.elements:
-                    if ele is not None:
-                        return_val = ele.value
-        return return_val
+            for ele in result.elements:
+                if ele is not None:
+                    return ele.value
 
     def run_tests(self):
         passed = []
@@ -39,9 +40,7 @@ class Validator:
                     passed.append(res)
                 else:
                     failed.append(res)
-        print(
-            f"-------------------------[ {len(passed)} Passed | {len(failed)} Failed ]-------------------------"
-        )
+        print(f"-------------------------[ {len(passed)} Passed | {len(failed)} Failed ]-------------------------")
 
     def run_package(self, package):
         package_results = []
@@ -67,8 +66,8 @@ class Validator:
         return package_results
 
     def execute_test(self, test):
-        output, error = run.run(test.sample, test.name)
-        result = self.process_result(output, error)
+        output = run.run(test.sample, test.name)
+        result = self.process_result(output)
         eval, msg = test.evaluate(result)
         return [eval, msg]
 
