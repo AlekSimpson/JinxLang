@@ -351,7 +351,7 @@ class Interpreter:
         name = access_node.token.value
         err = None
 
-        if table[name] is None:
+        if not name in table:
             pos = access_node.token.pos
             err = RuntimeError(f'"{name}" is not defined', context, pos)
 
