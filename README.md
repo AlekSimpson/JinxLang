@@ -8,7 +8,7 @@
 ## TODO
 
 * ~Overhaul Type System~ 
-* Fix Error System
+* ~Fix Error System~
 * Floats literally have been broken this entire time, needs fix
 * Optimize Parser Code 
 * Fix straggling bugs and weird edge cases
