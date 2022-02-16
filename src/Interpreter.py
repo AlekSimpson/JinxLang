@@ -1,6 +1,5 @@
-from RuntimeResult import RuntimeResult
 from SymbolTable import SymbolTable
-from Error import RuntimeError
+from Error import *
 import tokens as tk
 from Context import Context
 from Types import Number, string, Array, Type, Integer
@@ -23,23 +22,13 @@ class BaseFunction(Type):
         return new_context
 
     def check_args(self, arg_names, args):
-        res = RuntimeResult()
-
         if len(args) > len(arg_names):
-            err = RuntimeError(
-                f"to many arguements passed into function {name}", new_context, self.pos
-            )
-            _ = res.failure(err)
-            return res
+            return RuntimeError(f"to many arguements passed into function {self.name}", new_context, self.pos)
 
         if len(args) < len(arg_names):
-            err = RuntimeError(
-                f"to few arguements passed into function {name}", new_context, self.pos
-            )
-            _ = res.failure(err)
-            return res
+            return RuntimeError(f"to few arguements passed into function {self.name}", new_context, self.pos)
 
-        return res.success(None)
+        return None
 
     def populate_args(self, arg_names, args, exec_ctx):
         for i in range(0, len(arg_names)):
@@ -50,16 +39,13 @@ class BaseFunction(Type):
             exec_ctx.symbolTable.set_val(arg_name, arg_value)
 
     def check_and_populate_args(self, arg_names, args, exec_ctx):
-        res = RuntimeResult()
-
-        res.register(self.check_args(arg_names, args))
-        if res.error != None:
-            return res
+        check = self.check_args(arg_names, args)
+        if isinstance(check, Error):
+            return check
 
         self.populate_args(arg_names, args, exec_ctx)
 
-        return res.success(None)
-
+        return None
 
 class Function(BaseFunction):
     def __init__(
@@ -79,26 +65,26 @@ class Function(BaseFunction):
         self.should_return_nil = should_return_nil
 
     def execute(self, args):
-        res = RuntimeResult()
         interpreter = Interpreter()
 
         exec_ctx = self.generate_new_context()
 
-        res.register(self.check_and_populate_args(self.arg_nodes, args, exec_ctx))
-        if res.error != None:
-            return (None, res)
+        check = self.check_and_populate_args(self.arg_nodes, args, exec_ctx)
+        if isinstance(check, Error):
+            return check
 
-        body_res = interpreter.visit(self.body_node, exec_ctx)
-        _ = res.register(body_res)
+        body = interpreter.visit(self.body_node, exec_ctx)
+        if isinstance(body, Error):
+            return body
 
-        final_value = res.value
-        if not isinstance(res.value, Number):
-            final_value = Number() if self.should_return_nil else res.value.elements[-1]
-        if res.error is not None:
-            return (None, res)
+        final_value = body
+        if not isinstance(body, Number):
+            final_value = Number() if self.should_return_nil else body.elements[-1]
+        #if res.error is not None:
+        #    return (None, res)
 
         self.context = exec_ctx
-        return (final_value, res)
+        return final_value
 
     def copy(self):
         copy = Function(
@@ -117,12 +103,12 @@ class BuiltinFunction(BaseFunction):
         self.name_id = name_id
 
     def isNum(self, value):
-        returnVal = True
+        return_val = True
         try:
             int(value)
         except:
-            returnVal = False
-        return returnVal
+            return_val = False
+        return return_val
 
     def check_is_var(self, value):
         if value in global_symbol_table.symbols:
@@ -130,7 +116,6 @@ class BuiltinFunction(BaseFunction):
         return False
 
     def execute(self, args):
-        res = RuntimeResult()
         exec_ctx = self.generate_new_context()
 
         method_arg_names = [
@@ -148,17 +133,15 @@ class BuiltinFunction(BaseFunction):
         method = methods[self.name_id]
         method_a_names = method_arg_names[self.name_id]
 
-        res.register(self.check_and_populate_args(method_a_names, args, exec_ctx))
-        if res.error != None:
-            return res
+        check = self.check_and_populate_args(method_a_names, args, exec_ctx)
+        if isinstance(check, Error):
+            return check
 
-        return_value, return_res = method(exec_ctx)
-        res.register(return_res)
+        return_value = method(exec_ctx)
 
-        return (return_value, res)
+        return return_value
 
     def execute_print(self, exec_ctx):
-        res = RuntimeResult()
         value_arg = exec_ctx.symbolTable.get_val("value")
         value = Number(value_arg.value)
         isNumber = True
@@ -182,10 +165,9 @@ class BuiltinFunction(BaseFunction):
             else:
                 # value is a string
                 print(value.value.value)
-        return (Number(0), res)
+        return Number(0)
 
     def execute_append(self, exec_ctx):
-        res = RuntimeResult()
         arr_arg = exec_ctx.symbolTable.get_val("array").value
         value_obj = exec_ctx.symbolTable.get_val("value")
         value = value_obj.value
@@ -197,13 +179,12 @@ class BuiltinFunction(BaseFunction):
 
         arr.append(value_obj)
 
-        return (None, res)
+        return None
 
     def execute_length(self, exec_ctx):
-        res = RuntimeResult()
         arr_arg = exec_ctx.symbolTable.get_val("array").value
         length = global_symbol_table.get_val(arr_arg).length
-        return (Integer(64, length), res)
+        return Integer(64, length)
 
     def copy(self):
         copy = BuiltinFunction(self.name_id)
@@ -214,13 +195,10 @@ class BuiltinFunction(BaseFunction):
         return f"<function {self.name}>"
 
     def execute_run(self, exec_ctx):
-        res = RuntimeResult()
         fn = exec_ctx.symbolTable.get_val("fn")
 
         if not isinstance(fn.value, str):
-            err = RuntimeError("Arguements must be string", Context(), Position())
-            res.failure(err)
-            return (None, res)
+            return RuntimeError("Arguements must be string", Context(), Position())
 
         fn = fn.value
 
@@ -228,20 +206,16 @@ class BuiltinFunction(BaseFunction):
             with open(fn, "r") as f:
                 script = f.read()
         except Exception as e:
-            err = RuntimeError("Failed to execute file" + str(e), Context(), Position())
-            res.failure(err)
-            return (None, res)
+            return RuntimeError("Failed to execute file" + str(e), Context(), Position())
 
         from run import run
 
         return_value, error = run(script, fn)
 
-        if error != None:
-            err = RuntimeError("Failed to finish file", Context(), Position())
-            res.failure(err)
-            return (None, res)
+        if error is not None:
+            return RuntimeError("Failed to finish file", Context(), Position())
 
-        return (return_value, res)
+        return return_value
 
 BuiltinFunction.print = BuiltinFunction(0)
 BuiltinFunction.append = BuiltinFunction(1)
@@ -250,12 +224,23 @@ BuiltinFunction.length = BuiltinFunction(3)
 
 
 class Interpreter:
+    def check_for_error(self, node):
+        if isinstance(node, Error):
+            return node
+        return None
+
     def visit(self, node, context):
+        err_check = self.check_for_error(node)
+        if err_check is not None:
+            return err_check
+        if node is None:
+            return RuntimeError("Invalid syntax", context, Position())
+
         func_index = node.classType
         # print(f"[{func_index}] - {node.as_string()}")
         # ^^^^ Keep for debugging purposes ^^^^
-        result = RuntimeResult()
         table = context.symbolTable.symbols
+        result = None
 
         options = [
             self.visit_binop,
@@ -287,54 +272,49 @@ class Interpreter:
         return result
 
     def AccessNode(self, node, ctx, table):
-        res = RuntimeResult()
         err = self.check_for_declaration(table, node, ctx)
         if err is not None:
-            res.failure(err)
+            return err
         else:
             return self.visit_VarAccessNode(node, ctx)
 
     def visit_StringNode(self, node, ctx):
-        rt = RuntimeResult()
+        string_val = string(node.token.value)
+        string_val.set_context(ctx)
 
-        str = string(node.token.value)
-        str.set_context(ctx)
-
-        return rt.success(str)
+        return string_val
 
     def visit_ListNode(self, node, context):
-        res = RuntimeResult()
         elements = []
         for element_node in node.element_nodes:
             el = self.visit(element_node, context)
-            _ = res.register(el)
-            elements.append(el.value)
-            if res.error != None:
-                return res
+            elements.append(el)
+
+            if isinstance(el, Error):
+                return el
             if element_node.classType == 15:
                 break
 
         arr = Array(elements)
         arr.set_context(context)
 
-        return res.success(arr)
+        return arr
 
     def visit_ForNode(self, node, ctx):
-        rt = RuntimeResult()
+        res_value = self.visit(node.startValue, ctx)
+        if isinstance(res_value, Error):
+            return res_value
 
-        res_value = rt.register(self.visit(node.startValue, ctx))
-        if rt.error != None:
-            return rt
-        start_value = res_value.value.value
+        start_value = res_value.value
 
-        res_value = rt.register(self.visit(node.endValue, ctx))
-        if rt.error != None:
-            return rt
-        end_value = res_value.value.value
+        res_value = self.visit(node.endValue, ctx)
+        if isinstance(res_value, Error):
+            return res_value
+        end_value = res_value.value
 
-        res_value = rt.register(self.visit(node.iterator, ctx))
-        if rt.error != None:
-            return rt
+        res_value = self.visit(node.iterator, ctx)
+        if isinstance(res_value, Error):
+            return res_value
         iterator_name = node.iterator.token.value
 
         i = start_value
@@ -345,95 +325,84 @@ class Interpreter:
             table.set_val(iterator_name, Number(i))
             i += 1
 
-            _ = rt.register(self.visit(node.bodyNode, ctx))
-            if rt.error != None:
-                return rt
+            body_vst = self.visit(node.bodyNode, ctx)
+            if isinstance(body_vst, Error):
+                return body_vst
 
-        return rt.success(Number(0))
+        return Number(0)
 
     def visit_WhileNode(self, node, ctx):
-        rt = RuntimeResult()
-
         while True:
-            condition = rt.register(self.visit(node.conditionNode, ctx))
-            if rt.error != None:
-                return rt
-            cond_value = condition.value
+            condition = self.visit(node.conditionNode, ctx)
+            if isinstance(condition, Error):
+                return condition
 
-            if not cond_value.is_true():
+            if not condition.is_true():
                 break
 
-            _ = rt.register(self.visit(node.bodyNode, ctx))
-            if rt.error != None:
-                return rt
+            body_vst = self.visit(node.bodyNode, ctx)
+            if isinstance(body_vst, Error):
+                return body_vst
 
-        return rt.success(Number(0))
+        return Number(0)
 
     def check_for_declaration(self, table, node, context):
         access_node = node
         name = access_node.token.value
         err = None
 
-        if table[name] == None:
+        if not name in table:
             pos = access_node.token.pos
             err = RuntimeError(f'"{name}" is not defined', context, pos)
 
         return err
 
     def visit_binop(self, node, ctx):
-        rt = RuntimeResult()
         result = None
         error = None
-        returnVal = RuntimeResult()
 
         left_vst = self.visit(node.lhs, ctx)
-        _ = rt.register(left_vst)
-        if rt.error != None:
-            return rt
-        left = rt.value
+        if isinstance(left_vst, Error):
+            return left_vst
+        left = left_vst
 
         right_vst = self.visit(node.rhs, ctx)
-        _ = rt.register(right_vst)
-        if rt.error != None:
-            return rt
-        right = rt.value
+        if isinstance(right_vst, Error):
+            return right_vst
+        right = right_vst
 
         op_node = node.op
         name_cond = op_node.token.type_name
         if name_cond == tk.TT_PLUS:
-            result, error = left.added(right)
+            result = left.added(right)
         elif name_cond == tk.TT_MINUS:
-            result, error = left.subtracted(right)
+            result = left.subtracted(right)
         elif name_cond == tk.TT_MUL:
-            result, error = left.multiplied(right)
+            result = left.multiplied(right)
         elif name_cond == tk.TT_DIV:
-            result, error = left.divided(right)
+            result = left.divided(right)
         elif name_cond == tk.TT_POW:
-            result, error = left.power(right)
+            result = left.power(right)
         elif name_cond == tk.TT_EE:
-            result, error = left.comp_eq(right)
+            result = left.comp_eq(right)
         elif name_cond == tk.TT_NE:
-            result, error = left.comp_ne(right)
+            result = left.comp_ne(right)
         elif name_cond == tk.TT_LT:
-            result, error = left.comp_lt(right)
+            result = left.comp_lt(right)
         elif name_cond == tk.TT_GT:
-            result, error = left.comp_gt(right)
+            result = left.comp_gt(right)
         elif name_cond == tk.TT_LOE:
-            result, error = left.comp_loe(right)
+            result = left.comp_loe(right)
         elif name_cond == tk.TT_GOE:
-            result, error = left.comp_goe(right)
+            result = left.comp_goe(right)
         elif name_cond == tk.TT_AND:
-            result, error = left.comp_and(right)
+            result = left.comp_and(right)
         elif name_cond == tk.TT_OR:
-            result, error = left.comp_or(right)
+            result = left.comp_or(right)
         else:
-            result, error = (Number(0), None)
+            result = Number(0)
 
-        if error != None:
-            returnVal = rt.failure(error)
-        if result != None:
-            returnVal = rt.success(result)
-        return returnVal
+        return result
 
     def visit_number(self, node, ctx):
         entry = node.token.pos
@@ -446,59 +415,47 @@ class Interpreter:
         num = Number(val, p)
         num.set_context(child_context)
 
-        return RuntimeResult().success(num)
+        return num
 
     def visit_IfNode(self, node, ctx):
-        res = RuntimeResult()
-
         for case_ in node.cases:
-            condiion_value = res.register(self.visit(case_[0], ctx))
-            if res.error != None:
-                return res
-            c_value = condiion_value.value
+            condition_value = self.visit(case_[0], ctx)
+            if isinstance(condition_value, Error):
+                return condition_value
+            c_value = condition_value
 
             if c_value.is_true():
                 expr_value = self.visit(case_[1], ctx)
-                res.register(expr_value)
-                if res.error != None:
-                    return res
-                e_value = expr_value.value
+                if isinstance(expr_value, Error):
+                    return expr_value
 
-                return res.success(Number.nil if case_[2] else e_value)
+                return Number.nil if case_[2] else expr_value
 
-        if node.else_case != None:
-            else_value = res.register(self.visit(node.else_case[0], ctx))
-            if res.error != None:
-                return res
-            e_value = else_value.value
+        if node.else_case is not None:
+            else_value = self.visit(node.else_case[0], ctx)
+            if isinstance(else_value, Error):
+                return else_value
 
-            return res.success(Number.nil if node.else_case[1] else e_value)
+            return Number.nil if node.else_case[1] else else_value
 
-        return res.success(Number.nil)
+        return Number.nil
 
     def visit_unary(self, node, ctx):
-        rt = RuntimeResult()
-        number_reg = rt.register(self.visit(node.node, ctx))
-        number = number_reg.value
-        if rt.error != None:
-            return rt
+        number = self.visit(node.node, ctx)
 
-        error = None
+        if isinstance(number, Error):
+            return number
 
         if node.op_tok.type_name == tk.TT_MINUS:
-            if number != None:
-                (number, error) = number.multiplied(Number(-1))
+            if number is not None:
+                number = number.multiplied(Number(-1))
         elif node.op_tok.type_name == tk.TT_NOT:
-            if number != None:
-                (number, error) = number.not_op()
+            if number is not None:
+                number = number.not_op()
 
-        if error != None:
-            return rt.failure(error)
-        else:
-            return rt.success(number)
+        return number
 
     def visit_VarUpdateNode(self, node, ctx):
-        res = RuntimeResult()
         var_name = node.token.value
 
         # check if variable exsits
@@ -509,56 +466,49 @@ class Interpreter:
         # check if types match
         value = ctx.symbolTable.get_val(var_name)
 
-        new_val = res.register(self.visit(node.value_node, ctx))
-        if res.error is not None:
-            return res
+        new_val = self.visit(node.value_node, ctx)
+        if isinstance(new_val, Error):
+            return new_val
 
         # Check if types match
-        new = new_val.value
+        new = new_val
         previous_value = value
         types_match = self.check_types_match(new, previous_value, var_name, ctx, node)
         if types_match is not None:
-            return res.failure(types_match)
+            return types_match
 
         # update
-        ctx.symbolTable.set_val(var_name, new_val.value)
-        return res.success(new_val.value)
+        ctx.symbolTable.set_val(var_name, new_val)
+        return new_val
 
     def visit_VarAccessNode(self, node, ctx):
-        res = RuntimeResult()
         var_name = node.token.value
 
         value = None
         if ctx.symbolTable is not None:
             value = ctx.symbolTable.get_val(var_name)
         if value is not None:
-            return res.success(value)
+            return value
         else:
             p = node.token.pos
-            error = RuntimeError(f"{var_name} is not defined", ctx, p)
-            return res.failure(error)
+            return RuntimeError(f"{var_name} is not defined", ctx, p)
 
     def visit_VarAssignNode(self, node, ctx):
-        res = RuntimeResult()
         var_name = node.token.value
-        value = res.register(self.visit(node.value_node, ctx))
-        if res.error is not None:
-            return res
+        value = self.visit(node.value_node, ctx)
+        if isinstance(value, Error):
+            return value
 
-        value_type = value.value
+        value_type = value
         variable_type = node.type[1]
-        types_match = self.check_types_match(
-            value_type, variable_type, var_name, ctx, node
-        )
+        types_match = self.check_types_match(value_type, variable_type, var_name, ctx, node)
         if types_match is not None:
-            return res.failure(types_match)
+            return types_match
 
-        ctx.symbolTable.set_val(var_name, value.value)
-        return res.success(value.value)
+        ctx.symbolTable.set_val(var_name, value)
+        return value
 
     def visit_FuncDefNode(self, node, ctx):
-        res = RuntimeResult()
-
         func_name = node.token.value
         body_node = node.body_node
         func_arg_names = []
@@ -596,27 +546,25 @@ class Interpreter:
                 sTable = ctx.symbolTable
             sTable.set_val(func_name, method)
 
-        return res.success(method)
+        return method
 
     def visit_ReturnNode(self, node, ctx):
-        res = RuntimeResult()
         value = Number.nil
-        if node.node_to_return != None:
-            value = res.register(self.visit(node.node_to_return, ctx))
-            return res.success(value.value)
-        return res.success(value)
+        if node.node_to_return is not None:
+            value = self.visit(node.node_to_return, ctx)
+            return value
+        return value
 
     def visit_CallNode(self, node, ctx):
-        res = RuntimeResult()
         args = []
 
-        value_to_call = res.register(self.visit(node.node_to_call, ctx))
-        if res.error != None:
-            return res
+        value_to_call = self.visit(node.node_to_call, ctx)
+        if isinstance(value_to_call, Error):
+            return value_to_call
 
         func_value = Function()
-        if value_to_call.value != None:
-            func_value = value_to_call.value
+        if value_to_call is not None:
+            func_value = value_to_call
 
         val_cal = func_value
 
@@ -629,16 +577,15 @@ class Interpreter:
                     new, func_value.arg_types[i], func_value.name, ctx, node
                 )
                 if types_match is not None:
-                    return res.failure(types_match)
+                    return types_match
 
             # BUG new is always a number type regardless of what is passed in? Probably going to have to change that
             args.append(new)
             i += 1
 
-        return_value, return_res = val_cal.execute(args)
-        res.register(return_res)
-        if res.error is not None:
-            return res
+        return_value = val_cal.execute(args)
+        if isinstance(return_value, Error):
+            return return_value
 
         # Check if return value and declared return value match
         if not isinstance(func_value, BuiltinFunction):
@@ -649,61 +596,44 @@ class Interpreter:
                     _return, func_return, func_value.name, ctx, node
                 )
                 if types_match is not None:
-                    return res.failure(types_match)
-        return res.success(return_value)
+                    return types_match
+        return return_value
 
     def check_types_match(self, a, b, name, ctx, node):
         if not isinstance(a, type(b)):
             if a.ID != b.ID:
                 pos = node.token.pos
-                error = RuntimeError(
-                    f"Cannot assign value of {type(a)} to type {type(b)} {name}",
-                    ctx,
-                    pos,
-                )
-                return error
+                return RuntimeError(f"Cannot assign value of {type(a)} to type {type(b)} {name}", ctx, pos)
         return None
 
     def visit_GetArrNode(self, node, ctx):
-        res = RuntimeResult()
+        array_node = self.visit(node.array, ctx)
+        if isinstance(array_node, Error):
+            return array_node
 
-        arrayNodeRes = res.register(self.visit(node.array, ctx))
-        if res.error != None:
-            return res
-        arrayNode = arrayNodeRes.value
+        index = self.visit(node.index, ctx)
+        if isinstance(index, Error):
+            return index
 
-        index = res.register(self.visit(node.index, ctx))
-        if res.error != None:
-            return res
+        return_value = array_node.get(index.value)
 
-        return_value, return_res = arrayNode.get(index.value)
-        _ = res.register(return_res)
-        if return_res.error != None:
-            return res
-
-        return res.success(return_value)
+        return return_value
 
     def visit_SetArrNode(self, node, ctx):
-        res = RuntimeResult()
+        array_node = self.visit(node.array, ctx)
+        if isinstance(array_node, Error):
+            return array_node
 
-        arrayNodeRes = res.register(self.visit(node.array, ctx))
-        if res.error != None:
-            return res
-        arrayNode = arrayNodeRes.value
+        index = self.visit(node.index, ctx)
+        if isinstance(index, Error):
+            return index
 
-        index = res.register(self.visit(node.index, ctx))
-        if res.error != None:
-            return res
+        idx = index.value
 
-        idx = index.value.value
+        new_val = self.visit(node.new_val, ctx)
+        if isinstance(new_val, Error):
+            return new_val
 
-        new_val = res.register(self.visit(node.new_val, ctx))
-        if res.error != None:
-            return res
+        set_return = array_node.set(idx, new_val.value)
 
-        set_return, set_res = arrayNode.set(idx, new_val.value)
-        _ = res.register(set_res)
-        if res.error != None:
-            return res
-
-        return res
+        return set_return

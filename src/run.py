@@ -4,6 +4,8 @@ from Context import Context
 from GlobalTable import global_symbol_table
 from Types import Number
 from Interpreter import BuiltinFunction, Interpreter
+from Node import *
+from Error import *
 
 global_symbol_table.set_val("nil", Number.nil)
 global_symbol_table.set_val("true", Number.true)
@@ -13,7 +15,17 @@ global_symbol_table.set_val("append", BuiltinFunction.append)
 global_symbol_table.set_val("run", BuiltinFunction.run)
 global_symbol_table.set_val("length", BuiltinFunction.length)
 
+def check_for_errors(payload):
+    if isinstance(payload, Error):
+        return payload
+    if isinstance(payload, ListNode):
+        for node in payload.element_nodes:
+            if isinstance(node, Error):
+                return node
+    return None
+
 def run(text, fn):
+    #print("---------- RUNNING ----------")
     lexer = Lexer(text, fn)
     tokens, error = lexer.make_tokens()
 
@@ -22,10 +34,12 @@ def run(text, fn):
 
     # Generate AST
     parser = Parser(tokens)
-    nodes, parse_error = parser.parse()
+    nodes = parser.parse()
 
-    if parse_error is not None:
-        return (None, error)
+    #print(f"CHECKING {nodes.as_string()}")
+    parse_check = check_for_errors(nodes)
+    if parse_check is not None:
+        return parse_check
 
     # Run program
     interpreter = Interpreter()
@@ -33,8 +47,9 @@ def run(text, fn):
     ctx.symbolTable = global_symbol_table
     result = interpreter.visit(nodes, ctx)
 
-    return (result.value, result.error)
+    return result
 
+# XXX: Converge Error return value and result value into one value. Basically so that parser parser.parse() returns only one value and that value is either a return or just an error.
 
 ## BUG - KNOWN ##
 #  Error handling for non recognized keywords/variables is broken

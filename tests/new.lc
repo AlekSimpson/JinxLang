@@ -1,4 +1,4 @@
-method add() {
+method add():String {
   return "YES"
   print("*******HELLO TESTING******")
   return "NO"

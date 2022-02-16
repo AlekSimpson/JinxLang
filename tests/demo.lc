@@ -2,5 +2,5 @@ method add(a:Int, b:Int):Int {
 	return a + b
 }
 
-num:String = add(10, 10)
+num:Int = add(10, 10)
 print(num)

@@ -1,4 +1,4 @@
-method test() {
+method test(): String {
   print("brrrrr")
   return "NO"
   print("test")

@@ -1,4 +1,3 @@
-from RuntimeResult import RuntimeResult
 from Context import Context
 from Error import RuntimeError
 
@@ -46,47 +45,47 @@ class Real(Type):
     def comp_eq(self, other):
         new_num = Number(1 if self.value == other.value else 0)
         new_num.set_context(other.context)
-        return (new_num, None)
+        return new_num
 
     def comp_ne(self, other):
         new_num = Number(1 if self.value != other.value else 0)
         new_num.set_context(other.context)
-        return (new_num, None)
+        return new_num
 
     def comp_lt(self, other):
         new_num = Number(1 if self.value < other.value else 0)
         new_num.set_context(other.context)
-        return (new_num, None)
+        return new_num
 
     def comp_gt(self, other):
         new_num = Number(1 if self.value > other.value else 0)
         new_num.set_context(other.context)
-        return (new_num, None)
+        return new_num
 
     def comp_loe(self, other):
         new_num = Number(1 if self.value <= other.value else 0)
         new_num.set_context(other.context)
-        return (new_num, None)
+        return new_num
 
     def comp_goe(self, other):
         new_num = Number(1 if self.value >= other.value else 0)
         new_num.set_context(other.context)
-        return (new_num, None)
+        return new_num
 
     def comp_and(self, other):
         new_num = Number(1 if self.value == 1 and other.value == 1 else 0)
         new_num.set_context(other.context)
-        return (new_num, None)
+        return new_num
 
     def comp_or(self, other):
         new_num = Number(1 if self.value == 1 or other.value == 1 else 0)
         new_num.set_context(other.context)
-        return (new_num, None)
+        return new_num
 
     def not_op(self):
         new_num = Number(0 if self.value == 1 else 1)
         new_num.set_context(self.context)
-        return (new_num, None)
+        return new_num
 
 
 class Number(Real):
@@ -97,32 +96,31 @@ class Number(Real):
     def added(self, other):
         new_num = Number(self.value + other.value)
         new_num.set_context(other.context)
-        return (new_num, None)
+        return new_num
 
     def subtracted(self, other):
         new_num = Number(self.value - other.value)
         new_num.set_context(other.context)
-        return (new_num, None)
+        return new_num
 
     def multiplied(self, other):
         new_num = Number(self.value * other.value)
         new_num.set_context(other.context)
-        return (new_num, None)
+        return new_num
 
     def divided(self, other):
         if other.value == 0:
             pos = other.pos
-            err = RuntimeError("Cannot divide by zero", self.context, pos)
-            return (None, err)
+            return RuntimeError("Cannot divide by zero", self.context, pos)
 
         new_num = Number(self.value / other.value)
         new_num.set_context(other.context)
-        return (new_num, None)
+        return new_num
 
     def power(self, other):
         new_num = Number(pow(self.value, other.value))
         new_num.set_context(other.context)
-        return (new_num, None)
+        return new_num
 
     def is_true(self):
         return self.value != 0
@@ -176,23 +174,17 @@ class Array(Type):
         return new_arr
 
     def get(self, index):
-        res = RuntimeResult()
-        if index.value < 0 or index.value > self.length - 1:
-            err = RuntimeError("Index out of range", self.context, self.pos)
-            return (None, err)
+        if index < 0 or index > self.length - 1:
+            return RuntimeError("Index out of range", self.context, self.pos)
 
-        return (self.elements[index.value], res)
+        return self.elements[index]
 
     def set(self, index, new):
-        res = RuntimeResult()
-
         if index < 0 or index > self.length - 1:
-            err = RuntimeError("Index out of range", self.context, self.pos)
-            return (None, err)
+            return RuntimeError("Index out of range", self.context, self.pos)
 
         self.elements[index] = new
-        return (None, res)
-
+        return None
 
 class string(Real):
     def __init__(self, str_value=None):
@@ -201,15 +193,15 @@ class string(Real):
         self.ID = "STRING_TYPE"
 
     def added(self, other):
-        otherVal = other.str_value
-        str = self.str_value
+        other_val = other.str_value
+        string_val = self.str_value
 
-        new_str = string(str + otherVal)
+        new_str = string(string_val + other_val)
         new_str.set_context(other.context)
-        return (new_str, None)
+        return new_str
 
     def is_true(self):
-        return self.str_value != None
+        return self.str_value is not None
 
     def print_self(self):
         return str(self.str_value)

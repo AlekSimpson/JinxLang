@@ -1,10 +1,8 @@
 import tokens as tk
 from Types import Integer
-from Error import InvalidSyntaxError
+from Error import *
 from Node import *
-from ParseResult import ParseResult
 from tokens import Token
-
 
 class Parser:
     def __init__(self, tokens):
@@ -26,248 +24,186 @@ class Parser:
         if self.token_idx >= 0 and self.token_idx < len(self.tokens):
             self.curr_token = self.tokens[self.token_idx]
 
-    def parse(self):  # returns Node, Error
-        node_result, parse_result = self.statements()
-        if parse_result.error is not None:
-            if self.curr_token.type != tk.TT_EOF:
-                return (None, parse_result.failure(parse_result.error))
-            print(parse_result.error.as_string())
-            return (None, parse_result.error)
+    def throw_error(self, msg, token=None):
+        pos = self.curr_token if token is None else token.pos
+        return InvalidSyntaxError(msg, pos)
 
-        return (node_result, None)
+    def parse(self):
+        AST = self.statements()
+
+        return AST
 
     def call(self):
-        res = ParseResult()
-        atom, atom_res = self.atom()
-        _ = res.register(atom_res)
-        if res.error is not None:
-            return (None, res)
+        atom = self.atom()
+        if isinstance(atom, Error):
+            #res.register(atom)
+            return atom.error
+
         if self.curr_token.type_name == tk.TT_LPAREN:
-            _ = res.register(self.advance())
+            self.advance()
             arg_nodes = []
 
             if self.curr_token.type_name == tk.TT_RPAREN:
-                _ = res.register(self.advance())
+                self.advance()
             else:
-                expr, expr_res = self.expr()
-                if expr_res.error is not None:
-                    return (None, expr_res)
-                arg_nodes.append(res.register(expr))
-                if expr_res.error is not None:
-                    pos = expr.token.pos
-                    err = InvalidSyntaxError(
-                        "Expected closing parenthese in function declaration", pos
-                    )
-                    _ = res.failure(err)
-                    return (None, res)
+                expr = self.expr()
+                if isinstance(expr, Error):
+                    return self.throw_error("Expected closing parenthese in function declaration", expr.token)
+                arg_nodes.append(expr)
 
                 while self.curr_token.type_name == tk.TT_COMMA:
-                    _ = res.register(self.advance())
+                    self.advance()
 
-                    expr, expr_res = self.expr()
-                    if expr_res.error is not None:
-                        return (None, expr_res)
-                    arg_nodes.append(res.register(expr))
+                    expr = self.expr()
+                    if isinstance(expr, Error):
+                        return self.throw_error(expr.token, expr.error.details)
+                    arg_nodes.append(expr)
 
                 if self.curr_token.type_name != tk.TT_RPAREN:
-                    pos = expr.token.pos
-                    err = InvalidSyntaxError(
-                        "Expected closing parenthese in function declaration", pos
-                    )
-                    _ = res.failure(err)
-                    return (None, res)
+                    return self.throw_error("Expected closing parenthese in function declaration", expr.token)
 
-                _ = res.register(self.advance())
+                self.advance()
 
-            return (res.success(CallNode(atom, arg_nodes)), res)
+            return CallNode(atom, arg_nodes)
         elif self.curr_token.type_name == tk.TT_LBRACKET:
-            _ = res.register(self.advance())
+            self.advance()
 
-            if self.curr_token.type_name != tk.TT_INT and self.curr_token.type_name != tk.TT_ID:
-                pos = self.curr_token.pos
-                err = InvalidSyntaxError("Array index must be an integer", pos)
-                _ = res.failure(err)
-                return (None, res)
+            if (self.curr_token.type_name != tk.TT_INT and self.curr_token.type_name != tk.TT_ID):
+                return self.throw_error("Array index must be an integer")
 
-            index, idx_err = self.atom()
-            if idx_err.error is not None:
-                return (None, idx_err)
+            index = self.atom()
+            if isinstance(index, Error):
+                return self.throw_error(index.error.details)
 
             if self.curr_token.type_name != tk.TT_RBRACKET:
-                pos = self.curr_token.pos
-                err = InvalidSyntaxError(
-                    "Array subscripts must have a closing bracket", pos
-                )
-                return (None, res)
+                return self.throw_error("Array subscripts must have a closing bracket")
 
-            _ = res.register(self.advance())
-
+            self.advance()
             if self.curr_token.type_name == tk.TT_EQ:
-                _ = res.register(self.advance())
+                self.advance()
 
-                if (
-                    not self.curr_token.type_name != tk.TT_INT
-                    and not self.curr_token.type_name != tk.TT_STRING
-                ):
-                    pos = self.curr_token.pos
-                    err = InvalidSyntaxError(
-                        "Array can only hold value types of int or string", pos
-                    )
-                    return (None, res)
+                # BUG: Probably should make it so that this is not the case, arrays should be able to hold any theoretical value
+                if (not self.curr_token.type_name != tk.TT_INT and not self.curr_token.type_name != tk.TT_STRING):
+                    return self.throw_error("Array can only hold value types of int or string")
 
-                new_val, val_res = self.atom()
-                if val_res.error is not None:
-                    return (None, val_res)
+                new_val = self.atom()
+                if isinstance(new_val, Error):
+                    return self.throw_error(new_val.error.details)
 
-                _ = res.register(self.advance())
+                self.advance()
 
-                return (res.success(ArraySetNode(atom, index, new_val)), res)
-            return (res.success(ArrayGetNode(atom, index)), res)
-        return (res.success(atom), res)
+                return ArraySetNode(atom, index, new_val)
+            return ArrayGetNode(atom, index)
+        return atom
 
     def atom(self):
-        res = ParseResult()
         tok = self.curr_token
-        returnVal = (None, res)
 
         if tok.type_name == tk.TT_INT:
             val = NumberNode(self.curr_token)
-            _ = res.register(self.advance())
-            returnVal = (res.success(val), res)
+            self.advance()
+            return val
 
         elif tok.type_name == tk.TT_ID:
-            _ = res.register(self.advance())
-            return (res.success(VarAccessNode(tok)), res)
+            self.advance()
+            return VarAccessNode(tok)
 
         elif tok.type_name == tk.TT_STRING:
-            _ = res.register(self.advance())
-            return (res.success(StringNode(tok)), res)
+            self.advance()
+            return StringNode(tok)
 
         elif tok.type_name == "LPAREN":
-            _ = res.register(self.advance())
-            expr, err = self.expr()
+            self.advance()
+            expr = self.expr()
             if expr is not None:
-                _ = res.register(expr)
                 if self.curr_token.type_name == "RPAREN":
-                    _ = res.register(self.advance())
-                    returnVal = (res.success(expr), res)
+                    self.advance()
+                    return expr
                 else:
-                    p = tok.pos
-                    _ = res.failure(InvalidSyntaxError("Expected ')'", p))
-            if err is not None:
-                _ = res.register(err)
+                    return self.throw_error("Expected ')'", tok.pos)
+
+            elif isinstance(expr, Error):
+                return self.throw_error(expr.error.details)
+
         elif tok.type_name == tk.TT_LBRACKET:
-            list_expr = res.register(self.list_expr())
-            if res.error is not None:
-                return (None, res)
-            return res.success(list_expr)
+            list_expr = self.list_expr()
+            if isinstance(list_expr, Error):
+                return self.throw_error(list_expr.error.details)
+            return list_expr
+
         elif tok.type_name == "IF":
-            if_expr, expr_res = self.if_expr()
-            _ = res.register(expr_res)
-            if res.error is not None:
-                _ = res.failure(res.error)
-            else:
-                returnVal = (if_expr, res)
+            if_expr = self.if_expr()
+            if isinstance(if_expr, Error):
+                return self.throw_error(if_expr.error.details)
+            return if_expr
+
         elif tok.type_name == "FOR":
-            for_expr, expr_res = self.for_expr()
-            _ = res.register(expr_res)
-            if res.error is not None:
-                _ = res.failure(res.error)
-            else:
-                returnVal = (for_expr, res)
+            for_expr = self.for_expr()
+            if isinstance(for_expr, Error):
+                return self.throw_error(for_expr.error.details)
+            return for_expr
+
         elif tok.type_name == "WHILE":
-            while_expr, expr_res = self.while_expr()
-            _ = res.register(expr_res)
-            if res.error is not None:
-                _ = res.failure(res.error)
-            else:
-                returnVal = (while_expr, res)
+            while_expr = self.while_expr()
+            if isinstance(while_expr, Error):
+                return self.throw_error(while_expr.error.details)
+            return while_expr
+
         elif tok.type_name == "FUNC":
-            func_def, func_res = self.func_def()
-            _ = res.register(func_res)
-            if res.error is not None:
-                _ = res.failure(res.error)
-            else:
-                returnVal = (func_def, res)
-        else:
-            p = tok.pos
-            _ = res.failure(
-                InvalidSyntaxError(
-                    "Expected, int, float, identifier, '+', '-', or '('", p
-                )
-            )
-        return returnVal
+            func_def = self.func_def()
+            if isinstance(func_def, Error):
+                return self.throw_error(func_def.error.details)
+            return func_def
 
     def list_expr(self):
-        res = ParseResult()
         element_nodes = []
 
         if self.curr_token.type_name != tk.TT_LBRACKET:
-            return res.failure(
-                InvalidSyntaxError("Expected '[' in list", self.curr_token.pos)
-            )
+            return self.throw_error("Expected '[' in list")
 
-        _ = res.register(self.advance())
+        self.advance()
 
         if self.curr_token.type_name == tk.TT_RBRACKET:
-            _ = res.register(self.advance())
+            self.advance()
         else:
-            expr, expr_res = self.expr()
-            if expr_res.error is not None:
-                return (None, expr_res)
-            element_nodes.append(res.register(expr))
-            if expr_res.error is not None:
-                p = expr.token.pos
-                err = InvalidSyntaxError(
-                    "Expected closing bracket in list declaration", pos
-                )
-                _ = res.failure(err)
-                return (None, res)
+            expr = self.expr()
+            if isinstance(expr, Error):
+                return self.throw_error(expr.error.details)
+
+            element_nodes.append(expr)
+            #if expr_res.error is not None:
+            #    err = self.throw_error(res, "Expected closing bracket in list declaration")
+            #    return (None, err)
 
             while self.curr_token.type_name == tk.TT_COMMA:
-                _ = res.register(self.advance())
+                self.advance()
 
-                expr, expr_res = self.expr()
-                if expr_res.error is not None:
-                    return (None, expr_res)
-                element_nodes.append(res.register(expr))
+                expr = self.expr()
+                if isinstance(expr, Error):
+                    return self.throw_error(expr.error.details)
+                element_nodes.append(expr)
 
             if self.curr_token.type_name != tk.TT_RBRACKET:
-                pos = expr.token.pos
-                err = InvalidSyntaxError(
-                    "Expected closing bracket in list declaration", pos
-                )
-                _ = res.failure(err)
-                return (None, res)
+                return self.throw_error("Expected closing bracket in list declaration")
 
-            _ = res.register(self.advance())
-        return (res.success(ListNode(element_nodes)), res)
+            self.advance()
+        return ListNode(element_nodes)
 
     def func_def(self):
-        res = ParseResult()
-
         if not (self.curr_token.type_name == "FUNC"):
-            p = self.curr_token.pos
-            _ = res.failure(
-                InvalidSyntaxError(
-                    "Expected 'method' keyword in function declaration", p
-                )
-            )
-            return (None, res)
+            return self.throw_error("Expected 'method' keyword in function declaration")
 
-        _ = res.register(self.advance())
+        self.advance()
 
         name_token = Token()
         if self.curr_token.type_name == tk.TT_ID:
             name_token = self.curr_token
-            _ = res.register(self.advance())
+            self.advance()
 
         if not (self.curr_token.type_name == tk.TT_LPAREN):
-            p = self.curr_token.pos
-            _ = res.failure(InvalidSyntaxError("Expected '(' in function defintion", p))
-            return (None, res)
+            return self.throw_error("Expected '(' in function defintion")
 
-        _ = res.register(self.advance())
+        self.advance()
         arg_name_tokens = []
         arg_type_tokens = []
 
@@ -275,121 +211,80 @@ class Parser:
             look_for_args = True
             while look_for_args:
                 if self.curr_token.type_name != tk.TT_ID:
-                    pos = self.curr_token.pos
-                    _ = res.failure(
-                        InvalidSyntaxError(
-                            "Expected identifier after comma in function definition",
-                            pos,
-                        )
-                    )
-                    return (None, res)
+                    err = self.throw_error("Expected value after comma in function defintion")
+                    return err
+
                 arg_name_tokens.append(self.curr_token)
-                res.register(self.advance())
+                self.advance()
 
                 if self.curr_token.type_name != tk.TT_COLON:
-                    pos = self.curr_token.pos
-                    res.failure(
-                        InvalidSyntaxError(
-                            "Expected ':' in arguement type declaration in function {name_token.value}",
-                            pos,
-                        )
-                    )
-                    return (None, res)
-                res.register(self.advance())
+                    err = self.throw_error(f"Expected ':' in argument type declaration in function {name_token.value}")
+                    return err
+                self.advance()
 
                 if self.curr_token.type_dec is None:
-                    pos = self.curr_token.pos
-                    res.failure(
-                        InvalidSyntaxError(
-                            f"Expected arguement {arg_name_tokens[-1].value} to have a type declaration in function {name_token.value}",
-                            pos,
-                        )
-                    )
-                    return (None, res)
+                    err = self.throw_error(f"Expected argument {arg_name_tokens[-1].value} to have a tyhpe declaration in function {name_token.value}")
+                    return err
+
                 arg_type_tokens.append(self.curr_token)
-                res.register(self.advance())
+                self.advance()
 
                 look_for_args = self.curr_token.type_name == tk.TT_COMMA
                 if not look_for_args:
                     break
-                res.register(self.advance())
+                self.advance()
 
             if not (self.curr_token.type_name == tk.TT_RPAREN):
-                pos = self.curr_token.pos
-                _ = res.failure(
-                    InvalidSyntaxError("Expected ')' in function defintion", pos)
-                )
-                return (None, res)
+                err = self.throw_error("Expected ')' in function defintion")
+                return err
         else:
             # BUG The check for RPAREN could probably just be moved into one check if statement instead of having one in an else
             if not (self.curr_token.type_name == tk.TT_RPAREN):
-                pos = self.curr_token.pos
-                _ = res.failure(
-                    InvalidSyntaxError(
-                        "Expected identifier or ')' in function definition", pos
-                    )
-                )
-                return (None, res)
+                err = self.throw_error("Expected value or ')' in function definition")
+                return err
 
-        _ = res.register(self.advance())
+        self.advance()
 
         if self.curr_token.type_name != tk.TT_COLON:
-            pos = self.curr_token.pos
-            res.failure(InvalidSyntaxError("Expected ':' in function declaration", pos))
-            return (None, res)
+            err = self.throw_error("Expected ':' in function defintion")
+            return err
 
-        _ = res.register(self.advance())
+        self.advance()
 
         if self.curr_token.type_dec is None:
-            pos = self.curr_token.pos
-            res.failure(
-                InvalidSyntaxError("Expected return type in function declaration", pos)
-            )
-            return (None, res)
+            err = self.throw_error("Expected return type in function declaration")
+            return err
+
         returnType = self.curr_token
 
-        _ = res.register(self.advance())
+        self.advance()
 
         if self.curr_token.type_name == tk.TT_ARROW:
-            _ = res.register(self.advance())
+            self.advance()
 
-            node_to_return, return_res = self.expr()
-            _ = res.register(return_res)
-            if res.error is not None:
-                return (None, res)
+            node_to_return = self.expr()
+            if isinstance(node_to_return, Error):
+                err = self.throw_error(node_to_return.error.details)
+                return err
 
-            return (
-                res.success(
-                    FuncDefNode(
-                        node_to_return,
-                        returnType,
-                        name_token,
-                        arg_name_tokens,
-                        arg_type_tokens,
-                        False,
-                    )
-                ),
-                res,
-            )
+            return FuncDefNode(node_to_return, returnType, name_token, arg_name_tokens, arg_type_tokens, False)
 
         if self.curr_token.type_name != "LCURLY":
-            pos = self.curr_token.pos
-            res.failure(InvalidSyntaxError("Expected '{'", pos))
-            return (None, res)
+            err = self.throw_error("Expected '{'")
+            return err
 
-        res.register(self.advance())
+        self.advance()
 
         if self.curr_token.type_name != tk.TT_NEWLINE:
-            pos = self.curr_token.pos
-            res.failure(InvalidSyntaxError("Expected '->' in function or '{'", pos))
-            return (None, res)
+            err = self.throw_error("Expected '->' in function or '{'")
+            return err
 
-        res.register(self.advance())
+        self.advance()
 
-        body, body_res = self.statements()
-        res.register(body_res)
-        if res.error is not None:
-            return (None, res)
+        body = self.statements()
+        if isinstance(body, Error):
+            err = self.throw_error(body.error.details)
+            return err
 
         return_nil = True
         for node in body.element_nodes:
@@ -398,305 +293,230 @@ class Parser:
                 break
 
         if self.curr_token.type_name != "RCURLY":
-            pos = self.curr_token.pos
-            res.failure(InvalidSyntaxError("Expected '}'", pos))
-            return (None, res)
+            err = self.throw_error("Expected '}'")
+            return err
 
-        res.register(self.advance())
-        returnVal = (
-            res.success(
-                FuncDefNode(
-                    body,
-                    returnType,
-                    name_token,
-                    arg_name_tokens,
-                    arg_type_tokens,
-                    return_nil,
-                )
-            ),
-            res,
-        )
+        self.advance()
+        returnVal = FuncDefNode(body, returnType, name_token, arg_name_tokens, arg_type_tokens, return_nil)
         return returnVal
 
     def for_expr(self):
-        res = ParseResult()
-
         if not (self.curr_token.type_name == "FOR"):
-            p = self.curr_token.pos
-            _ = res.failure(InvalidSyntaxError("Expected 'for'", p))
-            return (None, res)
+            err = self.throw_error("Expected 'for'")
+            return err
 
-        _ = res.register(self.advance())
+        self.advance()
 
         if not (self.curr_token.type_name == "IDENTIFIER"):
-            p = self.curr_token.pos
-            _ = res.failure(InvalidSyntaxError("Expected variable", p))
-            return (None, res)
+            err = self.throw_error("Expected variable")
+            return err
 
         iterator_token = self.curr_token
-        _ = res.register(self.advance())
+        self.advance()
 
         if not (self.curr_token.type_name == "IN"):
-            p = self.curr_token.pos
-            _ = res.failure(InvalidSyntaxError("Expected 'in' keyword", p))
-            return (None, res)
+            err = self.throw_error("Expected 'in' keyword")
+            return err
 
-        _ = res.register(self.advance())
+        self.advance()
 
-        start_value, start_res = self.expr()
-        _ = res.register(start_res)
-        if res.error is not None:
-            return (None, res)
+        start_value = self.expr()
+        if isinstance(start_value, Error):
+            err = self.throw_error(start_value.error.details)
+            return err
 
         iterator_var = VarAssignNode(iterator_token, start_value, [1, Integer(64)])
 
         if not (self.curr_token.type_name == "COLON"):
-            p = self.curr_token.pos
-            _ = res.failure(InvalidSyntaxError("Expected ':' in range", p))
-            return (None, res)
+            err = self.throw_error("Expected ':' in range")
+            return err
 
-        _ = res.register(self.advance())
+        self.advance()
 
-        end_value, end_res = self.expr()
-        _ = res.register(end_res)
-        if res.error is not None:
-            return (None, res)
+        end_value = self.expr()
+        if isinstance(end_value, Error):
+            err = self.throw_error(end_value.error.details)
+            return err
 
         if not (self.curr_token.type_name == "LCURLY"):
-            p = self.curr_token.pos
-            _ = res.failure(InvalidSyntaxError("Expected '{' in for loop", p))
-            return (None, res)
+            err = self.throw_error("Expected '{' in for loop")
+            return err
 
-        _ = res.register(self.advance())
+        self.advance()
 
         if self.curr_token.type_name == tk.TT_NEWLINE:
-            res.register(self.advance())
+            self.advance()
 
-            body, body_result = res.register(self.statements())
-            if res.error is not None:
-                return (None, res)
+            body = self.statements()
+            if isinstance(body, Error):
+                return self.throw_error(body.error.details)
 
             if self.curr_token.type_name != "RCURLY":
-                pos = self.curr_token.pos
-                res.failure(InvalidSyntaxError("Expected '}'", pos))
-                return (None, res)
+                return self.throw_error("Expected '}'")
 
-            res.register(self.advance())
+            self.advance()
 
-            return (
-                res.success(ForNode(iterator_var, start_value, end_value, body, True)),
-                res,
-            )
+            return ForNode(iterator_var, start_value, end_value, body, True)
 
-        body, body_res = self.expr()
-        _ = res.register(body_res)
-        if res.error is not None:
-            return (None, res)
+        body = self.expr()
+        if isinstance(body, Error):
+            return self.throw_error(body.error.details)
 
         if not (self.curr_token.type_name == "RCURLY"):
-            p = self.curr_token.pos
-            _ = res.failure(InvalidSyntaxError("Expected '}' in for loop", p))
-            return (None, res)
+            return self.throw_error("Expected '}' in for loop")
 
-        return (
-            res.success(ForNode(iterator_var, start_value, end_value, body, False)),
-            res,
-        )
+        return ForNode(iterator_var, start_value, end_value, body, False)
 
     def while_expr(self):
-        res = ParseResult()
-
         if not (self.curr_token.type_name == "WHILE"):
-            p = self.curr_token.pos
-            _ = res.failure(
-                InvalidSyntaxError("Expected 'while' keyword in while loop", p)
-            )
-            return (None, res)
+            return self.throw_error("Expected 'while' keyword in while loop")
 
-        _ = res.register(self.advance())
+        self.advance()
 
-        cond_value, cond_res = self.expr()
-        _ = res.register(cond_res)
-        if res.error is not None:
-            return (None, res)
+        cond_value = self.expr()
+        if isinstance(cond_value, Error):
+            return self.throw_error(cond_value.error.details)
 
         if not (self.curr_token.type_name == "LCURLY"):
-            p = self.curr_token.pos
-            _ = res.failure(InvalidSyntaxError("Expected '{' in while loop", p))
-            return (None, res)
+            return self.throw_error("Expected '{' in while loop")
 
-        _ = res.register(self.advance())
+        self.advance()
 
         if self.curr_token.type_name == tk.TT_NEWLINE:
-            res.register(self.advance())
+            self.advance()
 
-            body, _ = res.register(self.statements())
-            if res.error is not None:
-                return (None, res)
+            body = self.statements()
+            if isinstance(body, Error):
+                return self.throw_error(body.error.details)
 
             if self.curr_token.type_name != "RCURLY":
-                pos = self.curr_token.pos
-                res.failure(InvalidSyntaxError("Expeected '}'", pos))
-                return (None, res)
+                return self.throw_error("Expected '}'")
 
-            res.register(self.advance())
+            self.advance()
 
-            return (res.success(WhileNode(cond_value, body, True)), res)
+            return WhileNode(cond_value, body, True)
 
-        body_value, body_res = self.expr()
-        _ = res.register(body_res)
-        if res.error is not None:
-            return (None, res)
+        body_value = self.expr()
+        if isinstance(body_value, Error):
+            return self.throw_error(body_value.error.details)
 
         if not (self.curr_token.type_name == "RCURLY"):
-            p = self.curr_token.pos
-            _ = res.failure(InvalidSyntaxError("Expected '}' in while loop", p))
-            return (None, res)
+            return self.throw_error("Expected '}' in while loop")
 
-        return (res.success(WhileNode(cond_value, body_value, False)), res)
+        return WhileNode(cond_value, body_value, False)
 
     def if_expr(self):
-        res = ParseResult()
-        all_cases, cases_res = self.if_expr_cases("IF")
-        res.register(cases_res)
-        if res.error is not None:
-            return (None, res)
+        all_cases = self.if_expr_cases("IF")
+        if isinstance(all_cases, Error):
+            return self.throw_error(all_cases.error.details)
         cases, else_case = all_cases
 
-        return (res.success(IfNode(cases, else_case)), res)
+        return IfNode(cases, else_case)
 
     def if_expr_cases(self, case_keyword):
-        res = ParseResult()
         cases = []
         else_case = None
 
         if self.curr_token.type_name != case_keyword:
-            pos = self.curr_token.pos
-            res.failure(InvalidSyntaxError("Expected 'if'", pos))
-            return (None, res)
+            return self.throw_error("Expected 'if'")
 
-        res.register(self.advance())
+        self.advance()
 
-        condition, cond_result = self.expr()
-        res.register(cond_result)
-        if res.error is not None:
-            return (None, res)
+        condition = self.expr()
+        if isinstance(condition, Error):
+            return self.throw_error(condition.error.details)
 
         if self.curr_token.type_name != "LCURLY":
-            pos = self.curr_token.pos
-            res.register(InvalidSyntaxError("Expected '{'", pos))
-            return (None, res)
+            return self.throw_error("Expected '{'")
 
-        res.register(self.advance())
+        self.advance()
 
         if self.curr_token.type_name == tk.TT_NEWLINE:
-            res.register(self.advance())
+            self.advance()
 
-            all_statements, statements_res = self.statements()
-            res.register(statements_res)
-            if res.error is not None:
-                return (None, res)
+            all_statements = self.statements()
+            if isinstance(all_statements, Error):
+                return self.throw_error(all_statements.error.details)
             statements = all_statements
             cases.append([condition, statements, True])
 
             if self.curr_token.type_name != "RCURLY":
-                pos = self.curr_token.pos
-                res.register(InvalidSyntaxError("Expected '}'", pos))
-                return (None, res)
-            res.register(self.advance())
+                return self.throw_error("Expected '}'")
+            self.advance()
 
-            all_cases, cases_res = self.if_expr_b_or_c()
-            res.register(cases_res)
-            if res.error is not None:
-                return (None, res)
+            all_cases = self.if_expr_b_or_c()
+            if isinstance(all_cases, Error):
+                return self.throw_error(all_cases.error.details)
+
             new_cases, else_case = all_cases
             if len(new_cases) != 0:
                 cases.extend(new_cases)
         else:
-            expr, expr_res = self.expr()
-            res.register(expr_res)
-            if res.error is not None:
-                return (None, res)
+            expr = self.expr()
+            if isinstance(expr, Error):
+                return self.throw_error(expr.error.details)
             cases.append([condition, expr, False])
 
             if self.curr_token.type_name != "RCURLY":
-                pos = self.curr_token.pos
-                res.register(InvalidSyntaxError("Expected '}'", pos))
-                return (None, res)
-            res.register(self.advance())
+                return self.throw_error("Expected '}'")
+            self.advance()
 
-            all_cases, else_res = self.if_expr_b_or_c()
-            res.register(else_res)
-            if res.error is not None:
-                return (None, res)
+            all_cases = self.if_expr_b_or_c()
+            if isinstance(all_cases, Error):
+                return self.throw_error(all_cases.error.details)
             new_cases, else_case = all_cases
             if len(new_cases) != 0:
                 cases.extend(new_cases)
 
-        res.success([cases, else_case])
-
-        return ([cases, else_case], res)
+        return [cases, else_case]
 
     def if_expr_c(self):
-        res = ParseResult()
         else_case = None
 
         if self.curr_token.type_name == "ELSE":
-            res.register(self.advance())
+            self.advance()
 
             if self.curr_token.type_name != "LCURLY":
-                pos = self.curr_token.pos
-                res.register(InvalidSyntaxError("Expected '{' in else statement", pos))
-                return (None, res)
+                return self.throw_error("Expected '{'in else statement")
 
-            res.register(self.advance())
+            self.advance()
 
             if self.curr_token.type_name == tk.TT_NEWLINE:
-                res.register(self.advance())
+                self.advance()
 
-                statements, statements_res = self.statements()
-                res.register(statements_res)
-                if res.error is not None:
-                    return res
+                statements = self.statements()
+                if isinstance(statements, Error):
+                    return self.throw_error(statements.error.details)
                 else_case = [statements, True]
 
                 if self.curr_token.type_name == "RCURLY":
-                    res.register(self.advance())
+                    self.advance()
                 else:
-                    pos = self.curr_token.pos
-                    res.failure(InvalidSyntaxError("Expected '}' in if statement", pos))
-                    return (None, res)
+                    return self.throw_error("Expected '}' in if statement")
             else:
-                expr, expr_res = self.expr()
-                res.register(expr_res)
-                if res.error is not None:
-                    return (None, res)
+                expr = self.expr()
+                if isinstance(expr, Error):
+                    return self.throw_error(expr.error.details)
 
                 else_case = [expr, False]
-        res.success(else_case)
 
-        return (else_case, res)
+        return else_case
 
     def if_expr_b_or_c(self):
-        res = ParseResult()
         cases = []
         else_case = None
 
         if self.curr_token.type_name == "ELIF":
-            all_cases, cases_res = self.if_expr_b()
-            res.register(cases_res)
-            if res.error is not None:
-                return (None, res)
+            all_cases = self.if_expr_b()
+            if isinstance(all_cases, Error):
+                return self.throw_error(all_cases.error)
             cases, else_case = all_cases
         else:
-            else_case, else_res = self.if_expr_c()
-            res.register(else_res)
-            if res.error is not None:
-                return (None, res)
+            else_case = self.if_expr_c()
+            if isinstance(else_case, Error):
+                return self.throw_error(else_case.error)
 
-        res.success([cases, else_case])
-
-        return ([cases, else_case], res)
+        return [cases, else_case]
 
     def if_expr_b(self):
         return self.if_expr_cases("ELIF")
@@ -705,39 +525,33 @@ class Parser:
         return self.bin_op(self.call, [tk.TT_POW], self.factor)
 
     def factor(self):
-        res = ParseResult()
         tok = self.curr_token
-        returnVal = (None, res)
+        return_val = tok
 
         if tok.type_name == "PLUS" or tok.type_name == "MINUS":
-            _ = res.register(self.advance())
-            fac_node, fac_res = self.factor()
+            self.advance()
+            fac_node = self.factor()
+            if isinstance(fac_node, Error):
+                return self.throw_error(fac_node.error)
 
-            if fac_node is not None:
-                _ = res.register(self.factor())
-                returnVal = (res.success(UnaryNode(tok, fac_node)), res)
-
-            if fac_res.error is not None:
-                _ = res.failure(fac_res.error)
-                returnVal = (None, res)
+            return_val = UnaryNode(tok, fac_node)
         else:
-            returnVal = self.power()
+            return_val = self.power()
 
-        return returnVal
+        return return_val
 
     def term(self):
         return self.bin_op(self.factor, [tk.TT_MUL, tk.TT_DIV])
 
     def statements(self):
-        res = ParseResult()
         statements = []
 
         while self.curr_token.type_name == tk.TT_NEWLINE:
-            res.register(self.advance())
+            self.advance()
 
-        statement, _ = res.register(self.statement())
-        if res.error is not None:
-            return res
+        statement = self.statement()
+        if isinstance(statement, Error):
+            return self.throw_error(statement.error.details)
 
         statements.append(statement)
 
@@ -746,91 +560,74 @@ class Parser:
         while True:
             newline_count = 0
             while self.curr_token.type_name == tk.TT_NEWLINE:
-                res.register(self.advance())
+                self.advance()
                 newline_count += 1
             if newline_count == 0:
                 more_statements = False
 
             if not more_statements:
                 break
-            statement, _ = res.register(self.statement())
+            statement = self.statement()
             if not statement:
                 more_statements = False
                 continue
             statements.append(statement)
 
         return_value = ListNode(statements)
-        res.success(return_value)
 
-        return (return_value, res)
+        return return_value
 
     def statement(self):
-        res = ParseResult()
         return_node = None
 
         if self.curr_token.type_name == "RETURN":
-            res.register(self.advance())
+            self.advance()
             if self.curr_token.type_name != "NEWLINE":
-                expr, expr_res = self.expr()
-                if expr_res.error is not None:
-                    return (None, expr_res)
+                expr = self.expr()
+                if isinstance(expr, Error):
+                    return self.throw_error(expr.details)
                 return_node = ReturnNode(expr)
-            return (return_node, res)
+            return return_node
 
-        expr, expr_res = self.expr()
-        if expr_res.error is not None:
-            return (None, res)
+        expr = self.expr()
+        if isinstance(expr, Error):
+            return self.throw_error(expr.details)
 
-        if expr_res.error is not None:
-            return (None, res.failure(expr_res.error))
-
-        return (expr, res)
+        return expr
 
     def expr(self):
-        res = ParseResult()
         jump_back = self.token_idx
 
         if self.curr_token.type_name == tk.TT_ID:
             var_name = self.curr_token
-            res.register(self.advance())
+            self.advance()
 
             if self.curr_token.type_name == tk.TT_COLON:
-                res.register(self.advance())
+                self.advance()
 
                 if self.curr_token.type_dec is None:
-                    pos = self.curr_token.pos
-                    res.register(
-                        InvalidSyntaxError("Variable declaration must have a type", pos)
-                    )
-                    return (None, res)
+                    return self.throw_error("Variable declaration must have a type")
+
                 type_tok = self.curr_token
-                res.register(self.advance())
+                self.advance()
 
                 if self.curr_token.type_name == tk.TT_EQ:
-                    _ = res.register(self.advance())
+                    self.advance()
 
-                    val, result = self.expr()
-                    _ = res.register(result)
+                    val = self.expr()
+                    if isinstance(val, Error):
+                        return self.throw_error(val.details)
 
-                    if res.error is not None:
-                        return (None, res)
-                    else:
-                        return (
-                            res.success(
-                                VarAssignNode(var_name, val, type_tok.type_dec)
-                            ),
-                            res,
-                        )
+                    return VarAssignNode(var_name, val, type_tok.type_dec)
+
             if self.curr_token.type_name == tk.TT_EQ:
-                _ = res.register(self.advance())
+                self.advance()
 
-                val, result = self.expr()
-                _ = res.register(result)
+                val = self.expr()
+                if isinstance(val, Error):
+                    return self.throw_erro(val.details)
 
-                if res.error is not None:
-                    return (None, res)
-                else:
-                    return (res.success(VarUpdateNode(var_name, val)), res)
+                return VarUpdateNode(var_name, val)
 
         self.token_idx = jump_back
         self.curr_token = self.tokens[self.token_idx]
@@ -838,28 +635,22 @@ class Parser:
         return self.bin_op(self.comp_expr, [tk.TT_AND, tk.TT_OR])
 
     def comp_expr(self):
-        res = ParseResult()
-
         if self.curr_token.type_name == "NOT" or self.curr_token.type_name == "AND":
             op_tok = self.curr_token
-            _ = res.register(self.advance())
+            self.advance()
 
-            node, node_result = self.comp_expr()
-            _ = res.register(node_result)
-            if res.error is not None:
-                return (None, res)
+            node = self.comp_expr()
+            if isinstance(node, Error):
+                return self.throw_error(node.error.details)
 
-            return (UnaryOpNode(op_tok, node), res)
+            # BUG: Is this why unary ops don't work??
+            return UnaryOpNode(op_tok, node)
 
-        node, node_result = self.bin_op(
-            self.arith_expr,
-            [tk.TT_EE, tk.TT_NE, tk.TT_LT, tk.TT_GT, tk.TT_LOE, tk.TT_GOE],
-        )
-        _ = res.register(node_result)
-        if res.error is not None:
-            _ = res.failure(res.error)
-            return (None, res)
-        return (node, res)
+        node = self.bin_op(self.arith_expr, [tk.TT_EE, tk.TT_NE, tk.TT_LT, tk.TT_GT, tk.TT_LOE, tk.TT_GOE])
+        if isinstance(node, Error):
+            return self.throw_error(node.details)
+
+        return node
 
     def arith_expr(self):
         return self.bin_op(self.term, [tk.TT_PLUS, tk.TT_MINUS])
@@ -872,28 +663,24 @@ class Parser:
         return False
 
     def bin_op(self, functionA, ops, functionB=None):
-        res = ParseResult()
-
         func = functionB
         if functionB is None:
             func = functionA
 
-        left, parse_result = functionA()
-        _ = res.register(parse_result)
-        if res.error is not None:
-            return (None, res)
+        left = functionA()
+        if isinstance(left, Error):
+            return self.throw_error(left.details)
 
         loop_condition = self.check_equal_to_ops(ops, self.curr_token.type_name)
         while loop_condition:
             op_tok = VariableNode(self.curr_token)
-            _ = res.register(self.advance())
+            self.advance()
 
-            right, parse_result_ = func()
-            _ = res.register(parse_result_)
-            if res.error is not None:
-                return (None, res)
+            right = func()
+            if isinstance(right, Error):
+                return self.throw_error(right.details)
 
             left = BinOpNode(left, op_tok, right)
             loop_condition = self.check_equal_to_ops(ops, self.curr_token.type_name)
 
-        return (res.success(left), res)
+        return left
