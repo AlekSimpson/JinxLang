@@ -23,9 +23,8 @@ class Validator:
             if result.elements[0] is not None:
                 return result.elements[0].value
         else:
-            for ele in result.elements:
-                if ele is not None:
-                    return ele.value
+            if result.elements[-1] is not None:
+                return result.elements[-1].value
 
     def run_tests(self):
         passed = []

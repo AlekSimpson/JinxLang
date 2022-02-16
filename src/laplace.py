@@ -13,15 +13,12 @@ if len(sys.argv) == 1:
             break
 
         result = run(textInput, "repl")
-        print(result)
 
         if isinstance(result, Error):
-            print("BRUH")
-            print(result)
             print(result.as_string())
         elif result is not None:
-            print(result)
-            if len(result.elements) == 1 and len(result.elements) != 0:
+            if len(result.elements) == 1:
+                print(result.elements)
                 if result.elements[0] is not None:
                     print(result.elements[0].print_self())
             else:
