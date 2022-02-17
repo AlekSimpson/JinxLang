@@ -36,7 +36,6 @@ class Parser:
     def call(self):
         atom = self.atom()
         if isinstance(atom, Error):
-            #res.register(atom)
             return atom.error
 
         if self.curr_token.type_name == tk.TT_LPAREN:
