@@ -12,7 +12,6 @@
 * ~Floats literally have been broken this entire time, needs fix~
 * ~Add tests for testing Int64, Int32, etc values~
 * ~Add unit tests for unary operations~
-* Optimize Parser Code 
 * Fix straggling bugs and weird edge cases
 * Added structures 
 * Write compiler

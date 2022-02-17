@@ -30,13 +30,12 @@ class Parser:
 
     def parse(self):
         AST = self.statements()
-
         return AST
 
     def call(self):
         atom = self.atom()
         if isinstance(atom, Error):
-            return atom.error
+            return self.throw_error(atom.details)
 
         if self.curr_token.type_name == tk.TT_LPAREN:
             self.advance()
@@ -173,9 +172,6 @@ class Parser:
                 return self.throw_error(expr.details)
 
             element_nodes.append(expr)
-            #if expr_res.error is not None:
-            #    err = self.throw_error(res, "Expected closing bracket in list declaration")
-            #    return (None, err)
 
             while self.curr_token.type_name == tk.TT_COMMA:
                 self.advance()
@@ -225,7 +221,7 @@ class Parser:
                 self.advance()
 
                 if self.curr_token.type_dec is None:
-                    err = self.throw_error(f"Expected argument {arg_name_tokens[-1].value} to have a tyhpe declaration in function {name_token.value}")
+                    err = self.throw_error(f"Expected argument {arg_name_tokens[-1].value} to have a type declaration in function {name_token.value}")
                     return err
 
                 arg_type_tokens.append(self.curr_token)
@@ -236,14 +232,9 @@ class Parser:
                     break
                 self.advance()
 
-            if not (self.curr_token.type_name == tk.TT_RPAREN):
-                err = self.throw_error("Expected ')' in function defintion")
-                return err
-        else:
-            # BUG The check for RPAREN could probably just be moved into one check if statement instead of having one in an else
-            if not (self.curr_token.type_name == tk.TT_RPAREN):
-                err = self.throw_error("Expected value or ')' in function definition")
-                return err
+        if not (self.curr_token.type_name == tk.TT_RPAREN):
+            err = self.throw_error("Expected value or ')' in function definition")
+            return err
 
         self.advance()
 
