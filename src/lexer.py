@@ -264,6 +264,9 @@ class Lexer:
 
     def make_tokens(self):
         error = None
+
+        self.items.append("EOF")
+
         while True:
             self.last_idx = self.curr_idx
             if self.items[self.curr_idx] == " ":
@@ -300,20 +303,33 @@ class Lexer:
             if error is not None:
                 break
 
-            # check if all tokens collected
-            if len(self.tokens) == len(self.items):
-                break
-
-            # Checks if it has checked everything and add EOF
-            self.reached_end = self.last_idx == self.curr_idx
-            if self.reached_end:
-                if self.quoteCount % 2 != 0:
-                    pos = Position(0, self.curr_idx, self.filename)
-                    return (None, InvalidSyntaxError(self.items[self.curr_idx], pos))
-                self.tokens.pop()
+            if self.items[self.curr_idx] == "EOF":
                 pos = Position(0, self.curr_idx, self.filename)
                 EOF = Token(MT_NONFAC, TT_EOF, "EOF", pos)
                 self.tokens.append(EOF)
+
+                if self.quoteCount % 2 != 0:
+                    return (None, InvalidSyntaxError(self.items[self.curr_idx], pos))
+
                 break
+
+            # check if all tokens collected
+            #if len(self.tokens) == len(self.items):
+            #    break
+
+            # Ok so maybe we should append an EOF item before we start the lexer so that it can use the EOF item as a point of reference for when the parsing is actually ending
+
+            # Checks if it has checked everything and add EOF
+            #self.reached_end = self.last_idx == self.curr_idx
+            #print(f"END COND: {self.reached_end}, idx {self.curr_idx}")
+            #if self.reached_end:
+            #    if self.quoteCount % 2 != 0:
+            #        pos = Position(0, self.curr_idx, self.filename)
+            #        return (None, InvalidSyntaxError(self.items[self.curr_idx], pos))
+            #    self.tokens.pop()
+            #    pos = Position(0, self.curr_idx, self.filename)
+            #    EOF = Token(MT_NONFAC, TT_EOF, "EOF", pos)
+            #    self.tokens.append(EOF)
+            #    break
 
         return (self.tokens, error)

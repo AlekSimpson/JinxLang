@@ -10,7 +10,8 @@
 * ~Overhaul Type System~ 
 * ~Fix Error System~
 * ~Floats literally have been broken this entire time, needs fix~
-* Add tests for testing Int64, Int32, etc values
+* ~Add tests for testing Int64, Int32, etc values~
+* ~Add unit tests for unary operations~
 * Optimize Parser Code 
 * Fix straggling bugs and weird edge cases
 * Added structures 
@@ -73,7 +74,7 @@ shoppingList: Array = ["apples" "water" "bananas"]
 shoppingList[2] = "ice cream"
 print(shoppingList[2])
 
-// Prints: ice cream 
+# Prints: ice cream 
 ```
 
 To append to an array you use the append function. The append function takes in two arguments, the first is the array to append to and the second is the item to append to the array. This code samples will add the string "chocolate" to the end of the array. 
@@ -102,7 +103,7 @@ for i in 0:length(playerScores) {
 }
 
 print(teamScore)
-// Prints "11"
+# Prints "11"
 ```
 *NOTE: iterating over elements of an array and not just a range will be added soon but it is not right now*
 In if statements the statement MUST be a conditional. There are no implicit comparisons to zero. 

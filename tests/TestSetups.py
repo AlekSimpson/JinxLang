@@ -71,16 +71,10 @@ VariableDecBool = Test("a:Bool = true; a", "Bool Variable Declaration", 1)
 VariableDecFloat = Test("a:Float = 5.0", "Float Variable Declaration", 5.0)
 VariableRefFloat = Test("a:Float = 5.0; a", "Float Variable Reference", 5.0)
 
-VariableErrorOne = CrashTest(
-    'a:Int = "test"', "Assigning String to Int", RuntimeError()
-)
+VariableErrorOne = CrashTest('a:Int = "test"', "Assigning String to Int", RuntimeError())
 VariableErrorTwo = CrashTest("a:String = 45", "Assigning Int to String", RuntimeError())
-VariableErrorThree = CrashTest(
-    'a:Int = 4; a = "test"', "Updating String to Int", RuntimeError()
-)
-VariableErrorFour = CrashTest(
-    'a:String = "test"; a = 45', "Updating String to Int", RuntimeError()
-)
+VariableErrorThree = CrashTest('a:Int = 4; a = "test"', "Updating String to Int", RuntimeError())
+VariableErrorFour = CrashTest('a:String = "test"; a = 45', "Updating String to Int", RuntimeError())
 
 # Arithmetic Tests
 AdditionTest = Test("3 + 1", "Addition", 4)
@@ -88,38 +82,33 @@ SubtractionTest = Test("6 - 2", "Subtraction", 4)
 MultiplicationTest = Test("2 * 2", "Multiplication", 4)
 DivisionTest = Test("8 / 2", "Division", 4)
 ExponentialTest = Test("2 ^ 2", "Exponents", 4)
+UnaryDeclaration = Test("-30", "Unary Value Declaration", -30)
+UnaryOperation = Test("1 + -1", "Unary Operations", 0)
+UnaryFloatDeclaration = Test("-30.0", "Unary Float Declaration", -30.0)
+UnaryFloatOperation = Test("-30.0 + 20", "Unary Float Operations", -10.0)
+DivideByZero = CrashTest("2 / 0", "Divide by Zero Error", RuntimeError())
 
 # For Loops
 InlineForTest = Test("for i in 1:5 { 1 + 1 }", "Inline For Loops", 0)
 NewlineForTest = Test("for i in 1:5 {; 1 + 1; }", "Newline For Loops", 0)
 InlineWhileTest = Test("a:Int = 0; while a < 5 { a = a + 1 }", "Inline While Loops", 0)
-NewlineWhileTest = Test(
-    "a:Int = 0; while a < 5 {; a = a + 1; }", "Newline While Loops", 0
-)
+NewlineWhileTest = Test("a:Int = 0; while a < 5 {; a = a + 1; }", "Newline While Loops", 0)
 
 # Method Defintion Tests
 InlineMethodDef = Test("method test():Int -> 1 + 1", "Inline Method Definition", None)
-NewlineMethodDef = Test(
-    "method test():Int {; return 1 + 1; }", "Newline Method Definition", None
-)
+NewlineMethodDef = Test("method test():Int {; return 1 + 1; }", "Newline Method Definition", None)
 
 # Inline Method Call Tests
 InlineMethodCall = Test("method test(): Int -> 1 + 1; test()", "Inline Method Calls", 2)
 
 # Newline Method Call Tests
-NewlineMethodCall = Test(
-    "method test():Int {; return 1 + 1; }; test()", "Newline Method Calls", 2
-)
+NewlineMethodCall = Test("method test():Int {; return 1 + 1; }; test()", "Newline Method Calls", 2)
 
 # Method Arguements Tests
-MethodArguements = Test(
-    "method add(a:Int, b:Int):Int {; return a + b; }; add(2, 2)", "Method Arguements", 4
-)
+MethodArguements = Test("method add(a:Int, b:Int):Int {; return a + b; }; add(2, 2)", "Method Arguements", 4)
 
 # Method Return Tests
-MethodReturnOne = Test(
-    "method test():Int {; return 1 + 1; }; test()", "Method Return Statements", 2
-)
+MethodReturnOne = Test("method test():Int {; return 1 + 1; }; test()", "Method Return Statements", 2)
 MethodReturnTwo = Test(
     "method test():Int {; new:Int = 23 + 321; return 323; }; test()",
     "Method Returns One Value",
@@ -173,6 +162,11 @@ arithmeticPackage = [
     MultiplicationTest,
     DivisionTest,
     ExponentialTest,
+    UnaryDeclaration,
+    UnaryOperation,
+    UnaryFloatDeclaration,
+    UnaryFloatOperation,
+    DivideByZero
 ]
 
 loopsPackage = [InlineForTest, NewlineForTest, InlineWhileTest, NewlineWhileTest]
