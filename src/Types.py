@@ -93,32 +93,42 @@ class Number(Real):
         super().__init__(value, pos)
         self.ID = "NUMBER_TYPE"
 
+    def get_dominant_type(self, a, b):
+        if a == "FLOAT_TYPE" or b.ID == "FLOAT_TYPE":
+            return Float
+        return Integer
+
     def added(self, other):
-        new_num = Number(self.value + other.value)
+        var_type = self.get_dominant_type(self.ID, other)
+        new_num = var_type(64, self.value + other.value)
         new_num.set_context(other.context)
         return new_num
 
     def subtracted(self, other):
-        new_num = Number(self.value - other.value)
+        var_type = self.get_dominant_type(self.ID, other)
+        new_num = var_type(64, self.value - other.value)
         new_num.set_context(other.context)
         return new_num
 
     def multiplied(self, other):
-        new_num = Number(self.value * other.value)
+        var_type = self.get_dominant_type(self.ID, other)
+        new_num = var_type(64, self.value * other.value)
         new_num.set_context(other.context)
         return new_num
 
     def divided(self, other):
+        var_type = self.get_dominant_type(self.ID, other)
         if other.value == 0:
             pos = other.pos
             return RuntimeError("Cannot divide by zero", self.context, pos)
 
-        new_num = Number(self.value / other.value)
+        new_num = var_type(64, self.value / other.value)
         new_num.set_context(other.context)
         return new_num
 
     def power(self, other):
-        new_num = Number(pow(self.value, other.value))
+        var_type = self.get_dominant_type(self.ID, other)
+        new_num = var_type(64, pow(self.value, other.value))
         new_num.set_context(other.context)
         return new_num
 
@@ -128,19 +138,23 @@ class Number(Real):
     def print_self(self):
         return self.value
 
-
 class Integer(Number):
     def __init__(self, bitsize, value=None, pos=None):
         super().__init__(value, pos)
         self.bitsize = bitsize
+        self.value = value
         self.ID = "NUMBER_TYPE"
-
 
 class Bool(Number):
     def __init__(self, value):
         self.value = value
         self.ID = "BOOL_TYPE"
 
+        def print_self(self):
+            if self.value == 1:
+                return "true"
+            else:
+                return "false"
 
 # class UInt(Integer):
 #    def __init__(self, value=None, pos=None, bitsize=64):
@@ -155,8 +169,8 @@ class Float(Number):
     def __init__(self, bitsize, value=None, pos=None):
         super().__init__(value, pos)
         self.bitsize = bitsize
-        self.ID = "NUMBER_TYPE"
-
+        self.value = value
+        self.ID = "FLOAT_TYPE"
 
 class Array(Type):
     def __init__(self, elements=[]):
@@ -168,7 +182,7 @@ class Array(Type):
     def print_self(self):
         new_arr = []
         for el in self.elements:
-            if el != None:
+            if el is not None:
                 new_arr.append(el.value)
 
         return new_arr

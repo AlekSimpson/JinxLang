@@ -18,7 +18,6 @@ if len(sys.argv) == 1:
             print(result.as_string())
         elif result is not None:
             if len(result.elements) == 1:
-                print(result.elements)
                 if result.elements[0] is not None:
                     print(result.elements[0].print_self())
             else:

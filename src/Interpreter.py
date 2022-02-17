@@ -2,7 +2,7 @@ from SymbolTable import SymbolTable
 from Error import *
 import tokens as tk
 from Context import Context
-from Types import Number, string, Array, Type, Integer
+from Types import *
 from Position import Position
 from GlobalTable import global_symbol_table
 
@@ -260,6 +260,7 @@ class Interpreter:
             self.visit_GetArrNode,
             self.visit_ReturnNode,
             self.visit_VarUpdateNode,
+            self.visit_float,
         ]
 
         if func_index == 4:
@@ -416,6 +417,20 @@ class Interpreter:
         num.set_context(child_context)
 
         return num
+
+    def visit_float(self, node, ctx):
+        entry = node.token.pos
+        child_context = Context("<float>", ctx, entry)
+
+        val = node.token.value
+
+        p = node.token.pos
+
+        flt = Float(64, val)
+        flt.set_context(child_context)
+
+        return flt
+
 
     def visit_IfNode(self, node, ctx):
         for case_ in node.cases:

@@ -9,8 +9,9 @@
 
 * ~Overhaul Type System~ 
 * ~Fix Error System~
-* Floats literally have been broken this entire time, needs fix
-* Optimize Parser Code 
+* ~Floats literally have been broken this entire time, needs fix~
+* ~Add tests for testing Int64, Int32, etc values~
+* ~Add unit tests for unary operations~
 * Fix straggling bugs and weird edge cases
 * Added structures 
 * Write compiler
@@ -58,3 +59,50 @@ print("Hello, World!")
 
 No libraries or main entry point functions are created. 
 
+### Simple Values 
+
+There is no special keyword for creating variables in Laplace. You simply type the name of the variable, declare its type and assign a value. To update the variable just type its name and new value with the assignment operator. The new value must conform to the type the variable was originally declared with. 
+```
+myVariable:Int = 42
+myVariable = 404
+```
+
+Creating an array is done with values and brackets ([]). Brackets are also used to access an element by its index and assign at an index. Spaces between the array elements are required. Commas are not used to seperate array elements. 
+```
+shoppingList: Array = ["apples" "water" "bananas"]
+shoppingList[2] = "ice cream"
+print(shoppingList[2])
+
+# Prints: ice cream 
+```
+
+To append to an array you use the append function. The append function takes in two arguments, the first is the array to append to and the second is the item to append to the array. This code samples will add the string "chocolate" to the end of the array. 
+```
+append(shoppingList, "chocolate")
+```
+
+To create an empty array.
+```
+myArray: Array = []
+```
+
+### Control Flow 
+
+You can use if statements to create conditionals. You use for, while and recurrsion to make loops. Parenthese around the body are optional, brackets around the body are not. 
+```
+playerScores: Array = [75, 43, 103, 87, 12]
+teamScore: Int = 0
+
+for i in 0:length(playerScores) {
+	if playerScore[i] > 50 {
+		teamScore += 3 // IMPORTANT: the '+=' operator is not appart of the language yet, but it will be.
+	} else {
+		teamScore += 1
+	}
+}
+
+print(teamScore)
+# Prints "11"
+```
+*NOTE: iterating over elements of an array and not just a range will be added soon but it is not right now*
+In if statements the statement MUST be a conditional. There are no implicit comparisons to zero. 

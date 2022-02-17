@@ -30,14 +30,12 @@ class Parser:
 
     def parse(self):
         AST = self.statements()
-
         return AST
 
     def call(self):
         atom = self.atom()
         if isinstance(atom, Error):
-            #res.register(atom)
-            return atom.error
+            return self.throw_error(atom.details)
 
         if self.curr_token.type_name == tk.TT_LPAREN:
             self.advance()
@@ -56,7 +54,7 @@ class Parser:
 
                     expr = self.expr()
                     if isinstance(expr, Error):
-                        return self.throw_error(expr.token, expr.error.details)
+                        return self.throw_error(expr.token, expr.details)
                     arg_nodes.append(expr)
 
                 if self.curr_token.type_name != tk.TT_RPAREN:
@@ -73,7 +71,7 @@ class Parser:
 
             index = self.atom()
             if isinstance(index, Error):
-                return self.throw_error(index.error.details)
+                return self.throw_error(index.details)
 
             if self.curr_token.type_name != tk.TT_RBRACKET:
                 return self.throw_error("Array subscripts must have a closing bracket")
@@ -88,7 +86,7 @@ class Parser:
 
                 new_val = self.atom()
                 if isinstance(new_val, Error):
-                    return self.throw_error(new_val.error.details)
+                    return self.throw_error(new_val.details)
 
                 self.advance()
 
@@ -100,9 +98,8 @@ class Parser:
         tok = self.curr_token
 
         if tok.type_name == tk.TT_INT:
-            val = NumberNode(self.curr_token)
             self.advance()
-            return val
+            return NumberNode(tok)
 
         elif tok.type_name == tk.TT_ID:
             self.advance()
@@ -111,6 +108,10 @@ class Parser:
         elif tok.type_name == tk.TT_STRING:
             self.advance()
             return StringNode(tok)
+
+        elif tok.type_name == tk.TT_FLOAT:
+            self.advance()
+            return FloatNode(tok)
 
         elif tok.type_name == "LPAREN":
             self.advance()
@@ -123,36 +124,36 @@ class Parser:
                     return self.throw_error("Expected ')'", tok.pos)
 
             elif isinstance(expr, Error):
-                return self.throw_error(expr.error.details)
+                return self.throw_error(expr.details)
 
         elif tok.type_name == tk.TT_LBRACKET:
             list_expr = self.list_expr()
             if isinstance(list_expr, Error):
-                return self.throw_error(list_expr.error.details)
+                return self.throw_error(list_expr.details)
             return list_expr
 
         elif tok.type_name == "IF":
             if_expr = self.if_expr()
             if isinstance(if_expr, Error):
-                return self.throw_error(if_expr.error.details)
+                return self.throw_error(if_expr.details)
             return if_expr
 
         elif tok.type_name == "FOR":
             for_expr = self.for_expr()
             if isinstance(for_expr, Error):
-                return self.throw_error(for_expr.error.details)
+                return self.throw_error(for_expr.details)
             return for_expr
 
         elif tok.type_name == "WHILE":
             while_expr = self.while_expr()
             if isinstance(while_expr, Error):
-                return self.throw_error(while_expr.error.details)
+                return self.throw_error(while_expr.details)
             return while_expr
 
         elif tok.type_name == "FUNC":
             func_def = self.func_def()
             if isinstance(func_def, Error):
-                return self.throw_error(func_def.error.details)
+                return self.throw_error(func_def.details)
             return func_def
 
     def list_expr(self):
@@ -168,19 +169,16 @@ class Parser:
         else:
             expr = self.expr()
             if isinstance(expr, Error):
-                return self.throw_error(expr.error.details)
+                return self.throw_error(expr.details)
 
             element_nodes.append(expr)
-            #if expr_res.error is not None:
-            #    err = self.throw_error(res, "Expected closing bracket in list declaration")
-            #    return (None, err)
 
             while self.curr_token.type_name == tk.TT_COMMA:
                 self.advance()
 
                 expr = self.expr()
                 if isinstance(expr, Error):
-                    return self.throw_error(expr.error.details)
+                    return self.throw_error(expr.details)
                 element_nodes.append(expr)
 
             if self.curr_token.type_name != tk.TT_RBRACKET:
@@ -223,7 +221,7 @@ class Parser:
                 self.advance()
 
                 if self.curr_token.type_dec is None:
-                    err = self.throw_error(f"Expected argument {arg_name_tokens[-1].value} to have a tyhpe declaration in function {name_token.value}")
+                    err = self.throw_error(f"Expected argument {arg_name_tokens[-1].value} to have a type declaration in function {name_token.value}")
                     return err
 
                 arg_type_tokens.append(self.curr_token)
@@ -234,14 +232,9 @@ class Parser:
                     break
                 self.advance()
 
-            if not (self.curr_token.type_name == tk.TT_RPAREN):
-                err = self.throw_error("Expected ')' in function defintion")
-                return err
-        else:
-            # BUG The check for RPAREN could probably just be moved into one check if statement instead of having one in an else
-            if not (self.curr_token.type_name == tk.TT_RPAREN):
-                err = self.throw_error("Expected value or ')' in function definition")
-                return err
+        if not (self.curr_token.type_name == tk.TT_RPAREN):
+            err = self.throw_error("Expected value or ')' in function definition")
+            return err
 
         self.advance()
 
@@ -264,7 +257,7 @@ class Parser:
 
             node_to_return = self.expr()
             if isinstance(node_to_return, Error):
-                err = self.throw_error(node_to_return.error.details)
+                err = self.throw_error(node_to_return.details)
                 return err
 
             return FuncDefNode(node_to_return, returnType, name_token, arg_name_tokens, arg_type_tokens, False)
@@ -283,7 +276,7 @@ class Parser:
 
         body = self.statements()
         if isinstance(body, Error):
-            err = self.throw_error(body.error.details)
+            err = self.throw_error(body.details)
             return err
 
         return_nil = True
@@ -322,7 +315,7 @@ class Parser:
 
         start_value = self.expr()
         if isinstance(start_value, Error):
-            err = self.throw_error(start_value.error.details)
+            err = self.throw_error(start_value.details)
             return err
 
         iterator_var = VarAssignNode(iterator_token, start_value, [1, Integer(64)])
@@ -335,7 +328,7 @@ class Parser:
 
         end_value = self.expr()
         if isinstance(end_value, Error):
-            err = self.throw_error(end_value.error.details)
+            err = self.throw_error(end_value.details)
             return err
 
         if not (self.curr_token.type_name == "LCURLY"):
@@ -349,7 +342,7 @@ class Parser:
 
             body = self.statements()
             if isinstance(body, Error):
-                return self.throw_error(body.error.details)
+                return self.throw_error(body.details)
 
             if self.curr_token.type_name != "RCURLY":
                 return self.throw_error("Expected '}'")
@@ -360,7 +353,7 @@ class Parser:
 
         body = self.expr()
         if isinstance(body, Error):
-            return self.throw_error(body.error.details)
+            return self.throw_error(body.details)
 
         if not (self.curr_token.type_name == "RCURLY"):
             return self.throw_error("Expected '}' in for loop")
@@ -375,7 +368,7 @@ class Parser:
 
         cond_value = self.expr()
         if isinstance(cond_value, Error):
-            return self.throw_error(cond_value.error.details)
+            return self.throw_error(cond_value.details)
 
         if not (self.curr_token.type_name == "LCURLY"):
             return self.throw_error("Expected '{' in while loop")
@@ -387,7 +380,7 @@ class Parser:
 
             body = self.statements()
             if isinstance(body, Error):
-                return self.throw_error(body.error.details)
+                return self.throw_error(body.details)
 
             if self.curr_token.type_name != "RCURLY":
                 return self.throw_error("Expected '}'")
@@ -398,7 +391,7 @@ class Parser:
 
         body_value = self.expr()
         if isinstance(body_value, Error):
-            return self.throw_error(body_value.error.details)
+            return self.throw_error(body_value.details)
 
         if not (self.curr_token.type_name == "RCURLY"):
             return self.throw_error("Expected '}' in while loop")
@@ -408,7 +401,7 @@ class Parser:
     def if_expr(self):
         all_cases = self.if_expr_cases("IF")
         if isinstance(all_cases, Error):
-            return self.throw_error(all_cases.error.details)
+            return self.throw_error(all_cases.details)
         cases, else_case = all_cases
 
         return IfNode(cases, else_case)
@@ -424,7 +417,7 @@ class Parser:
 
         condition = self.expr()
         if isinstance(condition, Error):
-            return self.throw_error(condition.error.details)
+            return self.throw_error(condition.details)
 
         if self.curr_token.type_name != "LCURLY":
             return self.throw_error("Expected '{'")
@@ -436,7 +429,7 @@ class Parser:
 
             all_statements = self.statements()
             if isinstance(all_statements, Error):
-                return self.throw_error(all_statements.error.details)
+                return self.throw_error(all_statements.details)
             statements = all_statements
             cases.append([condition, statements, True])
 
@@ -446,7 +439,7 @@ class Parser:
 
             all_cases = self.if_expr_b_or_c()
             if isinstance(all_cases, Error):
-                return self.throw_error(all_cases.error.details)
+                return self.throw_error(all_cases.details)
 
             new_cases, else_case = all_cases
             if len(new_cases) != 0:
@@ -454,7 +447,7 @@ class Parser:
         else:
             expr = self.expr()
             if isinstance(expr, Error):
-                return self.throw_error(expr.error.details)
+                return self.throw_error(expr.details)
             cases.append([condition, expr, False])
 
             if self.curr_token.type_name != "RCURLY":
@@ -463,7 +456,7 @@ class Parser:
 
             all_cases = self.if_expr_b_or_c()
             if isinstance(all_cases, Error):
-                return self.throw_error(all_cases.error.details)
+                return self.throw_error(all_cases.details)
             new_cases, else_case = all_cases
             if len(new_cases) != 0:
                 cases.extend(new_cases)
@@ -486,7 +479,7 @@ class Parser:
 
                 statements = self.statements()
                 if isinstance(statements, Error):
-                    return self.throw_error(statements.error.details)
+                    return self.throw_error(statements.details)
                 else_case = [statements, True]
 
                 if self.curr_token.type_name == "RCURLY":
@@ -496,7 +489,7 @@ class Parser:
             else:
                 expr = self.expr()
                 if isinstance(expr, Error):
-                    return self.throw_error(expr.error.details)
+                    return self.throw_error(expr.details)
 
                 else_case = [expr, False]
 
@@ -532,7 +525,7 @@ class Parser:
             self.advance()
             fac_node = self.factor()
             if isinstance(fac_node, Error):
-                return self.throw_error(fac_node.error)
+                return self.throw_error(fac_node.details)
 
             return_val = UnaryNode(tok, fac_node)
         else:
@@ -551,7 +544,7 @@ class Parser:
 
         statement = self.statement()
         if isinstance(statement, Error):
-            return self.throw_error(statement.error.details)
+            return self.throw_error(statement.details)
 
         statements.append(statement)
 
@@ -625,7 +618,7 @@ class Parser:
 
                 val = self.expr()
                 if isinstance(val, Error):
-                    return self.throw_erro(val.details)
+                    return self.throw_error(val.details)
 
                 return VarUpdateNode(var_name, val)
 
@@ -641,7 +634,7 @@ class Parser:
 
             node = self.comp_expr()
             if isinstance(node, Error):
-                return self.throw_error(node.error.details)
+                return self.throw_error(node.details)
 
             # BUG: Is this why unary ops don't work??
             return UnaryOpNode(op_tok, node)

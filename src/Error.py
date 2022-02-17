@@ -39,7 +39,7 @@ class RuntimeError(Error):
         ctx = self.context
 
         while True:
-            if ctx.parent == None:
+            if ctx.parent is None or p is None:
                 break
             result += f"File: {p.fn}, line: {p.ln}, in {ctx.display_name}\n{result}"
             p = ctx.parent_entry_pos
