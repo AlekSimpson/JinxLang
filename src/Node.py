@@ -1,7 +1,6 @@
 import tokens as tk
 from tokens import Token
 
-
 class NumberNode:
     def __init__(self, token):
         self.token = token
@@ -216,6 +215,15 @@ class ReturnNode:
         self.token = node_to_return.token
         self.description = "ReturnNode"
         self.classType = 15
+
+    def as_string(self):
+        return f"{self.description}: {self.token.as_string()}"
+
+class FloatNode:
+    def __init__(self, token):
+        self.token = token
+        self.description = "FloatNode"
+        self.classType = 17
 
     def as_string(self):
         return f"{self.description}: {self.token.as_string()}"

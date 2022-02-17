@@ -1,33 +1,11 @@
 from tokens import Token
 from Position import Position
-import tokens as tk
+from tokens import *
 from Error import InvalidSyntaxError, IllegalCharError
 from Types import Float, Integer, string, Void, Array, Bool
 
-keywords = [
-    "if",
-    "else",
-    "elif",
-    "for",
-    "in",
-    "while",
-    "method",
-    "return",
-    "break",
-    "continue",
-]
-keywordTokens = [
-    tk.TT_IF,
-    tk.TT_ELSE,
-    tk.TT_ELIF,
-    tk.TT_FOR,
-    tk.TT_IN,
-    tk.TT_WHILE,
-    tk.TT_FUNC,
-    tk.TT_RETURN,
-    tk.TT_BREAK,
-    tk.TT_CONTINUE,
-]
+keywords = ["if", "else", "elif", "for", "in", "while", "method", "return", "break", "continue"]
+keywordTokens = [TT_IF, TT_ELSE, TT_ELIF, TT_FOR, TT_IN, TT_WHILE, TT_FUNC, TT_RETURN, TT_BREAK, TT_CONTINUE]
 
 type_keywords = [
     "Int",
@@ -97,11 +75,24 @@ class Lexer:
                 return type_values[i]
         return None
 
+    def peek_next(self):
+        if self.curr_idx >= len(self.items):
+            return self.curr_idx
+        return self.curr_idx + 1
+
     def isKeyword(self, word):
+        return_value = TT_ID
         for i in range(0, len(keywords)):
             if keywords[i] == word:
-                return keywordTokens[i]
-        return tk.TT_ID
+                return_value = keywordTokens[i]
+
+        if self.curr_idx + 1 < len(self.items):
+            if self.isNum(self.curr_idx + 1):
+                #self.advance()
+                num = self.parse_numbers()
+                return_value = return_value + str(num)
+
+        return return_value
 
     def isLetter(self):
         letters = list("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXQZ_")
@@ -112,7 +103,7 @@ class Lexer:
 
     def isNum(self, num=None):
         isNumber = True
-        number = self.items[self.curr_idx] if num == None else num
+        number = self.items[self.curr_idx] if num is None else num
         try:
             int(number)
         except:
@@ -135,24 +126,41 @@ class Lexer:
 
             tokenType = self.isKeyword(full_word)
             typeRef = self.isTypeRef(full_word)
-            tok = Token(tk.MT_NONFAC, tokenType, full_word, pos, typeRef)
+            tok = Token(MT_NONFAC, tokenType, full_word, pos, typeRef)
             self.tokens.append(tok)
         return None
 
     def check_for_numbers(self):
         if self.isNum():
             pos = Position(0, self.curr_idx, self.filename)
-            full_num = ""
-            isNumber = True
-            while isNumber:
-                isNumber = self.isNum()
-                if isNumber:
-                    full_num = full_num + self.items[self.curr_idx]
-                    if self.curr_idx == len(self.items) - 1:
-                        break
-                    self.advance()
-                    self.item_count = self.item_count - 1
-            tok = Token(tk.MT_FACTOR, tk.TT_INT, int(full_num), pos)
+            full_num = self.parse_numbers()
+            tok = Token(MT_FACTOR, TT_INT, int(full_num), pos)
+            self.tokens.append(tok)
+        return None
+
+    def parse_numbers(self):
+        full_num = ""
+        isNumber = True
+        while isNumber:
+            isNumber = self.isNum()
+            if isNumber:
+                full_num = full_num + self.items[self.curr_idx]
+                if self.curr_idx == len(self.items) - 1:
+                    break
+                self.advance()
+                self.item_count = self.item_count - 1
+        return full_num
+
+    def check_for_floats(self):
+        if self.items[self.curr_idx] == ".":
+            if self.tokens[-1].type_name == "INT":
+                num = str(self.tokens[-1].value)
+                self.tokens.pop()
+            self.advance()
+            if self.isNum():
+                decimal_val = str(self.parse_numbers())
+            full_float = float(num + "." + decimal_val)
+            tok = Token(MT_FACTOR, TT_FLOAT, full_float)
             self.tokens.append(tok)
         return None
 
@@ -164,18 +172,18 @@ class Lexer:
 
         if self.items[self.curr_idx + 1] == "=":
             if self.items[self.curr_idx] == "=":
-                return Token(tk.MT_NONFAC, tk.TT_EE, "==", pos)
+                return Token(MT_NONFAC, TT_EE, "==", pos)
             elif self.items[self.curr_idx] == "!":
-                return Token(tk.MT_NONFAC, tk.TT_NE, "!=", pos)
+                return Token(MT_NONFAC, TT_NE, "!=", pos)
             elif self.items[self.curr_idx] == "<":
-                return Token(tk.MT_NONFAC, tk.TT_LOE, "<=", pos)
+                return Token(MT_NONFAC, TT_LOE, "<=", pos)
             elif self.items[self.curr_idx] == ">":
-                return Token(tk.MT_NONFAC, tk.TT_GOE, ">=", pos)
+                return Token(MT_NONFAC, TT_GOE, ">=", pos)
         elif self.items[self.curr_idx + 1] == self.items[self.curr_idx]:
             if self.curr_idx == "|":
-                return Token(tk.Mt_NONFAC, tk.TT_OR, "||", pos)
+                return Token(MT_NONFAC, TT_OR, "||", pos)
             elif self.curr_idx == "&":
-                return Token(tk.MT_NONFAC, tk.TT_AND, "&&", pos)
+                return Token(MT_NONFAC, TT_AND, "&&", pos)
         return None
 
     def check_for_string(self):
@@ -193,63 +201,23 @@ class Lexer:
                     break
                 full_str = full_str + self.items[self.curr_idx]
                 self.advance()
-            tok = Token(tk.MT_NONFAC, tk.TT_STRING, full_str, pos)
+            tok = Token(MT_NONFAC, TT_STRING, full_str, pos)
             self.tokens.append(tok)
         return None
 
     def check_for_symbols(self):
-        symbols = [
-            "+",
-            "-",
-            "/",
-            "*",
-            "^",
-            "(",
-            ")",
-            "=",
-            "!",
-            "<",
-            ">",
-            "{",
-            "}",
-            ":",
-            ",",
-            "[",
-            "]",
-            ";",
-            "\n",
-        ]
-        symbolsTokens = [
-            tk.TT_PLUS,
-            tk.TT_MINUS,
-            tk.TT_DIV,
-            tk.TT_MUL,
-            tk.TT_POW,
-            tk.TT_LPAREN,
-            tk.TT_RPAREN,
-            tk.TT_EQ,
-            tk.TT_NOT,
-            tk.TT_LT,
-            tk.TT_GT,
-            tk.TT_LCURLY,
-            tk.TT_RCURLY,
-            tk.TT_COLON,
-            tk.TT_COMMA,
-            tk.TT_LBRACKET,
-            tk.TT_RBRACKET,
-            tk.TT_NEWLINE,
-            tk.TT_NEWLINE,
-        ]
+        symbols = ["+", "-", "/", "*", "^", "(", ")", "=", "!", "<", ">", "{", "}", ":", ",", "[", "]", ";", "\n"]
+        symbolsTokens = [TT_PLUS, TT_MINUS, TT_DIV, TT_MUL, TT_POW, TT_LPAREN, TT_RPAREN, TT_EQ, TT_NOT,
+                         TT_LT, TT_GT, TT_LCURLY, TT_RCURLY, TT_COLON, TT_COMMA, TT_LBRACKET, TT_RBRACKET,
+                         TT_NEWLINE, TT_NEWLINE]
         pos = Position(0, self.curr_idx, self.filename)
 
         for i in range(0, len(symbols)):
             if self.items[self.curr_idx] == symbols[i]:
-                nilTok = Token(
-                    tk.MT_NONFAC, symbolsTokens[i], self.items[self.curr_idx], pos
-                )
+                nilTok = Token(MT_NONFAC, symbolsTokens[i], self.items[self.curr_idx], pos)
 
                 checkSub = self.check_subsequent()
-                tok = nilTok if checkSub == None else checkSub
+                tok = nilTok if checkSub is None else checkSub
 
                 self.tokens.append(tok)
                 self.advance()
@@ -261,7 +229,7 @@ class Lexer:
         # check for and, or symbols
         if self.items[self.curr_idx] == "|" and not endOfLine:
             if self.items[self.curr_idx + 1] == "|":
-                tok = Token(tk.MT_NONFAC, tk.TT_OR, "||", pos)
+                tok = Token(MT_NONFAC, TT_OR, "||", pos)
                 self.tokens.append(tok)
                 self.advance()
                 self.advance()
@@ -270,7 +238,7 @@ class Lexer:
                 return IllegalCharError(self.items[self.curr_idx], pos)
         elif self.items[self.curr_idx] == "&" and not endOfLine:
             if self.items[self.curr_idx + 1] == "&":
-                tok = Token(tk.MT_NONFAC, tk.TT_AND, "&&", pos)
+                tok = Token(MT_NONFAC, TT_AND, "&&", pos)
                 self.tokens.append(tok)
                 self.advance()
                 self.advance()
@@ -283,7 +251,7 @@ class Lexer:
         if self.items[self.curr_idx] == "-":
             if self.items[self.curr_idx + 1] == ">":
                 pos = Position(0, self.curr_idx, self.filename)
-                tok = Token(tk.MT_NONFAC, tk.TT_ARROW, "->", pos)
+                tok = Token(MT_NONFAC, TT_ARROW, "->", pos)
                 self.tokens.append(tok)
                 self.advance()
                 self.advance()
@@ -313,6 +281,12 @@ class Lexer:
             error = self.check_for_numbers()
             if error is not None:
                 break
+
+            # check for floats
+            error = self.check_for_floats()
+            if error is not None:
+                break
+
             # check for strings type
             error = self.check_for_letters()
             if error is not None:
@@ -338,7 +312,7 @@ class Lexer:
                     return (None, InvalidSyntaxError(self.items[self.curr_idx], pos))
                 self.tokens.pop()
                 pos = Position(0, self.curr_idx, self.filename)
-                EOF = Token(tk.MT_NONFAC, tk.TT_EOF, "EOF", pos)
+                EOF = Token(MT_NONFAC, TT_EOF, "EOF", pos)
                 self.tokens.append(EOF)
                 break
 

@@ -68,6 +68,8 @@ VariableDecString = Test('a:String = "test"', "String Variable Declaration", "te
 VariableRefString = Test('a:String = "test"; a', "String Variable Reference", "test")
 VariableRefBool = Test("a:Bool = true", "Bool Variable Reference", 1)
 VariableDecBool = Test("a:Bool = true; a", "Bool Variable Declaration", 1)
+VariableDecFloat = Test("a:Float = 5.0", "Float Variable Declaration", 5.0)
+VariableRefFloat = Test("a:Float = 5.0; a", "Float Variable Reference", 5.0)
 
 VariableErrorOne = CrashTest(
     'a:Int = "test"', "Assigning String to Int", RuntimeError()
@@ -161,6 +163,8 @@ variablesPackage = [
     VariableRefString,
     VariableDecBool,
     VariableRefBool,
+    VariableDecFloat,
+    VariableRefFloat
 ]
 
 arithmeticPackage = [

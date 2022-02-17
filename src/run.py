@@ -25,7 +25,6 @@ def check_for_errors(payload):
     return None
 
 def run(text, fn):
-    #print("---------- RUNNING ----------")
     lexer = Lexer(text, fn)
     tokens, error = lexer.make_tokens()
 
@@ -36,7 +35,6 @@ def run(text, fn):
     parser = Parser(tokens)
     nodes = parser.parse()
 
-    #print(f"CHECKING {nodes.as_string()}")
     parse_check = check_for_errors(nodes)
     if parse_check is not None:
         return parse_check

@@ -100,9 +100,8 @@ class Parser:
         tok = self.curr_token
 
         if tok.type_name == tk.TT_INT:
-            val = NumberNode(self.curr_token)
             self.advance()
-            return val
+            return NumberNode(tok)
 
         elif tok.type_name == tk.TT_ID:
             self.advance()
@@ -111,6 +110,10 @@ class Parser:
         elif tok.type_name == tk.TT_STRING:
             self.advance()
             return StringNode(tok)
+
+        elif tok.type_name == tk.TT_FLOAT:
+            self.advance()
+            return FloatNode(tok)
 
         elif tok.type_name == "LPAREN":
             self.advance()
