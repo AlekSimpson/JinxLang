@@ -16,17 +16,17 @@ from Error import RuntimeError
 
 
 class Type:
-    def __init__(self, value=None, pos=None):
+    def __init__(self, value=None, pos=None, description="AnyType"):
         self.value = value
         self.pos = pos
         self.context = None
+        self.description = description
 
     def set_context(self, ctx):
         self.context = ctx
 
     def print_self(self):
         return self.value
-
 
 class Void:
     def __init__(self, pos=None):
@@ -39,7 +39,7 @@ class Void:
 
 class Real(Type):
     def __init__(self, value=None, pos=None):
-        super().__init__(value, pos)
+        super().__init__(value, pos, "Real")
 
     ### NEED TO ADD CHECK FOR THE TYPE BEING THE SAME AND NOT JUST THE VALUE ###
     def comp_eq(self, other):
@@ -91,6 +91,7 @@ class Real(Type):
 class Number(Real):
     def __init__(self, value=None, pos=None):
         super().__init__(value, pos)
+        self.description = "Number"
         self.ID = "NUMBER_TYPE"
 
     def get_dominant_type(self, a, b):
@@ -141,12 +142,15 @@ class Number(Real):
 class Integer(Number):
     def __init__(self, bitsize, value=None, pos=None):
         super().__init__(value, pos)
+        self.description = "Integer"
         self.bitsize = bitsize
         self.value = value
         self.ID = "NUMBER_TYPE"
 
 class Bool(Number):
     def __init__(self, value):
+        super().__init__(value)
+        self.description = "Bool"
         self.value = value
         self.ID = "BOOL_TYPE"
 
@@ -168,22 +172,24 @@ class Bool(Number):
 class Float(Number):
     def __init__(self, bitsize, value=None, pos=None):
         super().__init__(value, pos)
+        self.description = "Float"
         self.bitsize = bitsize
         self.value = value
         self.ID = "FLOAT_TYPE"
 
 class Array(Type):
-    def __init__(self, elements=[]):
-        super().__init__()
+    def __init__(self, elements=[], element_id=None):
+        super().__init__(description="Array")
         self.elements = elements
         self.length = len(self.elements)
         self.ID = "ARRAY_TYPE"
+        self.element_id = element_id
 
     def print_self(self):
         new_arr = []
-        for el in self.elements:
-            if el is not None:
-                new_arr.append(el.value)
+        for element in self.elements:
+            if element is not None:
+                new_arr.append(element.value)
 
         return new_arr
 
@@ -203,6 +209,7 @@ class Array(Type):
 class string(Real):
     def __init__(self, str_value=None):
         super().__init__(str_value)
+        self.description = "String"
         self.str_value = str_value
         self.ID = "STRING_TYPE"
 

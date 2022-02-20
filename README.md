@@ -13,7 +13,7 @@
 * ~Add tests for testing Int64, Int32, etc values~
 * ~Add unit tests for unary operations~
 * Fix straggling bugs and weird edge cases
-* Added structures 
+* Add structures 
 * Write compiler
 
 *continue writing README and Docs*

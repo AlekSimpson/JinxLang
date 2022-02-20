@@ -121,10 +121,11 @@ MethodReturnThree = Test(
 )
 
 # Array Tests
-ArrayDec = Test("a:Array = [1,2,3,4]", "ArrayDeclaration", None)
-ArrayRef = Test("a:Array = [1,2,3,4]; a", "Array Reference", None)
-ArrayApp = Test("a:Array = [1,2,3]; append(a, 123)", "Array Append", None)
-ArrayVarRef = Test("a:Array = [1,2,3]; i:Int = 0; a[i]", "Array Variable Index Reference", 1)
+ArrayDec = Test("a:Array{Int} = [1 2 3 4]", "ArrayDeclaration", None)
+ArrayRef = Test("a:Array{Int} = [1 2 3 4]; a", "Array Reference", None)
+ArrayApp = Test("a:Array{Int} = [1 2 3]; append(a, 123)", "Array Append", None)
+ArrayVarRef = Test("a:Array{Int} = [1 2 3]; i:Int = 0; a[i]", "Array Variable Index Reference", 1)
+ArrayTypeMisMatch = CrashTest("a:Array{Int} = [1 2 3 4]; str:String = \"test\"; append(a, str)", "Appending String to Int Array", RuntimeError())
 
 # Print Tests
 PrintTestOne = Test('print("Hello World")', "Print Statements", "Hello World")
@@ -182,7 +183,7 @@ methodsPackage = [
     MethodReturnThree,
 ]
 
-arraysPackage = [ArrayDec, ArrayRef, ArrayApp, ArrayVarRef]
+arraysPackage = [ArrayDec, ArrayRef, ArrayApp, ArrayVarRef, ArrayTypeMisMatch]
 
 # Meta array to send to unit tests file
 setups = [

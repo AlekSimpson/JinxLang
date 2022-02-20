@@ -177,9 +177,22 @@ class BuiltinFunction(BaseFunction):
             if self.check_is_var(value):
                 value_obj = global_symbol_table.get_val(value)
 
+        el_id = global_symbol_table.get_val(arr_arg).element_id
+        type_check = self.check_types_match(el_id, value_obj, arr_arg)
+        if type_check is not None:
+            return type_check
+
         arr.append(value_obj)
 
         return None
+
+    def check_types_match(self, a, b, name):
+        if not isinstance(a, type(b)):
+            if a.ID != b.ID:
+                return RuntimeError(f"Cannot assign value of {b.description} to array of type {a.description} {name}", Context(), Position())
+        return None
+
+    #def check_elements_match(self, a, b, name, ctx, node):
 
     def execute_length(self, exec_ctx):
         arr_arg = exec_ctx.symbolTable.get_val("array").value
@@ -237,7 +250,7 @@ class Interpreter:
             return RuntimeError("Invalid syntax", context, Position())
 
         func_index = node.classType
-        # print(f"[{func_index}] - {node.as_string()}")
+        #print(f"[{func_index}] - {node.as_string()}")
         # ^^^^ Keep for debugging purposes ^^^^
         table = context.symbolTable.symbols
         result = None
@@ -287,6 +300,7 @@ class Interpreter:
 
     def visit_ListNode(self, node, context):
         elements = []
+
         for element_node in node.element_nodes:
             el = self.visit(element_node, context)
             elements.append(el)
@@ -296,7 +310,14 @@ class Interpreter:
             if element_node.classType == 15:
                 break
 
-        arr = Array(elements)
+        element_id = Void()
+        if len(elements) != 0:
+            type_dec = node.element_nodes[0].token.type_dec
+            if type_dec is not None:
+                #print(f"TOKEN {node.element_nodes[0].token.type_dec.type_obj}")
+                element_id = node.element_nodes[0].token.type_dec.type_obj
+
+        arr = Array(elements, element_id)
         arr.set_context(context)
 
         return arr
@@ -508,17 +529,31 @@ class Interpreter:
             p = node.token.pos
             return RuntimeError(f"{var_name} is not defined", ctx, p)
 
+    def check_element_types(self, array_type, elements, var_name, ctx, node):
+        for element in elements:
+            element_value = element.token.type_dec.type_obj
+            type_check = self.check_types_match(array_type, element_value, var_name, ctx, node)
+            if type_check is not None:
+                return type_check
+        return "TYPES MATCH"
+
     def visit_VarAssignNode(self, node, ctx):
         var_name = node.token.value
         value = self.visit(node.value_node, ctx)
         if isinstance(value, Error):
             return value
 
-        value_type = value
-        variable_type = node.type[1]
-        types_match = self.check_types_match(value_type, variable_type, var_name, ctx, node)
+        variable_type = node.type.type_obj
+        types_match = self.check_types_match(value, variable_type, var_name, ctx, node)
         if types_match is not None:
             return types_match
+
+        if isinstance(value, Array):
+            list_values = node.value_node.element_nodes
+            array_type = node.type.element_type.type_obj
+            types_match = self.check_element_types(array_type, list_values, var_name, ctx, node)
+            if types_match != "TYPES MATCH":
+                return types_match
 
         ctx.symbolTable.set_val(var_name, value)
         return value
@@ -543,7 +578,7 @@ class Interpreter:
             func_arg_names.append(arg_name.value)
 
         for arg_type in a_type_tokens:
-            func_arg_types.append(arg_type.type_dec[1])
+            func_arg_types.append(arg_type.type_dec.type_obj)
 
         method = Function(
             func_name,
@@ -588,13 +623,10 @@ class Interpreter:
             x = arg_node.token.value
             new = Number(x) if arg_node.token.type_name == "INT" else string(x)
             if not isinstance(func_value, BuiltinFunction):
-                types_match = self.check_types_match(
-                    new, func_value.arg_types[i], func_value.name, ctx, node
-                )
+                types_match = self.check_types_match(new, func_value.arg_types[i], func_value.name, ctx, node)
                 if types_match is not None:
                     return types_match
 
-            # BUG new is always a number type regardless of what is passed in? Probably going to have to change that
             args.append(new)
             i += 1
 
@@ -605,7 +637,7 @@ class Interpreter:
         # Check if return value and declared return value match
         if not isinstance(func_value, BuiltinFunction):
             _return = return_value
-            func_return = func_value.returnType.type_dec[1]
+            func_return = func_value.returnType.type_dec.type_obj
             if not isinstance(func_value, BuiltinFunction):
                 types_match = self.check_types_match(
                     _return, func_return, func_value.name, ctx, node
@@ -618,7 +650,7 @@ class Interpreter:
         if not isinstance(a, type(b)):
             if a.ID != b.ID:
                 pos = node.token.pos
-                return RuntimeError(f"Cannot assign value of {type(a)} to type {type(b)} {name}", ctx, pos)
+                return RuntimeError(f"Cannot assign value of {a.description} to type {b.description} {name}", ctx, pos)
         return None
 
     def visit_GetArrNode(self, node, ctx):

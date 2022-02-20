@@ -29,7 +29,7 @@ def run(text, fn):
     tokens, error = lexer.make_tokens()
 
     if error is not None:
-        return (None, error)
+        return error
 
     # Generate AST
     parser = Parser(tokens)
@@ -47,15 +47,6 @@ def run(text, fn):
 
     return result
 
-# XXX: Converge Error return value and result value into one value. Basically so that parser parser.parse() returns only one value and that value is either a return or just an error.
-
-## BUG - KNOWN ##
-#  Error handling for non recognized keywords/variables is broken
-#  Last I checked arithmetic stopped working when there was no spaces between the characters
-#  Binary operations with unary nodes do not work, the unary nodes must be mistaken for multiple operators in one operation
-
 # TODO:
-# When an array is declared the types stored in the array must also be included in the type declaration
-# Update and add tests
-#    - Things like tests for variable type checks (ex: a:Int = "test" should return an error)
-#    - Add test for checking if returns work properly, like making sure statements after return don't run and stuff
+# Make it so that spaces seperate array elements, not commas
+# Add for in loops (ex: for token in tokens) type thing

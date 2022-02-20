@@ -48,10 +48,11 @@ TT_CONTINUE = "CONTINUE"
 TT_FUNC = "FUNC"
 TT_COMMA = "COMMA"
 TT_ARROW = "ARROW"
+TT_SPACE = "SPACE"
 
 class Token:
     def __init__(self, type="", type_name="", value="", pos=None, type_dec=None):
-        self.type = type
+        self.type = type # meta token type
         self.type_name = type_name
         self.value = value
         self.pos = pos
