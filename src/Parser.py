@@ -3,6 +3,7 @@ from Types import Integer
 from Error import *
 from Node import *
 from tokens import Token
+from TypeValue import TypeValue
 
 class Parser:
     def __init__(self, tokens):
@@ -173,7 +174,7 @@ class Parser:
 
             element_nodes.append(expr)
 
-            while self.curr_token.type_name == tk.TT_COMMA:
+            while self.curr_token.type_name == tk.TT_SPACE: # TT_COMMA
                 self.advance()
 
                 expr = self.expr()
@@ -318,7 +319,7 @@ class Parser:
             err = self.throw_error(start_value.details)
             return err
 
-        iterator_var = VarAssignNode(iterator_token, start_value, [1, Integer(64)])
+        iterator_var = VarAssignNode(iterator_token, start_value, TypeValue(1, Integer(64)))
 
         if not (self.curr_token.type_name == "COLON"):
             err = self.throw_error("Expected ':' in range")

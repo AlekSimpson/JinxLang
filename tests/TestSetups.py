@@ -121,15 +121,21 @@ MethodReturnThree = Test(
 )
 
 # Array Tests
-ArrayDec = Test("a:Array = [1,2,3,4]", "ArrayDeclaration", None)
-ArrayRef = Test("a:Array = [1,2,3,4]; a", "Array Reference", None)
-ArrayApp = Test("a:Array = [1,2,3]; append(a, 123)", "Array Append", None)
-ArrayVarRef = Test("a:Array = [1,2,3]; i:Int = 0; a[i]", "Array Variable Index Reference", 1)
+ArrayDec = Test("a:Array{Int} = [1 2 3 4]", "ArrayDeclaration", None)
+ArrayRef = Test("a:Array{Int} = [1 2 3 4]; a", "Array Reference", None)
+ArrayApp = Test("a:Array{Int} = [1 2 3]; append(a, 123)", "Array Append", None)
+ArrayVarRef = Test("a:Array{Int} = [1 2 3]; i:Int = 0; a[i]", "Array Variable Index Reference", 1)
+ArrayTypeMisMatch = CrashTest("a:Array{Int} = [1 2 3 4]; str:String = \"test\"; append(a, str)", "Appending String to Int Array", RuntimeError())
 
 # Print Tests
 PrintTestOne = Test('print("Hello World")', "Print Statements", "Hello World")
 PrintTestTwo = Test("print(404)", "Printing Numbers", 404)
 PrintTestThree = Test('new:String = "Hello World"', "Printing Variables", "Hello World")
+
+# Standard Library Tests
+stdlength = Test("array:Array{Int} = [1 2 3]; length(array)", "STD length() Function", 3)
+stdremove = Test("array:Array{Int} = [1 2 3]; remove(array, 2); length(array)", "STD remove() Function", 2)
+stdremovelast = Test("array:Array{Int} = [1 2 3]; removeLast(array); length(array)", "STD removeLast() Function", 2)
 
 # Package Related Tests
 conditionalsPackage = [
@@ -182,7 +188,9 @@ methodsPackage = [
     MethodReturnThree,
 ]
 
-arraysPackage = [ArrayDec, ArrayRef, ArrayApp, ArrayVarRef]
+arraysPackage = [ArrayDec, ArrayRef, ArrayApp, ArrayVarRef, ArrayTypeMisMatch]
+
+stdPackage = [stdlength, stdremove, stdremovelast]
 
 # Meta array to send to unit tests file
 setups = [
@@ -192,4 +200,5 @@ setups = [
     [loopsPackage, "Loops"],
     [methodsPackage, "Methods"],
     [arraysPackage, "Arrays"],
+    [stdPackage, "Standard Library"]
 ]

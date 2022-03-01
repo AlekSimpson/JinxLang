@@ -23,10 +23,10 @@ class BaseFunction(Type):
 
     def check_args(self, arg_names, args):
         if len(args) > len(arg_names):
-            return RuntimeError(f"to many arguements passed into function {self.name}", new_context, self.pos)
+            return RuntimeError(f"to many arguements passed into function {self.name}", Context(), self.pos)
 
         if len(args) < len(arg_names):
-            return RuntimeError(f"to few arguements passed into function {self.name}", new_context, self.pos)
+            return RuntimeError(f"to few arguements passed into function {self.name}", Context(), self.pos)
 
         return None
 
@@ -48,15 +48,7 @@ class BaseFunction(Type):
         return None
 
 class Function(BaseFunction):
-    def __init__(
-        self,
-        name=None,
-        returnType=None,
-        body_node=None,
-        arg_nodes=None,
-        arg_types=None,
-        should_return_nil=False,
-    ):
+    def __init__(self, name=None, returnType=None, body_node=None, arg_nodes=None, arg_types=None, should_return_nil=False):
         super().__init__(name)
         self.body_node = body_node
         self.arg_nodes = arg_nodes
@@ -80,16 +72,12 @@ class Function(BaseFunction):
         final_value = body
         if not isinstance(body, Number):
             final_value = Number() if self.should_return_nil else body.elements[-1]
-        #if res.error is not None:
-        #    return (None, res)
 
         self.context = exec_ctx
         return final_value
 
     def copy(self):
-        copy = Function(
-            self.name, self.body_node, self.arg_nodes, self.should_return_nil
-        )
+        copy = Function(self.name, self.body_node, self.arg_nodes, self.should_return_nil)
         copy.set_context(self.context)
         return copy
 
@@ -115,16 +103,41 @@ class BuiltinFunction(BaseFunction):
             return True
         return False
 
+    # checks for variables and makes sure passed in arguments are valid
+    def process_parameter(self, parameter, exec_ctx):
+        return_value = parameter
+        if parameter.value in global_symbol_table.symbols:
+            val = global_symbol_table.get_val(parameter.value)
+            return val.print_self()
+
+        if isinstance(return_value, Array):
+            return_value = return_value.print_self()
+        elif isinstance(return_value, Integer) or isinstance(parameter, Number):
+            return_value = parameter.value
+        elif isinstance(return_value, string):
+            return_value = parameter.print_self()
+        else:
+            return_value = RuntimeError("Cannot reference undefined variable", exec_ctx, Position())
+
+        return return_value
+
+    def process_parameters(self, parameters, exec_ctx):
+        processed = []
+        for param in parameters:
+            processed.append(self.process_parameter(param, exec_ctx))
+
+        return processed
+
     def execute(self, args):
         exec_ctx = self.generate_new_context()
 
         method_arg_names = [
             ["value"], ["array", "value"], ["fn"],
-            ["array"]
+            ["array"], ["array", "index"], ["array"]
         ]
         methods = [
             self.execute_print, self.execute_append, self.execute_run,
-            self.execute_length
+            self.execute_length, self.execute_remove, self.execute_removeLast
         ]
 
         if self.name_id < 0 or self.name_id > len(methods) - 1:
@@ -142,48 +155,69 @@ class BuiltinFunction(BaseFunction):
         return return_value
 
     def execute_print(self, exec_ctx):
-        value_arg = exec_ctx.symbolTable.get_val("value")
-        value = Number(value_arg.value)
-        isNumber = True
-        if not self.isNum(value.value):
-            isNumber = False
-            value = string(value)
+        arg_name = exec_ctx.symbolTable.get_val("value")
+        proc = self.process_parameter(arg_name, exec_ctx)
 
-        # Check if printing a number
-        if isNumber:
-            print(value.value)
-        else:
-            # Check if value is a variable
-            if value.value.value in global_symbol_table.symbols:
-                val = global_symbol_table.get_val(value.value.value)
-                # Check if variable is an array
-                if isinstance(val, Array):
-                    print(val.print_self())
-                else:
-                    # print variable
-                    print(val.value)
-            else:
-                # value is a string
-                print(value.value.value)
-        return Number(0)
-
-    def execute_append(self, exec_ctx):
-        arr_arg = exec_ctx.symbolTable.get_val("array").value
-        value_obj = exec_ctx.symbolTable.get_val("value")
-        value = value_obj.value
-        arr = global_symbol_table.get_val(arr_arg).elements
-
-        if not self.isNum(value_obj):
-            if self.check_is_var(value):
-                value_obj = global_symbol_table.get_val(value)
-
-        arr.append(value_obj)
+        if isinstance(proc, Error):
+            print(proc.as_string())
+            return None
+        print(proc)
 
         return None
 
+    def execute_append(self, exec_ctx):
+        array = exec_ctx.symbolTable.get_val("array")
+        new_value = exec_ctx.symbolTable.get_val("value")
+        procs = self.process_parameters([array, new_value], exec_ctx)
+
+        for proc in procs:
+            if isinstance(proc, Error):
+                print(proc.as_string())
+                return None
+
+        el_id = array.element_id
+        type_check = self.check_types_match(el_id, new_value, array)
+        if type_check is not None:
+            return type_check
+
+        array.elements.append(new_value)
+        return None
+
+    def execute_remove(self, exec_ctx):
+        array = exec_ctx.symbolTable.get_val("array")
+        index = exec_ctx.symbolTable.get_val("index")
+        procs = self.process_parameters([array, index], exec_ctx)
+
+        for proc in procs:
+            if isinstance(proc, Error):
+                print(proc.as_string())
+                return None
+
+        array.elements.pop(index.value)
+
+        return None
+
+    def execute_removeLast(self, exec_ctx):
+        array = exec_ctx.symbolTable.get_val("array")
+        proc = self.process_parameter(array, exec_ctx)
+
+        if isinstance(proc, Error):
+            print(proc.as_string())
+            return None
+
+        array.elements.pop()
+
+        return None
+
+    def check_types_match(self, a, b, name):
+        if not isinstance(a, type(b)):
+            if a.ID != b.ID:
+                return RuntimeError(f"Cannot assign value of {b.description} to array of type {a.description} {name}", Context(), Position())
+        return None
+
     def execute_length(self, exec_ctx):
-        arr_arg = exec_ctx.symbolTable.get_val("array").value
-        length = global_symbol_table.get_val(arr_arg).length
+        arr_arg = exec_ctx.symbolTable.get_val("array")
+        length = arr_arg.length
         return Integer(64, length)
 
     def copy(self):
@@ -221,7 +255,8 @@ BuiltinFunction.print = BuiltinFunction(0)
 BuiltinFunction.append = BuiltinFunction(1)
 BuiltinFunction.run = BuiltinFunction(2)
 BuiltinFunction.length = BuiltinFunction(3)
-
+BuiltinFunction.remove = BuiltinFunction(4)
+BuiltinFunction.removeLast = BuiltinFunction(5)
 
 class Interpreter:
     def check_for_error(self, node):
@@ -237,7 +272,7 @@ class Interpreter:
             return RuntimeError("Invalid syntax", context, Position())
 
         func_index = node.classType
-        # print(f"[{func_index}] - {node.as_string()}")
+        #print(f"[{func_index}] - {node.as_string()}")
         # ^^^^ Keep for debugging purposes ^^^^
         table = context.symbolTable.symbols
         result = None
@@ -287,6 +322,7 @@ class Interpreter:
 
     def visit_ListNode(self, node, context):
         elements = []
+
         for element_node in node.element_nodes:
             el = self.visit(element_node, context)
             elements.append(el)
@@ -296,7 +332,13 @@ class Interpreter:
             if element_node.classType == 15:
                 break
 
-        arr = Array(elements)
+        element_id = Void()
+        if len(elements) != 0:
+            type_dec = node.element_nodes[0].token.type_dec
+            if type_dec is not None:
+                element_id = node.element_nodes[0].token.type_dec.type_obj
+
+        arr = Array(elements, element_id)
         arr.set_context(context)
 
         return arr
@@ -431,7 +473,6 @@ class Interpreter:
 
         return flt
 
-
     def visit_IfNode(self, node, ctx):
         for case_ in node.cases:
             condition_value = self.visit(case_[0], ctx)
@@ -508,17 +549,32 @@ class Interpreter:
             p = node.token.pos
             return RuntimeError(f"{var_name} is not defined", ctx, p)
 
+    def check_element_types(self, array_type, elements, var_name, ctx, node):
+        for element in elements:
+            #element_value = element.token.type_dec.type_obj
+            type_check = self.check_types_match(array_type, element, var_name, ctx, node)
+            if type_check is not None:
+                return type_check
+        return "TYPES MATCH"
+
     def visit_VarAssignNode(self, node, ctx):
         var_name = node.token.value
         value = self.visit(node.value_node, ctx)
         if isinstance(value, Error):
             return value
 
-        value_type = value
-        variable_type = node.type[1]
-        types_match = self.check_types_match(value_type, variable_type, var_name, ctx, node)
+        variable_type = node.type.type_obj
+        types_match = self.check_types_match(value, variable_type, var_name, ctx, node)
         if types_match is not None:
             return types_match
+
+        if isinstance(value, Array):
+            #list_values = node.value_node.element_nodes
+            list_values = value.elements
+            array_type = node.type.element_type.type_obj
+            types_match = self.check_element_types(array_type, list_values, var_name, ctx, node)
+            if types_match != "TYPES MATCH":
+                return types_match
 
         ctx.symbolTable.set_val(var_name, value)
         return value
@@ -543,16 +599,9 @@ class Interpreter:
             func_arg_names.append(arg_name.value)
 
         for arg_type in a_type_tokens:
-            func_arg_types.append(arg_type.type_dec[1])
+            func_arg_types.append(arg_type.type_dec.type_obj)
 
-        method = Function(
-            func_name,
-            node.returnType,
-            body_node,
-            func_arg_names,
-            func_arg_types,
-            node.should_return_nil,
-        )
+        method = Function(func_name, node.returnType, body_node, func_arg_names, func_arg_types, node.should_return_nil)
         method.set_context(ctx)
 
         if func_name is not None:
@@ -585,16 +634,16 @@ class Interpreter:
 
         i = 0
         for arg_node in node.arg_nodes:
-            x = arg_node.token.value
-            new = Number(x) if arg_node.token.type_name == "INT" else string(x)
-            if not isinstance(func_value, BuiltinFunction):
-                types_match = self.check_types_match(
-                    new, func_value.arg_types[i], func_value.name, ctx, node
-                )
-                if types_match is not None:
-                    return types_match
+            new = arg_node.token.value
+            new = self.visit(arg_node, ctx)
+            if isinstance(new, Array):
+                new = Array(new.elements, new.element_id)
 
-            # BUG new is always a number type regardless of what is passed in? Probably going to have to change that
+            #if not isinstance(func_value, BuiltinFunction):
+            #    types_match = self.check_types_match(new, func_value.arg_types[i], func_value.name, ctx, node)
+            #    if types_match is not None:
+            #        return types_match
+
             args.append(new)
             i += 1
 
@@ -605,11 +654,9 @@ class Interpreter:
         # Check if return value and declared return value match
         if not isinstance(func_value, BuiltinFunction):
             _return = return_value
-            func_return = func_value.returnType.type_dec[1]
+            func_return = func_value.returnType.type_dec.type_obj
             if not isinstance(func_value, BuiltinFunction):
-                types_match = self.check_types_match(
-                    _return, func_return, func_value.name, ctx, node
-                )
+                types_match = self.check_types_match(_return, func_return, func_value.name, ctx, node)
                 if types_match is not None:
                     return types_match
         return return_value
@@ -618,7 +665,7 @@ class Interpreter:
         if not isinstance(a, type(b)):
             if a.ID != b.ID:
                 pos = node.token.pos
-                return RuntimeError(f"Cannot assign value of {type(a)} to type {type(b)} {name}", ctx, pos)
+                return RuntimeError(f"Cannot assign value of {a.description} to type {b.description} {name}", ctx, pos)
         return None
 
     def visit_GetArrNode(self, node, ctx):
@@ -649,6 +696,6 @@ class Interpreter:
         if isinstance(new_val, Error):
             return new_val
 
-        set_return = array_node.set(idx, new_val.value)
+        set_return = array_node.set(idx, new_val)
 
         return set_return

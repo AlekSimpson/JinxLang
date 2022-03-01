@@ -3,6 +3,7 @@ from Position import Position
 from tokens import *
 from Error import InvalidSyntaxError, IllegalCharError
 from Types import Float, Integer, string, Void, Array, Bool
+from TypeValue import TypeValue
 
 keywords = ["if", "else", "elif", "for", "in", "while", "method", "return", "break", "continue"]
 keywordTokens = [TT_IF, TT_ELSE, TT_ELIF, TT_FOR, TT_IN, TT_WHILE, TT_FUNC, TT_RETURN, TT_BREAK, TT_CONTINUE]
@@ -30,27 +31,26 @@ type_keywords = [
 ]
 
 type_values = [
-    (1, Integer(64)),
-    (1, Integer(64)),
-    (1, Integer(32)),
-    (1, Integer(16)),
-    (1, Integer(8)),
-    (2, Float(64)),
-    (2, Float(64)),
-    (2, Float(32)),
-    (2, Float(16)),
-    (2, Float(8)),
-    (11, string()),
-    (1, Bool(1)),
-    (404, Void()),
-    (12, Array()),
-    (1, Integer(64)),
-    (1, Integer(64)),
-    (1, Integer(32)),
-    (1, Integer(16)),
-    (1, Integer(8)),
+    TypeValue(1, Integer(64)),
+    TypeValue(1, Integer(64)),
+    TypeValue(1, Integer(32)),
+    TypeValue(1, Integer(16)),
+    TypeValue(1, Integer(8)),
+    TypeValue(2, Float(64)),
+    TypeValue(2, Float(64)),
+    TypeValue(2, Float(32)),
+    TypeValue(2, Float(16)),
+    TypeValue(2, Float(8)),
+    TypeValue(11, string()),
+    TypeValue(1, Bool(1)),
+    TypeValue(404, Void()),
+    TypeValue(12, Array()),
+    TypeValue(1, Integer(64)),
+    TypeValue(1, Integer(64)),
+    TypeValue(1, Integer(32)),
+    TypeValue(1, Integer(16)),
+    TypeValue(1, Integer(8)),
 ]
-
 
 class Lexer:
     def __init__(self, text, ln_pos=0, filename="repl"):
@@ -62,18 +62,33 @@ class Lexer:
         self.curr_idx = 0
         self.item_count = len(self.items)
         self.last_idx = 0
-        self.reached_end = False
         self.quoteCount = 0
+        self.parsingArray = False
 
     def advance(self):
         if self.curr_idx < len(self.items) - 1:
             self.curr_idx = self.curr_idx + 1
 
-    def isTypeRef(self, word):
-        for i in range(0, len(type_keywords)):
-            if type_keywords[i] == word:
-                return type_values[i]
-        return None
+    def get_array_type(self):
+        element_type = None
+        pos = Position(0, self.curr_idx, self.filename)
+
+        if self.items[self.curr_idx] != "{":
+            return InvalidSyntaxError("Expected opening curly brace in array declaration", pos)
+        self.advance()
+
+        element_type = self.parse_letters()
+        typeref_check = self.isTypeRef(element_type)
+        if typeref_check is None:
+            return InvalidSyntaxError(f"Array cannot be of unrecognized type '{element_type}'", pos)
+
+        element_type = typeref_check
+
+        if self.items[self.curr_idx] != "}":
+            return InvalidSyntaxError("Expected closing curly brace in array declaration", pos)
+        self.advance()
+
+        return element_type
 
     def peek_next(self):
         if self.curr_idx >= len(self.items):
@@ -81,16 +96,22 @@ class Lexer:
         return self.curr_idx + 1
 
     def isKeyword(self, word):
-        return_value = TT_ID
         for i in range(0, len(keywords)):
             if keywords[i] == word:
-                return_value = keywordTokens[i]
+                return keywordTokens[i]
+        return TT_ID
 
-        if self.curr_idx + 1 < len(self.items):
-            if self.isNum(self.curr_idx + 1):
-                #self.advance()
-                num = self.parse_numbers()
-                return_value = return_value + str(num)
+    def isTypeRef(self, word):
+        return_value = None
+        for i in range(0, len(type_keywords)):
+            if type_keywords[i] == word:
+                return_value = type_values[i]
+
+        if word == "Array":
+            arr_type = self.get_array_type()
+            if isinstance(arr_type, InvalidSyntaxError):
+                return arr_type
+            return_value.element_type = arr_type
 
         return return_value
 
@@ -113,28 +134,34 @@ class Lexer:
     def check_for_letters(self):
         if self.isLetter():
             pos = Position(0, self.curr_idx, self.filename)
-            full_word = ""
-            isLetter = True
-            while isLetter:
-                isLetter = self.isLetter()
-                if isLetter:
-                    full_word = full_word + self.items[self.curr_idx]
-                    if self.curr_idx == len(self.items) - 1:
-                        break
-                    self.advance()
-                    self.item_count = self.item_count - 1
+            full_word = self.parse_letters()
 
             tokenType = self.isKeyword(full_word)
             typeRef = self.isTypeRef(full_word)
+            if isinstance(typeRef, InvalidSyntaxError):
+                return typeRef
             tok = Token(MT_NONFAC, tokenType, full_word, pos, typeRef)
             self.tokens.append(tok)
         return None
+
+    def parse_letters(self):
+        full_word = ""
+        isLetter = True
+        while isLetter:
+            isLetter = self.isLetter()
+            if isLetter:
+                full_word = full_word + self.items[self.curr_idx]
+                if self.curr_idx == len(self.items) - 1:
+                    break
+                self.advance()
+                self.item_count = self.item_count - 1
+        return full_word
 
     def check_for_numbers(self):
         if self.isNum():
             pos = Position(0, self.curr_idx, self.filename)
             full_num = self.parse_numbers()
-            tok = Token(MT_FACTOR, TT_INT, int(full_num), pos)
+            tok = Token(MT_FACTOR, TT_INT, int(full_num), pos, TypeValue(1, Integer(64)))
             self.tokens.append(tok)
         return None
 
@@ -214,6 +241,10 @@ class Lexer:
 
         for i in range(0, len(symbols)):
             if self.items[self.curr_idx] == symbols[i]:
+                if self.items[self.curr_idx] == "[":
+                    self.parsingArray = True
+                elif self.items[self.curr_idx] == "]":
+                    self.parsingArray = False
                 nilTok = Token(MT_NONFAC, symbolsTokens[i], self.items[self.curr_idx], pos)
 
                 checkSub = self.check_subsequent()
@@ -270,6 +301,10 @@ class Lexer:
         while True:
             self.last_idx = self.curr_idx
             if self.items[self.curr_idx] == " ":
+                if self.parsingArray:
+                    pos = Position(0, self.curr_idx, self.filename)
+                    spaceTok = Token(MT_NONFAC, TT_SPACE, self.items[self.curr_idx], pos)
+                    self.tokens.append(spaceTok)
                 self.advance()
             if self.items[self.curr_idx] == "\t":
                 self.advance()
@@ -311,5 +346,4 @@ class Lexer:
                 if self.quoteCount % 2 != 0:
                     return (None, InvalidSyntaxError(self.items[self.curr_idx], pos))
                 break
-
         return (self.tokens, error)
