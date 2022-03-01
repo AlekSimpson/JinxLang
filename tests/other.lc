@@ -1,7 +1,0 @@
-method test(): String {
-  print("brrrrr")
-  return "NO"
-  print("test")
-}
-val:String = test()
-print(val)

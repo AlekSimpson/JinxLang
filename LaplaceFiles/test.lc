@@ -1,9 +1,0 @@
-a = []
-val = 2
-for i in 1:10 {
-  val = val * i
-  append(a, val)
-  print(val)
-}
-
-print(a)

@@ -132,6 +132,9 @@ PrintTestOne = Test('print("Hello World")', "Print Statements", "Hello World")
 PrintTestTwo = Test("print(404)", "Printing Numbers", 404)
 PrintTestThree = Test('new:String = "Hello World"', "Printing Variables", "Hello World")
 
+# Standard Library Tests
+stdlength = Test("array:Array{Int} = [1 2 3]; length(array)", "STD length() Function", 3)
+
 # Package Related Tests
 conditionalsPackage = [
     InlineConditionalOne,
@@ -185,6 +188,8 @@ methodsPackage = [
 
 arraysPackage = [ArrayDec, ArrayRef, ArrayApp, ArrayVarRef, ArrayTypeMisMatch]
 
+stdPackage = [stdlength]
+
 # Meta array to send to unit tests file
 setups = [
     [conditionalsPackage, "Conditionals"],
@@ -193,4 +198,5 @@ setups = [
     [loopsPackage, "Loops"],
     [methodsPackage, "Methods"],
     [arraysPackage, "Arrays"],
+    [stdPackage, "Standard Library"]
 ]

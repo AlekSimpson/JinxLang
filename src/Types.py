@@ -147,6 +147,9 @@ class Integer(Number):
         self.value = value
         self.ID = "NUMBER_TYPE"
 
+    def print_self(self):
+        return self.value
+
 class Bool(Number):
     def __init__(self, value):
         super().__init__(value)
@@ -159,6 +162,8 @@ class Bool(Number):
                 return "true"
             else:
                 return "false"
+    def print_self(self):
+        return self.value
 
 # class UInt(Integer):
 #    def __init__(self, value=None, pos=None, bitsize=64):
@@ -176,6 +181,9 @@ class Float(Number):
         self.bitsize = bitsize
         self.value = value
         self.ID = "FLOAT_TYPE"
+
+    def print_self(self):
+        return self.value
 
 class Array(Type):
     def __init__(self, elements=[], element_id=None):
