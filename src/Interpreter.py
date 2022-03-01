@@ -133,11 +133,11 @@ class BuiltinFunction(BaseFunction):
 
         method_arg_names = [
             ["value"], ["array", "value"], ["fn"],
-            ["array"]
+            ["array"], ["array", "index"], ["array"]
         ]
         methods = [
             self.execute_print, self.execute_append, self.execute_run,
-            self.execute_length
+            self.execute_length, self.execute_remove, self.execute_removeLast
         ]
 
         if self.name_id < 0 or self.name_id > len(methods) - 1:
@@ -181,6 +181,32 @@ class BuiltinFunction(BaseFunction):
             return type_check
 
         array.elements.append(new_value)
+        return None
+
+    def execute_remove(self, exec_ctx):
+        array = exec_ctx.symbolTable.get_val("array")
+        index = exec_ctx.symbolTable.get_val("index")
+        procs = self.process_parameters([array, index], exec_ctx)
+
+        for proc in procs:
+            if isinstance(proc, Error):
+                print(proc.as_string())
+                return None
+
+        array.elements.pop(index.value)
+
+        return None
+
+    def execute_removeLast(self, exec_ctx):
+        array = exec_ctx.symbolTable.get_val("array")
+        proc = self.process_parameter(array, exec_ctx)
+
+        if isinstance(proc, Error):
+            print(proc.as_string())
+            return None
+
+        array.elements.pop()
+
         return None
 
     def check_types_match(self, a, b, name):
@@ -229,7 +255,8 @@ BuiltinFunction.print = BuiltinFunction(0)
 BuiltinFunction.append = BuiltinFunction(1)
 BuiltinFunction.run = BuiltinFunction(2)
 BuiltinFunction.length = BuiltinFunction(3)
-
+BuiltinFunction.remove = BuiltinFunction(4)
+BuiltinFunction.removeLast = BuiltinFunction(5)
 
 class Interpreter:
     def check_for_error(self, node):

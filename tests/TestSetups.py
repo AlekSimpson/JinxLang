@@ -134,6 +134,8 @@ PrintTestThree = Test('new:String = "Hello World"', "Printing Variables", "Hello
 
 # Standard Library Tests
 stdlength = Test("array:Array{Int} = [1 2 3]; length(array)", "STD length() Function", 3)
+stdremove = Test("array:Array{Int} = [1 2 3]; remove(array, 2); length(array)", "STD remove() Function", 2)
+stdremovelast = Test("array:Array{Int} = [1 2 3]; removeLast(array); length(array)", "STD removeLast() Function", 2)
 
 # Package Related Tests
 conditionalsPackage = [
@@ -188,7 +190,7 @@ methodsPackage = [
 
 arraysPackage = [ArrayDec, ArrayRef, ArrayApp, ArrayVarRef, ArrayTypeMisMatch]
 
-stdPackage = [stdlength]
+stdPackage = [stdlength, stdremove, stdremovelast]
 
 # Meta array to send to unit tests file
 setups = [

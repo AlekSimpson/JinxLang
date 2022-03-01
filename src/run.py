@@ -14,6 +14,8 @@ global_symbol_table.set_val("print", BuiltinFunction.print)
 global_symbol_table.set_val("append", BuiltinFunction.append)
 global_symbol_table.set_val("run", BuiltinFunction.run)
 global_symbol_table.set_val("length", BuiltinFunction.length)
+global_symbol_table.set_val("remove", BuiltinFunction.remove)
+global_symbol_table.set_val("removeLast", BuiltinFunction.removeLast)
 
 def check_for_errors(payload):
     if isinstance(payload, Error):
