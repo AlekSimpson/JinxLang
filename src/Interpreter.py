@@ -5,7 +5,8 @@ from Context import Context
 from Types import *
 from Position import Position
 from GlobalTable import global_symbol_table
-
+from TypeKeywords import type_keywords, type_values
+from TypeValue import TypeValue
 
 class BaseFunction(Type):
     def __init__(self, name):
@@ -14,9 +15,6 @@ class BaseFunction(Type):
 
     def generate_new_context(self):
         new_context = Context(self.name, self.context, self.pos)
-
-        # table = SymbolTable()
-        # if new_context.parent.symbolTable != None: table = new_context.parent.symbolTable
         new_context.symbolTable = SymbolTable()
 
         return new_context
@@ -210,9 +208,9 @@ class BuiltinFunction(BaseFunction):
         return None
 
     def check_types_match(self, a, b, name):
-        if not isinstance(a, type(b)):
-            if a.ID != b.ID:
-                return RuntimeError(f"Cannot assign value of {b.description} to array of type {a.description} {name}", Context(), Position())
+        #if not isinstance(a, type(b)):
+        if a.ID != b.ID:
+            return RuntimeError(f"Cannot assign value of {b.description} to array of type {a.description} {name}", Context(), Position())
         return None
 
     def execute_length(self, exec_ctx):
@@ -278,24 +276,26 @@ class Interpreter:
         result = None
 
         options = [
-            self.visit_binop,
-            self.visit_number,
-            "VariableNode",
-            self.visit_unary,
-            "VarAccessNode",
-            self.visit_VarAssignNode,
-            self.visit_IfNode,
-            self.visit_ForNode,
-            self.visit_WhileNode,
-            self.visit_FuncDefNode,
-            self.visit_CallNode,
-            self.visit_StringNode,
-            self.visit_ListNode,
-            self.visit_SetArrNode,
-            self.visit_GetArrNode,
-            self.visit_ReturnNode,
-            self.visit_VarUpdateNode,
-            self.visit_float,
+            self.visit_binop,          # 0
+            self.visit_number,         # 1
+            "VariableNode",            # 2
+            self.visit_unary,          # 3
+            "VarAccessNode",           # 4
+            self.visit_VarAssignNode,  # 5
+            self.visit_IfNode,         # 6
+            self.visit_ForNode,        # 7
+            self.visit_WhileNode,      # 8
+            self.visit_FuncDefNode,    # 9
+            self.visit_CallNode,       # 10
+            self.visit_StringNode,     # 11
+            self.visit_ListNode,       # 12
+            self.visit_SetArrNode,     # 13
+            self.visit_GetArrNode,     # 14
+            self.visit_ReturnNode,     # 15
+            self.visit_VarUpdateNode,  # 16
+            self.visit_float,          # 17
+            self.visit_ObjectDefNode,  # 18
+            self.visit_DotNode,        # 19
         ]
 
         if func_index == 4:
@@ -612,6 +612,48 @@ class Interpreter:
 
         return method
 
+    def visit_ObjectDefNode(self, node, ctx):
+        object_name = node.name.value
+        body_node = node.body_node
+        obj_atrr_names = []
+        obj_atrr_types = []
+
+        o_name_tokens = []
+        if node.attribute_name_tokens is not None:
+            o_name_tokens = node.attribute_name_tokens
+
+        o_type_tokens = []
+        if node.attribute_type_tokens is not None:
+            o_type_tokens = node.attribute_type_tokens
+
+        # Populate atrribute arrays with attr names and types
+        for attr_name in o_name_tokens:
+            obj_atrr_names.append(attr_name.value)
+
+        for attr_type in o_type_tokens:
+            obj_atrr_types.append(attr_type.type_dec.type_obj)
+
+        object = Object(object_name, body_node, obj_atrr_names, obj_atrr_types)
+        ctx.symbolTable.set_val(object_name, object)
+        type_keywords.append(object_name)
+        type_values.append(TypeValue(1, object))
+
+        #XXX: May or may not have to check for if the object has already been declared here
+
+        return object
+
+    def visit_DotNode(self, node, ctx):
+        reference_chain = node.lhs
+        root_ref = None
+        for ref in reference_chain:
+            c = ctx if root_ref is None else root_ref.context
+            root_ref = self.visit(ref, c)
+            if isinstance(root_ref, Error):
+                return root_ref
+
+        final_node = self.visit(node.rhs, root_ref.context)
+        return final_node
+
     def visit_ReturnNode(self, node, ctx):
         value = Number.nil
         if node.node_to_return is not None:
@@ -647,12 +689,16 @@ class Interpreter:
             args.append(new)
             i += 1
 
-        return_value = val_cal.execute(args)
+        return_value = None
+        if isinstance(val_cal, Object):
+            return_value = val_cal.initialize(args)
+        else:
+            return_value = val_cal.execute(args)
         if isinstance(return_value, Error):
             return return_value
 
         # Check if return value and declared return value match
-        if not isinstance(func_value, BuiltinFunction):
+        if not isinstance(func_value, BuiltinFunction) and not isinstance(func_value, Object):
             _return = return_value
             func_return = func_value.returnType.type_dec.type_obj
             if not isinstance(func_value, BuiltinFunction):
@@ -662,10 +708,10 @@ class Interpreter:
         return return_value
 
     def check_types_match(self, a, b, name, ctx, node):
-        if not isinstance(a, type(b)):
-            if a.ID != b.ID:
-                pos = node.token.pos
-                return RuntimeError(f"Cannot assign value of {a.description} to type {b.description} {name}", ctx, pos)
+        #if not isinstance(a, type(b)):
+        if a.ID != b.ID:
+            pos = node.token.pos
+            return RuntimeError(f"Cannot assign value of {a.description} to type {b.description} {name}", ctx, pos)
         return None
 
     def visit_GetArrNode(self, node, ctx):

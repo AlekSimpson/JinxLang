@@ -94,9 +94,9 @@ teamScore: Int = 0
 
 for i in 0:length(playerScores) {
 	if playerScore[i] > 50 {
-		teamScore += 3 // IMPORTANT: the '+=' operator is not appart of the language yet, but it will be.
+		teamScore = teamScore + 3 // IMPORTANT: the '+=' operator is not appart of the language yet, but it will be.
 	} else {
-		teamScore += 1
+		teamScore = teamScore + 1
 	}
 }
 

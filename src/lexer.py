@@ -1,56 +1,13 @@
-from tokens import Token
+from tokens import Token, ObjectRefTok
 from Position import Position
 from tokens import *
 from Error import InvalidSyntaxError, IllegalCharError
 from Types import Float, Integer, string, Void, Array, Bool
 from TypeValue import TypeValue
+from TypeKeywords import type_keywords, type_values
 
-keywords = ["if", "else", "elif", "for", "in", "while", "method", "return", "break", "continue"]
-keywordTokens = [TT_IF, TT_ELSE, TT_ELIF, TT_FOR, TT_IN, TT_WHILE, TT_FUNC, TT_RETURN, TT_BREAK, TT_CONTINUE]
-
-type_keywords = [
-    "Int",
-    "Int64",
-    "Int32",
-    "Int16",
-    "Int8",
-    "Float",
-    "Float64",
-    "Float32",
-    "Float16",
-    "Float8",
-    "String",
-    "Bool",
-    "Void",
-    "Array",
-    "UInt",
-    "UInt64",
-    "UInt32",
-    "UInt16",
-    "UInt8",
-]
-
-type_values = [
-    TypeValue(1, Integer(64)),
-    TypeValue(1, Integer(64)),
-    TypeValue(1, Integer(32)),
-    TypeValue(1, Integer(16)),
-    TypeValue(1, Integer(8)),
-    TypeValue(2, Float(64)),
-    TypeValue(2, Float(64)),
-    TypeValue(2, Float(32)),
-    TypeValue(2, Float(16)),
-    TypeValue(2, Float(8)),
-    TypeValue(11, string()),
-    TypeValue(1, Bool(1)),
-    TypeValue(404, Void()),
-    TypeValue(12, Array()),
-    TypeValue(1, Integer(64)),
-    TypeValue(1, Integer(64)),
-    TypeValue(1, Integer(32)),
-    TypeValue(1, Integer(16)),
-    TypeValue(1, Integer(8)),
-]
+keywords = ["if", "else", "elif", "for", "in", "while", "method", "return", "break", "continue", "object"]
+keywordTokens = [TT_IF, TT_ELSE, TT_ELIF, TT_FOR, TT_IN, TT_WHILE, TT_FUNC, TT_RETURN, TT_BREAK, TT_CONTINUE, TT_STRUCT]
 
 class Lexer:
     def __init__(self, text, ln_pos=0, filename="repl"):
@@ -180,14 +137,31 @@ class Lexer:
 
     def check_for_floats(self):
         if self.items[self.curr_idx] == ".":
+            lhs = None
             if self.tokens[-1].type_name == "INT":
-                num = str(self.tokens[-1].value)
+                lhs = str(self.tokens[-1].value)
                 self.tokens.pop()
+            elif self.tokens[-1].type_name == TT_ID:
+                lhs = [self.tokens[-1]]
+                self.tokens.pop()
+            elif self.tokens[-1].type_name == TT_DOT:
+                prev_lhs = self.tokens[-1].lhs
+                rhs = self.tokens[-1].rhs
+                lhs = lhs.extend(prev_lhs)
+                lhs.append(rhs)
+
+                self.tokens.pop()
+
             self.advance()
             if self.isNum():
                 decimal_val = str(self.parse_numbers())
-            full_float = float(num + "." + decimal_val)
-            tok = Token(MT_FACTOR, TT_FLOAT, full_float)
+                full_float = float(lhs + "." + decimal_val)
+                tok = Token(MT_FACTOR, TT_FLOAT, full_float)
+            elif self.isLetter():
+                pos = Position(0, self.curr_idx, self.filename)
+                letters = str(self.parse_letters())
+                letter_tok = Token(MT_NONFAC, TT_ID, letters, pos)
+                tok = ObjectRefTok(lhs, letter_tok)
             self.tokens.append(tok)
         return None
 

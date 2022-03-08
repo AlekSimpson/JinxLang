@@ -1,5 +1,7 @@
 from Context import Context
 from Error import RuntimeError
+from Position import Position
+from SymbolTable import SymbolTable
 
 # Type (Supertype for all)
 # Number
@@ -14,7 +16,6 @@ from Error import RuntimeError
 #      Float64, 32, 16
 # String
 
-
 class Type:
     def __init__(self, value=None, pos=None, description="AnyType"):
         self.value = value
@@ -27,6 +28,52 @@ class Type:
 
     def print_self(self):
         return self.value
+
+class Object(Type):
+    def __init__(self, name, body_node, attr_names, attr_types):
+        self.name = name
+        self.body_node = body_node
+        self.attr_names = attr_names
+        self.context = Context()
+        self.attr_types = attr_types
+        self.ID = self.name + "_TYPE"
+        self.description = self.name
+
+    def generate_new_context(self):
+        # Those last two values will probably have to be filled in with
+        # real values some day
+        new_ctx = Context(self.name, None, Position())
+        new_ctx.symbolTable = SymbolTable()
+        self.context = new_ctx
+
+    def check_types_match(self, a, b):
+        #if not isinstance(a, type(b)):
+        if a.ID != b.ID:
+            return RuntimeError("Cannot assign type {a.description} to parameter type {b.description}, in object {self.name}, initialization", Position(), self.context)
+        return None
+
+    def initialize(self, values):
+        self.generate_new_context()
+        # check if length of values is same as attr_names
+        if len(values) > len(self.attr_names):
+            return RuntimeError("Given amount of parameters exceeds object {self.name}'s initialization parameters", Position(), self.context)
+        elif len(values) < len(self.attr_names):
+            return RuntimeError(f"Given amount of parameters does not meet object {self.name}'s amount of initialization parameters", Position(), self.context)
+
+        for i in range(0, len(values)):
+            # check type is same as first attr
+            does_match = self.check_types_match(values[i], self.attr_types[i])
+            if does_match is not None:
+                return does_match
+            # populate local symbol table with value
+            self.context.symbolTable.set_val(self.attr_names[i], values[i])
+
+        # Need to initialization any functions or variables inside of the body node
+        return self
+
+    def print_self(self):
+        return f"Object: {self.name}"
+
 
 class Void:
     def __init__(self, pos=None):
