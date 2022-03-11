@@ -2,7 +2,7 @@ from tokens import Token, ObjectRefTok
 from Position import Position
 from tokens import *
 from Error import InvalidSyntaxError, IllegalCharError
-from Types import Float, Integer, string, Void, Array, Bool
+from Types import Float, Integer, string, Void, Array, Bool, Object
 from TypeValue import TypeValue
 from TypeKeywords import type_keywords, type_values
 
@@ -21,6 +21,7 @@ class Lexer:
         self.last_idx = 0
         self.quoteCount = 0
         self.parsingArray = False
+        self.isNewType = False
 
     def advance(self):
         if self.curr_idx < len(self.items) - 1:
@@ -99,6 +100,13 @@ class Lexer:
                 return typeRef
             tok = Token(MT_NONFAC, tokenType, full_word, pos, typeRef)
             self.tokens.append(tok)
+            if full_word == "object":
+                self.isNewType = True
+            elif self.isNewType:
+                new_obj = Object(full_word)
+                type_keywords.append(full_word)
+                type_values.append(TypeValue(1, new_obj))
+                self.isNewType = False
         return None
 
     def parse_letters(self):
@@ -146,8 +154,10 @@ class Lexer:
                 self.tokens.pop()
             elif self.tokens[-1].type_name == TT_DOT:
                 prev_lhs = self.tokens[-1].lhs
+                #print(f"PREV TOK: {self.tokens[-1].lhs}")
                 rhs = self.tokens[-1].rhs
-                lhs = lhs.extend(prev_lhs)
+                lhs = []
+                lhs.extend(prev_lhs)
                 lhs.append(rhs)
 
                 self.tokens.pop()

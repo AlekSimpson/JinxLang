@@ -248,6 +248,7 @@ class Parser:
                     return self.throw_error(f"Expected ':' in argument type declaration in object contructor {name_token.value}")
                 self.advance()
 
+                #print(f"CURR TOKEN IS: {self.curr_token.value}")
                 if self.curr_token.type_dec is None:
                     return self.throw_error(f"Expected argument {attribute_name_tokens[-1].value} to have a type declaration in object constructor {name_token.value}")
 

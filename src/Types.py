@@ -30,13 +30,14 @@ class Type:
         return self.value
 
 class Object(Type):
-    def __init__(self, name, body_node, attr_names, attr_types):
+    def __init__(self, name, body_node=None, attr_names=None, attr_types=None):
         self.name = name
         self.body_node = body_node
         self.attr_names = attr_names
         self.context = Context()
         self.attr_types = attr_types
         self.ID = self.name + "_TYPE"
+        self.value = self.name
         self.description = self.name
 
     def generate_new_context(self):

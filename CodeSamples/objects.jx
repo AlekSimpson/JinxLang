@@ -1,0 +1,11 @@
+object Person(name: String)
+object Student(person: Person)
+#object Test(id: Int)
+
+#id: Int = 2
+#test: Test = Test(id)
+#test.id
+
+p: Person =  Person("Bill")
+student: Student = Student(p)
+print(student.person.name)

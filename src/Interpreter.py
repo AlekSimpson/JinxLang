@@ -104,6 +104,9 @@ class BuiltinFunction(BaseFunction):
     # checks for variables and makes sure passed in arguments are valid
     def process_parameter(self, parameter, exec_ctx):
         return_value = parameter
+
+        #print(f"VALUE: {parameter.value}")
+
         if parameter.value in global_symbol_table.symbols:
             val = global_symbol_table.get_val(parameter.value)
             return val.print_self()
@@ -635,8 +638,8 @@ class Interpreter:
 
         object = Object(object_name, body_node, obj_atrr_names, obj_atrr_types)
         ctx.symbolTable.set_val(object_name, object)
-        type_keywords.append(object_name)
-        type_values.append(TypeValue(1, object))
+        #type_keywords.append(object_name)
+        #type_values.append(TypeValue(1, object))
 
         #XXX: May or may not have to check for if the object has already been declared here
 
