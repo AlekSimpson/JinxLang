@@ -2,7 +2,8 @@ from tokens import Token, ObjectRefTok
 from Position import Position
 from tokens import *
 from Error import InvalidSyntaxError, IllegalCharError
-from Types import Float, Integer, string, Void, Array, Bool, Object
+from Types import Float, Integer, string, Void, Array, Bool
+from Interpreter import Object
 from TypeValue import TypeValue
 from TypeKeywords import type_keywords, type_values
 
@@ -154,7 +155,6 @@ class Lexer:
                 self.tokens.pop()
             elif self.tokens[-1].type_name == TT_DOT:
                 prev_lhs = self.tokens[-1].lhs
-                #print(f"PREV TOK: {self.tokens[-1].lhs}")
                 rhs = self.tokens[-1].rhs
                 lhs = []
                 lhs.extend(prev_lhs)

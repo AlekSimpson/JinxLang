@@ -8,6 +8,54 @@ from GlobalTable import global_symbol_table
 from TypeKeywords import type_keywords, type_values
 from TypeValue import TypeValue
 
+class Object(Type):
+    def __init__(self, name, body_node=None, attr_names=None, attr_types=None):
+        self.name = name
+        self.body_node = body_node
+        self.attr_names = attr_names
+        self.context = Context()
+        self.attr_types = attr_types
+        self.ID = self.name + "_TYPE"
+        self.value = self.name
+        self.description = self.name
+
+    def generate_new_context(self):
+        new_ctx = Context(self.name, None, Position())
+        new_ctx.symbolTable = SymbolTable()
+        self.context = new_ctx
+
+    def check_types_match(self, a, b):
+        if a.ID != b.ID:
+            return RuntimeError("Cannot assign type {a.description} to parameter type {b.description}, in object {self.name}, initialization", Position(), self.context)
+        return None
+
+    def initialize(self, values):
+        self.generate_new_context()
+        # check if length of values is same as attr_names
+        if len(values) > len(self.attr_names):
+            return RuntimeError("Given amount of parameters exceeds object {self.name}'s initialization parameters", Position(), self.context)
+        elif len(values) < len(self.attr_names):
+            return RuntimeError(f"Given amount of parameters does not meet object {self.name}'s amount of initialization parameters", Position(), self.context)
+
+        for i in range(0, len(values)):
+            # check type is same as first attr
+            does_match = self.check_types_match(values[i], self.attr_types[i])
+            if does_match is not None:
+                return does_match
+            # populate local symbol table with value
+            self.context.symbolTable.set_val(self.attr_names[i], values[i])
+
+        # Need to initialization any functions or variables inside of the body node
+        interpreter = Interpreter()
+        body = interpreter.visit(self.body_node, self.context)
+        if isinstance(body, Error):
+            return body
+
+        return self
+
+    def print_self(self):
+        return f"Object: {self.name}"
+
 class BaseFunction(Type):
     def __init__(self, name):
         super().__init__()
@@ -211,7 +259,6 @@ class BuiltinFunction(BaseFunction):
         return None
 
     def check_types_match(self, a, b, name):
-        #if not isinstance(a, type(b)):
         if a.ID != b.ID:
             return RuntimeError(f"Cannot assign value of {b.description} to array of type {a.description} {name}", Context(), Position())
         return None
@@ -554,7 +601,6 @@ class Interpreter:
 
     def check_element_types(self, array_type, elements, var_name, ctx, node):
         for element in elements:
-            #element_value = element.token.type_dec.type_obj
             type_check = self.check_types_match(array_type, element, var_name, ctx, node)
             if type_check is not None:
                 return type_check
@@ -572,7 +618,6 @@ class Interpreter:
             return types_match
 
         if isinstance(value, Array):
-            #list_values = node.value_node.element_nodes
             list_values = value.elements
             array_type = node.type.element_type.type_obj
             types_match = self.check_element_types(array_type, list_values, var_name, ctx, node)
