@@ -1,11 +1,8 @@
 object Person(name: String)
-object Student(person: Person)
-#object Test(id: Int)
 
-#id: Int = 2
-#test: Test = Test(id)
-#test.id
+object Student(person: Person) {
+    test: Int = 45
+}
 
-p: Person =  Person("Bill")
-student: Student = Student(p)
-print(student.person.name)
+student: Student = Student(Person("Name"))
+print(student.test)
