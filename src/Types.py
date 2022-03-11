@@ -1,5 +1,7 @@
 from Context import Context
 from Error import RuntimeError
+from Position import Position
+from SymbolTable import SymbolTable
 
 # Type (Supertype for all)
 # Number
@@ -13,7 +15,6 @@ from Error import RuntimeError
 #   AbstractFloat
 #      Float64, 32, 16
 # String
-
 
 class Type:
     def __init__(self, value=None, pos=None, description="AnyType"):

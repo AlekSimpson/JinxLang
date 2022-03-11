@@ -50,5 +50,4 @@ def run(text, fn):
     return result
 
 # TODO:
-# Make it so that spaces seperate array elements, not commas
 # Add for in loops (ex: for token in tokens) type thing

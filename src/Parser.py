@@ -156,6 +156,33 @@ class Parser:
             if isinstance(func_def, Error):
                 return self.throw_error(func_def.details)
             return func_def
+        elif tok.type_name == "STRUCT":
+            struct_def = self.struct_def()
+            if isinstance(struct_def, Error):
+                return self.throw_error(struct_def.details)
+            return struct_def
+        elif tok.type_name == "DOT":
+            dot_expr = self.dot_expr()
+            if isinstance(dot_expr, Error):
+                return self.throw_error(dot_expr.details)
+            return dot_expr
+
+    def dot_expr(self):
+        lhs = self.curr_token.lhs
+        lhs_nodes = []
+        for tok in lhs:
+            if tok.type_name != tk.TT_ID:
+                return self.throw_error("Expected identifier in dot expression")
+            new = VarAccessNode(tok)
+            lhs_nodes.append(new)
+
+        tok = self.curr_token.rhs
+        if tok.type_name != tk.TT_ID:
+            return self.throw_error("Expected identifier in dot expression")
+        rhs = VarAccessNode(tok)
+
+        self.advance()
+        return DotNode(lhs_nodes, rhs, self.curr_token)
 
     def list_expr(self):
         element_nodes = []
@@ -174,7 +201,7 @@ class Parser:
 
             element_nodes.append(expr)
 
-            while self.curr_token.type_name == tk.TT_SPACE: # TT_COMMA
+            while self.curr_token.type_name == tk.TT_SPACE:
                 self.advance()
 
                 expr = self.expr()
@@ -187,6 +214,69 @@ class Parser:
 
             self.advance()
         return ListNode(element_nodes)
+
+    def struct_def(self):
+        if not(self.curr_token.type_name == "STRUCT"):
+            return self.throw_error("Expected 'object' keyword in object declaration")
+
+        self.advance()
+
+        if not self.curr_token.type_name == tk.TT_ID:
+            return self.throw_error("Object requires name")
+
+        name_token = self.curr_token
+        self.advance()
+
+        if not self.curr_token.type_name == tk.TT_LPAREN:
+            return self.throw_error("Object requires constructor")
+
+        self.advance()
+
+        attribute_name_tokens = []
+        attribute_type_tokens = []
+
+        if self.curr_token.type_name == tk.TT_ID:
+            look_for_attr = True
+            while look_for_attr:
+                if self.curr_token.type_name != tk.TT_ID:
+                    return self.throw_error("Expected value after comma in object constructor")
+
+                attribute_name_tokens.append(self.curr_token)
+                self.advance()
+
+                if self.curr_token.type_name != tk.TT_COLON:
+                    return self.throw_error(f"Expected ':' in argument type declaration in object contructor {name_token.value}")
+                self.advance()
+
+                if self.curr_token.type_dec is None:
+                    return self.throw_error(f"Expected argument {attribute_name_tokens[-1].value} to have a type declaration in object constructor {name_token.value}")
+
+                attribute_type_tokens.append(self.curr_token)
+                self.advance()
+
+                look_for_attr = self.curr_token.type_name == tk.TT_COMMA
+                if not look_for_attr:
+                    break
+                self.advance()
+
+            if not (self.curr_token.type_name == tk.TT_RPAREN):
+                return self.throw_error(f"Expected closing ')' in object constructor {name_token.value}")
+
+            self.advance()
+
+            body = None
+            if self.curr_token.type_name == "LCURLY":
+                self.advance()
+
+                body = self.statements()
+                if isinstance(body, Error):
+                    return self.throw_error(body.details)
+
+                if self.curr_token.type_name != "RCURLY":
+                    return self.throw_error(f"Expected closing curly bracket in object definition {name_token.value}")
+                self.advance()
+
+            return ObjectDefNode(name_token, body, attribute_name_tokens, attribute_type_tokens)
 
     def func_def(self):
         if not (self.curr_token.type_name == "FUNC"):

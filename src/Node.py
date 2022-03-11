@@ -80,7 +80,6 @@ class ForNode:
     def as_string(self):
         return f"{self.description}: {self.token.as_string()}"
 
-
 class WhileNode:
     def __init__(self, conditionNode, bodyNode, should_return_nil):
         self.conditionNode = conditionNode
@@ -119,6 +118,42 @@ class FuncDefNode:
 
     def as_string(self):
         return f"{self.description}: {self.token.as_string()}"
+
+class ObjectDefNode:
+    def __init__(self, name, body_node, attribute_name_tokens=None, attribute_type_tokens=None, context=None, token=None):
+        self.token = Token()
+        self.name = name
+        self.attribute_name_tokens = attribute_name_tokens
+        self.attribute_type_tokens = attribute_type_tokens
+        self.body_node = body_node
+        self.context = context
+        self.description = "ObjectDefNode"
+        self.classType = 18
+
+    def as_string(self):
+        return f"{self.description}: {self.name}"
+
+class DotNode:
+    def __init__(self, root_array, rhs, token=None):
+        self.token = token
+        self.rhs = rhs
+        self.lhs = root_array
+        self.description = "DotNode"
+        self.classType = 19
+
+    def as_string(self):
+        return f"{self.description}: {self.rhs.as_string()}"
+
+#class ObjectCallNode:
+#    def __init__(self, node_to_call, arg_nodes, token=None):
+#        self.token = token
+#        self.node_to_call = node_to_call
+#        self.arg_nodes = arg_nodes
+#        self.description = "ObjectCallNode"
+#        self.classType = 19
+#
+#    def as_string(self):
+#        return f"{self.description}: {self.token.as_string()}"
 
 
 class CallNode:

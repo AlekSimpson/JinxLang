@@ -1,0 +1,8 @@
+object Person(name: String)
+
+object Student(person: Person) {
+    test: Int = 45
+}
+
+student: Student = Student(Person("Name"))
+print(student.test)

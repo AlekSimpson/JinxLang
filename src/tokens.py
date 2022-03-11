@@ -46,9 +46,11 @@ TT_BREAK = "BREAK"
 TT_CONTINUE = "CONTINUE"
 
 TT_FUNC = "FUNC"
+TT_STRUCT = "STRUCT"
 TT_COMMA = "COMMA"
 TT_ARROW = "ARROW"
 TT_SPACE = "SPACE"
+TT_DOT = "DOT"
 
 class Token:
     def __init__(self, type="", type_name="", value="", pos=None, type_dec=None):
@@ -60,3 +62,9 @@ class Token:
 
     def as_string(self):
         return (f'{self.type_name} : {self.value}')
+
+class ObjectRefTok(Token):
+    def __init__(self, lhs, rhs, pos=None):
+        super().__init__(MT_NONFAC, TT_DOT, ".", pos, None)
+        self.lhs = lhs
+        self.rhs = rhs

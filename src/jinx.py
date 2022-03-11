@@ -6,7 +6,7 @@ from Error import *
 
 if len(sys.argv) == 1:
     while True:
-        textInput = input("laplace> ")
+        textInput = input("jinx> ")
         if textInput == "":
             continue
         if str(textInput) == "stop":
