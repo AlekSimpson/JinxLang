@@ -317,7 +317,7 @@ class Interpreter:
         if err_check is not None:
             return err_check
         if node is None:
-            return RuntimeError("Invalid syntax", context, Position())
+            return
 
         func_index = node.classType
         #print(f"[{func_index}] - {node.as_string()}")

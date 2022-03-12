@@ -12,7 +12,8 @@
 * ~Floats literally have been broken this entire time, needs fix~
 * ~Add tests for testing Int64, Int32, etc values~
 * ~Add unit tests for unary operations~
-* Add structures 
+* ~Add structures~ 
+* Add inheritance
 * Write compiler
 
 *continue writing README and Docs*

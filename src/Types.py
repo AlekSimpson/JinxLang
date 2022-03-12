@@ -37,7 +37,6 @@ class Void:
     def print_self(self):
         return "Void"
 
-
 class Real(Type):
     def __init__(self, value=None, pos=None):
         super().__init__(value, pos, "Real")
