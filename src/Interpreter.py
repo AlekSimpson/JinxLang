@@ -21,7 +21,7 @@ class Object(Type):
 
     def generate_new_context(self):
         new_ctx = Context(self.name, None, Position())
-        new_ctx.symbolTable = SymbolTable()
+        new_ctx.symbolTable = SymbolTable({})
         self.context = new_ctx
 
     def check_types_match(self, a, b):
@@ -51,7 +51,18 @@ class Object(Type):
         if isinstance(body, Error):
             return body
 
-        return self
+        return TestObject(self.name, self.context)
+
+    def print_self(self):
+        return f"Object: {self.name}"
+
+class TestObject:
+    def __init__(self, name, obj_context):
+        self.name = name
+        self.context = obj_context
+        self.ID  = self.name + "_TYPE"
+        self.description = self.name
+        self.value = self.name
 
     def print_self(self):
         return f"Object: {self.name}"
@@ -683,8 +694,6 @@ class Interpreter:
 
         object = Object(object_name, body_node, obj_atrr_names, obj_atrr_types)
         ctx.symbolTable.set_val(object_name, object)
-        #type_keywords.append(object_name)
-        #type_values.append(TypeValue(1, object))
 
         #XXX: May or may not have to check for if the object has already been declared here
 
@@ -728,11 +737,6 @@ class Interpreter:
             new = self.visit(arg_node, ctx)
             if isinstance(new, Array):
                 new = Array(new.elements, new.element_id)
-
-            #if not isinstance(func_value, BuiltinFunction):
-            #    types_match = self.check_types_match(new, func_value.arg_types[i], func_value.name, ctx, node)
-            #    if types_match is not None:
-            #        return types_match
 
             args.append(new)
             i += 1
