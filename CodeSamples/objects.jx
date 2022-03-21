@@ -5,4 +5,4 @@ object Student(person: Person) {
 }
 
 student: Student = Student(Person("Name"))
-print(student.test)
+print(student.person.name)
