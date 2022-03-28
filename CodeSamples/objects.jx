@@ -1,8 +1,11 @@
-object Person(name: String)
+object Person(name: String) {
+    age: Int = 18
+}
 
 object Student(person: Person) {
     test: Int = 45
 }
 
-student: Student = Student(Person("Name"))
+student: Student = Student(Person("Bob"))
 print(student.person.name)
+print(student.person.age)

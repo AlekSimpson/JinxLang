@@ -13,8 +13,12 @@
 * ~Add tests for testing Int64, Int32, etc values~
 * ~Add unit tests for unary operations~
 * ~Add structures~ 
-* Add inheritance
+* ~Add inheritance~ nvm inheritance is cringe
 * Write compiler
+* System library (to get inputs, outputs, etc and also some sort of bash interface)
+
+## Known bugs
+* When you create an array of custom objects and then retrieve one by index, you cannot get any of the objects parameters, you first have to store that in a variable and then do the retrieval
 
 *continue writing README and Docs*
 

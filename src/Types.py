@@ -147,6 +147,35 @@ class Integer(Number):
         self.value = value
         self.ID = "NUMBER_TYPE"
 
+    def added(self, other):
+        new_num = Integer(64, self.value + other.value)
+        new_num.set_context(other.context)
+        return new_num
+
+    def subtracted(self, other):
+        new_num = Integer(64, self.value - other.value)
+        new_num.set_context(other.context)
+        return new_num
+
+    def multiplied(self, other):
+        new_num = Integer(64, self.value * other.value)
+        new_num.set_context(other.context)
+        return new_num
+
+    def divided(self, other):
+        if other.value == 0:
+            pos = other.pos
+            return RuntimeError("Cannot divide by zero", self.context, pos)
+
+        new_num = Integer(64, int(self.value / other.value))
+        new_num.set_context(other.context)
+        return new_num
+
+    def power(self, other):
+        new_num = Integer(64, pow(self.value, other.value))
+        new_num.set_context(other.context)
+        return new_num
+
     def print_self(self):
         return self.value
 
@@ -165,15 +194,6 @@ class Bool(Number):
     def print_self(self):
         return self.value
 
-# class UInt(Integer):
-#    def __init__(self, value=None, pos=None, bitsize=64):
-#        super().__init__(value, pos, bitsize)
-
-# class Int(Integer):
-#    def __init__(self, value=None, pos=None, bitsize=64):
-#        super().__init__(value, pos, bitsize)
-
-
 class Float(Number):
     def __init__(self, bitsize, value=None, pos=None):
         super().__init__(value, pos)
@@ -181,6 +201,35 @@ class Float(Number):
         self.bitsize = bitsize
         self.value = value
         self.ID = "FLOAT_TYPE"
+
+    def added(self, other):
+        new_num = Float(64, self.value + other.value)
+        new_num.set_context(other.context)
+        return new_num
+
+    def subtracted(self, other):
+        new_num = Float(64, self.value - other.value)
+        new_num.set_context(other.context)
+        return new_num
+
+    def multiplied(self, other):
+        new_num = Float(64, self.value * other.value)
+        new_num.set_context(other.context)
+        return new_num
+
+    def divided(self, other):
+        if other.value == 0:
+            pos = other.pos
+            return RuntimeError("Cannot divide by zero", self.context, pos)
+
+        new_num = Float(64, self.value / other.value)
+        new_num.set_context(other.context)
+        return new_num
+
+    def power(self, other):
+        new_num = Float(64, pow(self.value, other.value))
+        new_num.set_context(other.context)
+        return new_num
 
     def print_self(self):
         return self.value

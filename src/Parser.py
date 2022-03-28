@@ -81,7 +81,6 @@ class Parser:
             if self.curr_token.type_name == tk.TT_EQ:
                 self.advance()
 
-                # BUG: Probably should make it so that this is not the case, arrays should be able to hold any theoretical value
                 if (not self.curr_token.type_name != tk.TT_INT and not self.curr_token.type_name != tk.TT_STRING):
                     return self.throw_error("Array can only hold value types of int or string")
 
@@ -727,7 +726,6 @@ class Parser:
             if isinstance(node, Error):
                 return self.throw_error(node.details)
 
-            # BUG: Is this why unary ops don't work??
             return UnaryOpNode(op_tok, node)
 
         node = self.bin_op(self.arith_expr, [tk.TT_EE, tk.TT_NE, tk.TT_LT, tk.TT_GT, tk.TT_LOE, tk.TT_GOE])

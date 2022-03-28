@@ -426,14 +426,14 @@ class Interpreter:
         table = ctx.symbolTable
 
         while i < end_value:
-            table.set_val(iterator_name, Number(i))
+            table.set_val(iterator_name, Number(0))
             i += 1
 
             body_vst = self.visit(node.bodyNode, ctx)
             if isinstance(body_vst, Error):
                 return body_vst
 
-        return Number(0)
+        return Integer(8, 0)
 
     def visit_WhileNode(self, node, ctx):
         while True:
@@ -448,7 +448,7 @@ class Interpreter:
             if isinstance(body_vst, Error):
                 return body_vst
 
-        return Number(0)
+        return Integer(8, 0)
 
     def check_for_declaration(self, table, node, context):
         access_node = node
@@ -477,34 +477,39 @@ class Interpreter:
 
         op_node = node.op
         name_cond = op_node.token.type_name
-        if name_cond == tk.TT_PLUS:
-            result = left.added(right)
-        elif name_cond == tk.TT_MINUS:
-            result = left.subtracted(right)
-        elif name_cond == tk.TT_MUL:
-            result = left.multiplied(right)
-        elif name_cond == tk.TT_DIV:
-            result = left.divided(right)
-        elif name_cond == tk.TT_POW:
-            result = left.power(right)
-        elif name_cond == tk.TT_EE:
-            result = left.comp_eq(right)
-        elif name_cond == tk.TT_NE:
-            result = left.comp_ne(right)
-        elif name_cond == tk.TT_LT:
-            result = left.comp_lt(right)
-        elif name_cond == tk.TT_GT:
-            result = left.comp_gt(right)
-        elif name_cond == tk.TT_LOE:
-            result = left.comp_loe(right)
-        elif name_cond == tk.TT_GOE:
-            result = left.comp_goe(right)
-        elif name_cond == tk.TT_AND:
-            result = left.comp_and(right)
-        elif name_cond == tk.TT_OR:
-            result = left.comp_or(right)
+
+        if left.description == right.description:
+            if name_cond == tk.TT_PLUS:
+                result = left.added(right)
+            elif name_cond == tk.TT_MINUS:
+                result = left.subtracted(right)
+            elif name_cond == tk.TT_MUL:
+                result = left.multiplied(right)
+            elif name_cond == tk.TT_DIV:
+                result = left.divided(right)
+            elif name_cond == tk.TT_POW:
+                result = left.power(right)
+            elif name_cond == tk.TT_EE:
+                result = left.comp_eq(right)
+            elif name_cond == tk.TT_NE:
+                result = left.comp_ne(right)
+            elif name_cond == tk.TT_LT:
+                result = left.comp_lt(right)
+            elif name_cond == tk.TT_GT:
+                result = left.comp_gt(right)
+            elif name_cond == tk.TT_LOE:
+                result = left.comp_loe(right)
+            elif name_cond == tk.TT_GOE:
+                result = left.comp_goe(right)
+            elif name_cond == tk.TT_AND:
+                result = left.comp_and(right)
+            elif name_cond == tk.TT_OR:
+                result = left.comp_or(right)
+            else:
+                result = Integer(8, 0)
         else:
-            result = Number(0)
+            pos = node.token.pos
+            return RuntimeError("Cannot perform binary operation on two non-matching types", ctx, pos)
 
         return result
 
@@ -516,7 +521,8 @@ class Interpreter:
 
         p = node.token.pos
 
-        num = Number(val, p)
+        #num = Number(val, p)
+        num = Integer(32, val, p)
         num.set_context(child_context)
 
         return num

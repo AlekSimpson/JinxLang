@@ -85,7 +85,7 @@ ExponentialTest = Test("2 ^ 2", "Exponents", 4)
 UnaryDeclaration = Test("-30", "Unary Value Declaration", -30)
 UnaryOperation = Test("1 + -1", "Unary Operations", 0)
 UnaryFloatDeclaration = Test("-30.0", "Unary Float Declaration", -30.0)
-UnaryFloatOperation = Test("-30.0 + 20", "Unary Float Operations", -10.0)
+UnaryFloatOperation = Test("-30.0 + 20.0", "Unary Float Operations", -10.0)
 DivideByZero = CrashTest("2 / 0", "Divide by Zero Error", RuntimeError())
 
 # For Loops
