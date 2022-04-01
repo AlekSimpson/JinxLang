@@ -21,19 +21,16 @@ class Compiler:
         self.table = None
         self._config_llvm()
 
-        #XXX: They define builtin functions here in the init method
+        # NOTE: They define builtin functions here in the init method
         fnty = ir.FunctionType(ir.IntType(32), [ir.IntType(8).as_pointer()], var_arg=True)
         printf_func = ir.Function(self.module, fnty, 'printf')
 
-        ###########################################
-        # NOTE: So you need to put the above ^^^ defintion (fnty and printf_func) in their Function types.
-        # The llvm implementation will also be included in the Function types. This way you can basically just use the existing
-        # Functions architecture as a sort of API for llvm.
-        ###########################################
-
         # This helps to keep track of Defined Variabled
-        # XXX: Probably can replace this with context I think
-        self.variables = {'printf':(printf_func,ir.IntType(32))}
+        # NOTE: Probably can replace this with context I think
+        # NOTE: Variables are stored in tuples ex: (ptr, Type)
+        self.variables = {
+            'printf' : (printf_func,ir.IntType(32))
+        }
 
     def printf(self,params,Type):
         '''
@@ -47,7 +44,7 @@ class Compiler:
         format = ptr
         format = self.builder.gep(format, [zero, zero])
         format = self.builder.bitcast(format, ir.IntType(8).as_pointer())
-        func,_ = self.variables['printf']
+        func, _ = self.variables['printf']
         return self.builder.call(func,[format,*params])
 
     # NOTE: End builtin functions
@@ -159,6 +156,34 @@ class Compiler:
         fnty = ir.FunctionType(return_type, func_arg_types)
         func = ir.Function(self.module, fnty, name=name)
 
+        block = func.append_basic_block(f'{name}_entry')
+        previous_builder = self.builder
+
+        self.builder = ir.IRBuilder(block)
+        params_ptr = []
+
+        for i, typ in enumerate(func_arg_types):
+            ptr = self.builder.alloca(typ)
+            self.builder.store(func.args[i], ptr)
+            params_ptr.append(ptr)
+
+        previous_variables = self.variables.copy()
+        for i, x in enumerate(zip(func_arg_types, func_arg_names)):
+            typ = func_arg_types[i]
+            ptr = params_ptr[i]
+
+            self.variables[x[1]] = ptr, typ
+
+        self.variables[name] = func, return_type
+
+        self.compile(body_node, ctx)
+
+        # Removing function's variables so that they cannot be accessed out of scope
+        self.variables = previous_variables
+        self.variables[name] = func, return_type
+
+        self.builder = previous_builder
+
     def visit_CallNode(self, node, ctx):
         args = []
 
@@ -170,7 +195,7 @@ class Compiler:
         if value_to_call is not None:
             func_value = value_to_call
 
-        val_cal = func_value
+        val_cal = func_value.name
 
         i = 0
         for arg_node in node.arg_nodes:
@@ -182,7 +207,8 @@ class Compiler:
             args.append(new)
             i += 1
 
-        return_value = val_cal.execute(args)
+        #return_value = val_cal.execute(args)
+        return_value = self.variables[val_cal]()
 
         func_return = func_value.returnType.type_dec.type_obj
         types_match = self.check_types_match(return_value, func_return, return_value.name, ctx, node)
