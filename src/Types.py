@@ -140,12 +140,33 @@ class Number(Real):
         return self.value
 
 class Integer(Number):
-    def __init__(self, bitsize, value=None, pos=None):
+    def __init__(self, bitsize, value=None, pos=None, ir_value=None):
         super().__init__(value, pos)
         self.description = "Integer"
         self.bitsize = bitsize
         self.value = value
+        self.ir_value = ir_value
         self.ID = "NUMBER_TYPE"
+
+    def addc(self, other, builder):
+        return builder.add(self.ir_value, other.ir_value)
+
+    def subc(self, other, builder):
+        return builder.sub(self.ir_value, other.ir_value)
+
+    def divc(self, other, builder):
+        return builder.sdiv(self.ir_value, other.ir_value)
+
+    def mulc(self, other, builder):
+        return builder.mul(self.ir_value, other.ir_value)
+
+    def powc(self, other, builder):
+        val = 1
+        for i in range(0, other.value):
+            val = val * builder.fmul(self.ir_value, self.ir_value)
+        return val
+
+    # Interpreter code
 
     def added(self, other):
         new_num = Integer(64, self.value + other.value)
@@ -202,6 +223,26 @@ class Float(Number):
         self.value = value
         self.ID = "FLOAT_TYPE"
 
+    def addc(self, other, builder):
+        return builder.fadd(self.value, other.value)
+
+    def subc(self, other, builder):
+        return builder.fsub(self.value, other.value)
+
+    def divc(self, other, builder):
+        return builder.fdiv(self.value, other.value)
+
+    def mulc(self, other, builder):
+        return builder.fmul(self.value, other.value)
+
+    def powc(self, other, builder):
+        val = 1
+        for i in range(0, other.value):
+            val = val * builder.fmul(self.value, self.value)
+        return val
+
+    ## Interpreter code
+
     def added(self, other):
         new_num = Float(64, self.value + other.value)
         new_num.set_context(other.context)
@@ -235,12 +276,13 @@ class Float(Number):
         return self.value
 
 class Array(Type):
-    def __init__(self, elements=[], element_id=None):
+    def __init__(self, elements=[], element_id=None, element_type=None):
         super().__init__(description="Array")
         self.elements = elements
         self.length = len(self.elements)
         self.ID = "ARRAY_TYPE"
         self.element_id = element_id
+        self.element_type=element_type # for compiler
 
     def print_self(self):
         new_arr = []

@@ -426,7 +426,7 @@ class Interpreter:
         table = ctx.symbolTable
 
         while i < end_value:
-            table.set_val(iterator_name, Number(0))
+            table.set_val(iterator_name, Number(i))
             i += 1
 
             body_vst = self.visit(node.bodyNode, ctx)
