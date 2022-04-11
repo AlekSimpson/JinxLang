@@ -41,7 +41,6 @@ class Real(Type):
     def __init__(self, value=None, pos=None):
         super().__init__(value, pos, "Real")
 
-    ### NEED TO ADD CHECK FOR THE TYPE BEING THE SAME AND NOT JUST THE VALUE ###
     def comp_eq(self, other):
         new_num = Number(1 if self.value == other.value else 0)
         new_num.set_context(other.context)
@@ -147,6 +146,7 @@ class Integer(Number):
         self.value = value
         self.ir_value = ir_value
         self.ID = "NUMBER_TYPE"
+        self.ptr = None
 
     def addc(self, other, builder):
         return builder.add(self.ir_value, other.ir_value)
@@ -306,11 +306,12 @@ class Array(Type):
         return None
 
 class string(Real):
-    def __init__(self, str_value=None):
+    def __init__(self, str_value=None, ir_value=None):
         super().__init__(str_value)
         self.description = "String"
         self.str_value = str_value
         self.ID = "STRING_TYPE"
+        self.ir_value = ir_value
 
     def added(self, other):
         other_val = other.str_value

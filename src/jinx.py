@@ -36,7 +36,7 @@ else:
 
     result = run(script, filename)
     ## TEMP CODE ##
-    print(result)
+    #print(result)
     ## END TEMP CODE ##
 
     if isinstance(result, Error):
