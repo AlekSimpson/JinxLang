@@ -2,6 +2,7 @@ from Context import Context
 from Error import RuntimeError
 from Position import Position
 from SymbolTable import SymbolTable
+from llvmlite import ir
 
 # Type (Supertype for all)
 # Number
@@ -145,6 +146,7 @@ class Integer(Number):
         self.bitsize = bitsize
         self.value = value
         self.ir_value = ir_value
+        self.ir_type = ir.IntType(bitsize)
         self.ID = "NUMBER_TYPE"
         self.ptr = None
 
@@ -201,10 +203,12 @@ class Integer(Number):
         return self.value
 
 class Bool(Number):
-    def __init__(self, value):
+    def __init__(self, value, ir_value=None):
         super().__init__(value)
         self.description = "Bool"
         self.value = value
+        self.ir_value = ir_value 
+        self.ir_type = ir.IntType(1)
         self.ID = "BOOL_TYPE"
 
         def print_self(self):
@@ -216,11 +220,13 @@ class Bool(Number):
         return self.value
 
 class Float(Number):
-    def __init__(self, bitsize, value=None, pos=None):
+    def __init__(self, bitsize, value=None, pos=None, ir_value=None):
         super().__init__(value, pos)
         self.description = "Float"
         self.bitsize = bitsize
         self.value = value
+        self.ir_value = ir_value
+        self.ir_type = ir.IntType(bitsize)
         self.ID = "FLOAT_TYPE"
 
     def addc(self, other, builder):
@@ -276,13 +282,15 @@ class Float(Number):
         return self.value
 
 class Array(Type):
-    def __init__(self, elements=[], element_id=None, element_type=None):
+    def __init__(self, elements=[], element_id=None, element_type=None, ir_value=None):
         super().__init__(description="Array")
         self.elements = elements
         self.length = len(self.elements)
         self.ID = "ARRAY_TYPE"
         self.element_id = element_id
         self.element_type=element_type # for compiler
+        self.ir_value = ir_value
+        self.ir_type = ir.ArrayType(elements[0].ir_type, self.length)
 
     def print_self(self):
         new_arr = []
@@ -312,6 +320,7 @@ class string(Real):
         self.str_value = str_value
         self.ID = "STRING_TYPE"
         self.ir_value = ir_value
+        self.ir_type = ir.ArrayType(ir.IntType(8), 1)
 
     def added(self, other):
         other_val = other.str_value
@@ -328,6 +337,6 @@ class string(Real):
         return str(self.str_value)
 
 
-Number.nil = Number(0)
-Number.true = Bool(1)
-Number.false = Bool(0)
+Number.nil = Integer(bitsize=1, value=0, ir_value=ir.Constant(ir.IntType(1), 0))
+Number.true = Bool(1, ir_value=ir.Constant(ir.IntType(1), 1))
+Number.false = Bool(0, ir_value=ir.Constant(ir.IntType(1), 0))

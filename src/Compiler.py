@@ -20,7 +20,7 @@ class Compiler:
         llvm.initialize_native_target()
         llvm.initialize_native_asmprinter()
         self.table = None
-        self.debug = False
+        self.debug = False 
         self._config_llvm()
         self.init_string_formats()
 
@@ -31,7 +31,6 @@ class Compiler:
         # NOTE: Probably can replace this with Context and GlobalTable I think
         # NOTE: Variables are stored in tuples ex: (ptr, Type)
         self.builtin = {'print' : (printf, self.printf)}
-        self.variables = {}
 
     def init_string_formats(self):
         str_c_fmt = ir.Constant(ir.ArrayType(ir.IntType(8), len("%s\n\0")), bytearray("%s\n\0".encode("utf8")))
@@ -51,7 +50,7 @@ class Compiler:
 
         fmt = self.int_global_fmt
         print_res = params[0].ir_value
-        if not isinstance(params[0], Integer):
+        if isinstance(params[0], string):
             fmt = self.str_global_fmt
 
         printf = self.builtin['print'][0]
@@ -122,8 +121,9 @@ class Compiler:
             return
 
         func_index = node.classType
-        #print(f"[{func_index}] - {node.as_string()}")
-        # ^^^^ Keep for debugging purposes ^^^^
+        if self.debug:
+            print(f"[{func_index}] - {node.as_string()}")
+
         self.table = context.symbolTable.symbols
         result = None
 
@@ -156,18 +156,46 @@ class Compiler:
 
         return result
 
-    def visit_unary(self, node, ctx): pass
-    def visit_VarAssignNode(self, node, ctx): pass
+    def visit_unary(self, node, ctx):
+        entry = node.token.pos
+        child_context = Context("<number>", ctx, entry)
+
+        val = node.token.value
+        p = node.token.pos
+
+        Type = ir.IntType(64)
+        if node.op_tok.type_name == tk.TT_MINUS:
+            return Integer(64, ir_value=ir.Constant(Type, (val * -1)))
+        elif node.op_tok.type_name == tk.TT_NOT:
+            return Integer(64, ir_value=ir.Constant(Type, (0 if val == 1 else 1)))
+
+    def visit_VarAssignNode(self, node, ctx):
+        var_name = node.token.value
+        value = self.compile(node.value_node, ctx)
+        if isinstance(value, Error):
+            return value
+
+        if not var_name in ctx.symbolTable.symbols:
+            ptr = self.builder.alloca(value.ir_type)
+            self.builder.store(value.ir_value, ptr)
+            ctx.symbolTable.set_val(var_name, [ptr, value.ir_type])
+        else:
+            ptr,_  = ctx.symbolTable.get_val(var_name)
+            self.builder.store(value, ptr)
+
+        ctx.symbolTable.set_val(var_name, value)
+        return value
+
     def visit_IfNode(self, node, ctx): pass
     def visit_ForNode(self, node, ctx): pass
     def visit_WhileNode(self, node, ctx): pass
 
     def visit_VarAccessNode(self, node, ctx):
-        if node.token.value in self.variables:
-            ptr, _ = self.variables[node.token.value]
-        elif node.token.value in self.builtin:
-            ptr, _ = self.builtin[node.token.value]
-        #return self.builder.load(ptr), Type
+        if node.token.value in self.builtin:
+            ptr = self.builtin[node.token.value]
+        else:
+            ptr = ctx.symbolTable.get_val(node.token.value)
+        #return self.builder.load(ptr), ptr_type
         return ptr
 
     # NOTE: Not tested yet
@@ -249,7 +277,7 @@ class Compiler:
             ret = builtin_func(args)
             ret_type = ir.IntType(32)
         else:
-            func, ret_type = self.variables[val_cal]
+            func, ret_type = ctx.symbolTable.get_val(val_cal)
             ret = self.builder.call(func, args)
 
         return ret, ret_type
@@ -274,8 +302,6 @@ class Compiler:
         c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)),
                         bytearray(str_value.encode("utf8")))
 
-        # NOTE: Returning None now just cause I don't know what to do with it right now,
-        #       need to flesh out more of the context and symbol table integration first
         str = string(ir_value=c_str_val)
         return str
 
@@ -300,7 +326,8 @@ class Compiler:
 
         arr_ty = ir.ArrayType(ir.IntType(8), len(elements))
         return ir.Constant(arr_ty, elements), arr_ty
-        #arr = Array(elements, element_id, element_type=arr_ty)
+        #arr_ir = ir.Constant(arr_type, elements)
+        #arr = Array(elements, element_id, element_type=arr_ty, ir_value=arr_ir)
         #arr.set_context(ctx)
         #return arr
 
