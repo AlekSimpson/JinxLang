@@ -20,7 +20,7 @@ class Compiler:
         llvm.initialize_native_target()
         llvm.initialize_native_asmprinter()
         self.table = None
-        self.debug = False 
+        self.debug = False
         self._config_llvm()
         self.init_string_formats()
 
@@ -46,23 +46,36 @@ class Compiler:
         self.int_global_fmt.initializer = int_c_fmt
 
     def printf(self, params):
-        print_res = params[0]
-
-        fmt = self.int_global_fmt
-        print_res = params[0].ir_value
-        if isinstance(params[0], string):
-            fmt = self.str_global_fmt
-
+        arg = params[0]
         printf = self.builtin['print'][0]
 
-        if not isinstance(print_res.type, ir.IntType):
-            before = print_res
-            print_res = self.builder.alloca(print_res.type)
-            self.builder.store(before, print_res)
+        fmt = self.int_global_fmt
+        if not isinstance(arg, Type):
+            arg = self.builder.load(arg)
+            if isinstance(arg.type, ir.ArrayType):
+                fmt = self.str_global_fmt
 
-        voidptr_ty = ir.IntType(8).as_pointer()
-        fmt_arg = self.builder.bitcast(fmt, voidptr_ty)
-        self.builder.call(printf, [fmt_arg, print_res])
+                before = arg
+                arg = self.builder.alloca(arg.type)
+                self.builder.store(before, arg)
+
+            voidptr_ty = ir.IntType(8).as_pointer()
+            fmt_arg = self.builder.bitcast(fmt, voidptr_ty)
+            self.builder.call(printf, [fmt_arg, arg])
+        else:
+            if isinstance(arg, string):
+                fmt = self.str_global_fmt
+
+            arg = arg.ir_value
+
+            if not isinstance(arg.type, ir.IntType):
+                before = arg
+                arg = self.builder.alloca(arg.type)
+                self.builder.store(before, arg)
+
+            voidptr_ty = ir.IntType(8).as_pointer()
+            fmt_arg = self.builder.bitcast(fmt, voidptr_ty)
+            self.builder.call(printf, [fmt_arg, arg])
 
     # NOTE: End builtin functions
 
@@ -157,11 +170,7 @@ class Compiler:
         return result
 
     def visit_unary(self, node, ctx):
-        entry = node.token.pos
-        child_context = Context("<number>", ctx, entry)
-
         val = node.token.value
-        p = node.token.pos
 
         Type = ir.IntType(64)
         if node.op_tok.type_name == tk.TT_MINUS:
@@ -175,15 +184,16 @@ class Compiler:
         if isinstance(value, Error):
             return value
 
-        if not var_name in ctx.symbolTable.symbols:
-            ptr = self.builder.alloca(value.ir_type)
+        if var_name not in ctx.symbolTable.symbols:
+            ptr = self.builder.alloca(value.ir_value.type)
             self.builder.store(value.ir_value, ptr)
-            ctx.symbolTable.set_val(var_name, [ptr, value.ir_type])
-        else:
-            ptr,_  = ctx.symbolTable.get_val(var_name)
-            self.builder.store(value, ptr)
+            ctx.symbolTable.set_val(var_name, ptr)
+        #else:
+        #    print("storing here two")
+        #    ptr,_  = ctx.symbolTable.get_val(var_name)
+        #    self.builder.store(value, ptr)
 
-        ctx.symbolTable.set_val(var_name, value)
+        #ctx.symbolTable.set_val(var_name, value)
         return value
 
     def visit_IfNode(self, node, ctx): pass
@@ -195,10 +205,9 @@ class Compiler:
             ptr = self.builtin[node.token.value]
         else:
             ptr = ctx.symbolTable.get_val(node.token.value)
-        #return self.builder.load(ptr), ptr_type
         return ptr
 
-    # NOTE: Not tested yet
+    # NOTE: Not tested yet, nvm this shit definitely does not work yet
     def visit_FuncDefNode(self, node, ctx):
         name = node.token.value
         body_node = node.body_node
@@ -280,7 +289,7 @@ class Compiler:
             func, ret_type = ctx.symbolTable.get_val(val_cal)
             ret = self.builder.call(func, args)
 
-        return ret, ret_type
+        return ret
 
         #return_value = self.variables[val_cal]()
 
@@ -302,17 +311,20 @@ class Compiler:
         c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)),
                         bytearray(str_value.encode("utf8")))
 
-        str = string(ir_value=c_str_val)
+        str = string(str_value=node.token.value, ir_value=c_str_val)
         return str
 
 
     def visit_ListNode(self, node, ctx):
         elements = []
+        ir_elements = []
 
         for element_node in node.element_nodes:
             el = self.compile(element_node, ctx)
             elements.append(el)
-            
+            if isinstance(el, Type):
+                ir_elements.append(el.ir_value)
+
             if isinstance(el, Error):
                 return el
             if element_node.classType == 15:
@@ -324,12 +336,14 @@ class Compiler:
                 if type_dec is not None:
                     element_id = node.element_nodes[0].token.type_dec.type_obj
 
-        arr_ty = ir.ArrayType(ir.IntType(8), len(elements))
-        return ir.Constant(arr_ty, elements), arr_ty
-        #arr_ir = ir.Constant(arr_type, elements)
-        #arr = Array(elements, element_id, element_type=arr_ty, ir_value=arr_ir)
-        #arr.set_context(ctx)
-        #return arr
+        arr_ty = ir.IntType(8)
+        if isinstance(elements[0], Type):
+            arr_ty = ir.ArrayType(elements[0].ir_type, len(ir_elements))
+        arr_ir = ir.Constant(arr_ty, ir_elements)
+        arr = Array(elements, element_id, ir_value=arr_ir, ir_type=arr_ty)
+        arr.set_context(ctx)
+
+        return arr
 
     def visit_number(self, node, ctx):
         entry = node.token.pos

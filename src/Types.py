@@ -282,15 +282,14 @@ class Float(Number):
         return self.value
 
 class Array(Type):
-    def __init__(self, elements=[], element_id=None, element_type=None, ir_value=None):
+    def __init__(self, elements=[], element_id=None, ir_value=None, ir_type=None):
         super().__init__(description="Array")
         self.elements = elements
         self.length = len(self.elements)
         self.ID = "ARRAY_TYPE"
         self.element_id = element_id
-        self.element_type=element_type # for compiler
         self.ir_value = ir_value
-        self.ir_type = ir.ArrayType(elements[0].ir_type, self.length)
+        self.ir_type = ir_type
 
     def print_self(self):
         new_arr = []
@@ -320,7 +319,11 @@ class string(Real):
         self.str_value = str_value
         self.ID = "STRING_TYPE"
         self.ir_value = ir_value
-        self.ir_type = ir.ArrayType(ir.IntType(8), 1)
+        if str_value is not None:
+            length = len(self.str_value)
+        else:
+            length = 0
+        self.ir_type = ir.ArrayType(ir.IntType(8), length)
 
     def added(self, other):
         other_val = other.str_value

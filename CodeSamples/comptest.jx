@@ -1,2 +1,8 @@
-num: Int = -1
+#arr:Array{Int} = [404 2 3 4 5]
+#print(arr)
+num: Int = 420 
+string: String = "hello world"
 print(num)
+print(string)
+print("other test")
+print(404)
