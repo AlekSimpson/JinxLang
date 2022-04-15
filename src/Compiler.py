@@ -20,7 +20,7 @@ class Compiler:
         llvm.initialize_native_target()
         llvm.initialize_native_asmprinter()
         self.table = None
-        self.debug = False
+        self.debug = True
         self._config_llvm()
         self.init_string_formats()
 
@@ -146,26 +146,26 @@ class Compiler:
         result = None
 
         visit_map = [
-            self.visit_binop,          # 0
-            self.visit_number,         # 1
-            "VariableNode",            # 2
-            self.visit_unary,          # 3
-            self.AccessNode,           # 4
-            self.visit_VarAssignNode,  # 5
+            self.visit_binop,          # 0 |
+            self.visit_number,         # 1 |
+            "VariableNode",            # 2 |
+            self.visit_unary,          # 3 |
+            self.AccessNode,           # 4 |
+            self.visit_VarAssignNode,  # 5 |
             self.visit_IfNode,         # 6
             self.visit_ForNode,        # 7
             self.visit_WhileNode,      # 8
             self.visit_FuncDefNode,    # 9
-            self.visit_CallNode,       # 10
-            self.visit_StringNode,     # 11
-            self.visit_ListNode,       # 12
-        #    self.visit_SetArrNode,     # 13
-        #    self.visit_GetArrNode,     # 14
-        #    self.visit_ReturnNode,     # 15
-        #    self.visit_VarUpdateNode,  # 16
-        #    self.visit_float,          # 17
-        #    self.visit_ObjectDefNode,  # 18
-        #    self.visit_DotNode,        # 19
+            self.visit_CallNode,       # 10 |
+            self.visit_StringNode,     # 11 |
+            self.visit_ListNode,       # 12 |
+            self.visit_SetArrNode,     # 13
+            self.visit_GetArrNode,     # 14
+            self.visit_ReturnNode,     # 15
+            self.visit_VarUpdateNode,  # 16
+            self.visit_float,          # 17
+            self.visit_ObjectDefNode,  # 18
+            self.visit_DotNode,        # 19
         ]
 
         if func_index < 0 or func_index > 19:
@@ -200,6 +200,28 @@ class Compiler:
     def visit_IfNode(self, node, ctx): pass
     def visit_ForNode(self, node, ctx): pass
     def visit_WhileNode(self, node, ctx): pass
+    def visit_SetArrNode(self, node, ctx): pass
+    def visit_GetArrNode(self, node, ctx): pass
+    def visit_ReturnNode(self, node, ctx): pass
+
+    def visit_VarUpdateNode(self, node, ctx):
+        print("Update is visited")
+        var_name = node.token.value
+        new_val = self.compile(node.value_node, ctx)
+        if isinstance(new_val, Error):
+            return new_val
+
+        if var_name in ctx.symbolTable.symbols:
+            storage = ctx.symbolTable.get_val(var_name)
+            ptr = storage.ptr
+            self.builder.store(new_val.ir_value, ptr)
+            ctx.symbolTable.set_val(var_name, storage)
+
+        return new_val
+
+    def visit_float(self, node, ctx): pass
+    def visit_ObjectDefNode(self, node, ctx): pass
+    def visit_DotNode(self, node, ctx): pass
 
     def visit_VarAccessNode(self, node, ctx):
         if node.token.value in self.builtin:
@@ -325,6 +347,7 @@ class Compiler:
 
             if isinstance(el, Error):
                 return el
+
             if element_node.classType == 15:
                 break
 

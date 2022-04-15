@@ -1,2 +1,4 @@
-arr:Array{Int} = [404 2 3 4 5]
+arr: Array{Int} = [1 2 3]
+print(arr)
+arr = [6 7 8]
 print(arr)
