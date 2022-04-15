@@ -34,6 +34,7 @@ class Void:
     def __init__(self, pos=None):
         self.pos = pos
         self.context = None
+        self.ptr = None
 
     def print_self(self):
         return "Void"
@@ -210,6 +211,7 @@ class Bool(Number):
         self.ir_value = ir_value 
         self.ir_type = ir.IntType(1)
         self.ID = "BOOL_TYPE"
+        self.ptr = None
 
         def print_self(self):
             if self.value == 1:
@@ -228,6 +230,7 @@ class Float(Number):
         self.ir_value = ir_value
         self.ir_type = ir.IntType(bitsize)
         self.ID = "FLOAT_TYPE"
+        self.ptr = None
 
     def addc(self, other, builder):
         return builder.fadd(self.value, other.value)
@@ -290,6 +293,8 @@ class Array(Type):
         self.element_id = element_id
         self.ir_value = ir_value
         self.ir_type = ir_type
+        self.ptr = None
+        self.description = f"{self.print_self()}"
 
     def print_self(self):
         new_arr = []
@@ -324,6 +329,7 @@ class string(Real):
         else:
             length = 0
         self.ir_type = ir.ArrayType(ir.IntType(8), length)
+        self.ptr = None
 
     def added(self, other):
         other_val = other.str_value

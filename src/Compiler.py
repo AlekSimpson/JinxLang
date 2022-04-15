@@ -49,19 +49,24 @@ class Compiler:
         arg = params[0]
         printf = self.builtin['print'][0]
 
+        # Check if arg is a complex type, if so we need to print its string representation
+        if isinstance(arg, Array):
+            str_value = arg.description + "\0"
+            c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)),
+                            bytearray(str_value.encode("utf8")))
+
+            arg = string(str_value=str_value, ir_value=c_str_val)
+
         fmt = self.int_global_fmt
-        if not isinstance(arg, Type):
-            arg = self.builder.load(arg)
+        if arg.ptr is not None:
+            arg = self.builder.load(arg.ptr)
+
             if isinstance(arg.type, ir.ArrayType):
                 fmt = self.str_global_fmt
 
                 before = arg
                 arg = self.builder.alloca(arg.type)
                 self.builder.store(before, arg)
-
-            voidptr_ty = ir.IntType(8).as_pointer()
-            fmt_arg = self.builder.bitcast(fmt, voidptr_ty)
-            self.builder.call(printf, [fmt_arg, arg])
         else:
             if isinstance(arg, string):
                 fmt = self.str_global_fmt
@@ -73,9 +78,9 @@ class Compiler:
                 arg = self.builder.alloca(arg.type)
                 self.builder.store(before, arg)
 
-            voidptr_ty = ir.IntType(8).as_pointer()
-            fmt_arg = self.builder.bitcast(fmt, voidptr_ty)
-            self.builder.call(printf, [fmt_arg, arg])
+        voidptr_ty = ir.IntType(8).as_pointer()
+        fmt_arg = self.builder.bitcast(fmt, voidptr_ty)
+        self.builder.call(printf, [fmt_arg, arg])
 
     # NOTE: End builtin functions
 
@@ -186,14 +191,10 @@ class Compiler:
 
         if var_name not in ctx.symbolTable.symbols:
             ptr = self.builder.alloca(value.ir_value.type)
+            value.ptr = ptr
             self.builder.store(value.ir_value, ptr)
-            ctx.symbolTable.set_val(var_name, ptr)
-        #else:
-        #    print("storing here two")
-        #    ptr,_  = ctx.symbolTable.get_val(var_name)
-        #    self.builder.store(value, ptr)
+            ctx.symbolTable.set_val(var_name, value)
 
-        #ctx.symbolTable.set_val(var_name, value)
         return value
 
     def visit_IfNode(self, node, ctx): pass
@@ -274,8 +275,6 @@ class Compiler:
             new = arg_node.token.value
             new = self.compile(arg_node, ctx)
             typ = ir.IntType(64)
-            if isinstance(new, Array):
-                 new = Array(new.elements, new.element_id)
 
             args.append(new)
             types.append(typ)
@@ -313,7 +312,6 @@ class Compiler:
 
         str = string(str_value=node.token.value, ir_value=c_str_val)
         return str
-
 
     def visit_ListNode(self, node, ctx):
         elements = []
@@ -353,7 +351,7 @@ class Compiler:
         p = node.token.pos
 
         Type = ir.IntType(64)
-        return Integer(64, ir_value=ir.Constant(Type, val))
+        return Integer(64, value=val, ir_value=ir.Constant(Type, val))
 
     def check_for_declaration(self, table, node, context):
         access_node = node
@@ -373,15 +371,11 @@ class Compiler:
         left_vst = self.compile(node.lhs, ctx)
         if isinstance(left_vst, Error):
             return left_vst
-        #left_ty = left_vst[1]
-        #left = left_vst[0]
         left = left_vst
 
         right_vst = self.compile(node.rhs, ctx)
         if isinstance(right_vst, Error):
             return right_vst
-        #right_ty = right_vst[1]
-        #right = right_vst[0]
         right = right_vst
 
         op_node = node.op
