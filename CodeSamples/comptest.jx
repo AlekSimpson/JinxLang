@@ -1,4 +1,0 @@
-arr: Array{Int} = [1 2 3]
-print(arr)
-arr = [6 7 8]
-print(arr)

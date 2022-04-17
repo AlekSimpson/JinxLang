@@ -20,16 +20,13 @@ class Compiler:
         llvm.initialize_native_target()
         llvm.initialize_native_asmprinter()
         self.table = None
-        self.debug = True
+        self.debug = False
         self._config_llvm()
         self.init_string_formats()
 
         printf_ty = ir.FunctionType(ir.IntType(32), [ir.IntType(8).as_pointer()], var_arg=True)
         printf = ir.Function(self.module, printf_ty, name="printf")
 
-        # This helps to keep track of Defined Variabled
-        # NOTE: Probably can replace this with Context and GlobalTable I think
-        # NOTE: Variables are stored in tuples ex: (ptr, Type)
         self.builtin = {'print' : (printf, self.printf)}
 
     def init_string_formats(self):
@@ -204,15 +201,29 @@ class Compiler:
     def visit_GetArrNode(self, node, ctx): pass
     def visit_ReturnNode(self, node, ctx): pass
 
+    def types_match(self, a, b, ctx):
+        if a.type != b.type:
+            return RuntimeError(f"Mismatched Types: Cannot assign value of type {b.type}, to type {a.type}", ctx, Position())
+        return None
+
     def visit_VarUpdateNode(self, node, ctx):
-        print("Update is visited")
         var_name = node.token.value
         new_val = self.compile(node.value_node, ctx)
+
         if isinstance(new_val, Error):
             return new_val
 
         if var_name in ctx.symbolTable.symbols:
             storage = ctx.symbolTable.get_val(var_name)
+            types_match = self.types_match(storage.ir_value, new_val.ir_value, ctx)
+            if isinstance(types_match, Error):
+                return types_match
+
+            storage.ir_value = new_val.ir_value
+            if isinstance(storage, Array):
+                storage.elements = new_val.elements
+                storage.description = f"{storage.print_self()}"
+
             ptr = storage.ptr
             self.builder.store(new_val.ir_value, ptr)
             ctx.symbolTable.set_val(var_name, storage)

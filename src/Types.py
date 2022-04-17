@@ -299,12 +299,9 @@ class Array(Type):
     def print_self(self):
         new_arr = []
 
-        print("**********************************")
         for element in self.elements:
-            print(f"ELEMENT IS: {element}")
             if element is not None:
                 new_arr.append(element.value)
-        print("**********************************")
 
         return new_arr
 

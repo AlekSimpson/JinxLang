@@ -47,11 +47,15 @@ def run(text, fn):
     #ctx = Context("<program>")
     #ctx.symbolTable = global_symbol_table
     #result = interpreter.visit(nodes, ctx)
+
     compiler = Compiler()
     ctx = Context("<program>")
     ctx.symbolTable = global_symbol_table
     result = compiler.compile(nodes, ctx)
-    result = compiler.compile_ir_and_output(compiler.module)
+
+    # NOTE: temporary conditional check here, should eventually create an LLVM binding for the Error types
+    if not isinstance(result, Error):
+        result = compiler.compile_ir_and_output(compiler.module)
 
     return result
 
