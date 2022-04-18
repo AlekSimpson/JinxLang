@@ -42,6 +42,12 @@ class Compiler:
         self.int_global_fmt.global_constant = True
         self.int_global_fmt.initializer = int_c_fmt
 
+        flt_c_fmt = ir.Constant(ir.ArrayType(ir.IntType(8), len("%.1f\n\0")), bytearray("%.1f\n\0".encode("utf8")))
+        self.flt_global_fmt = ir.GlobalVariable(self.module, flt_c_fmt.type, name="flt_str")
+        self.flt_global_fmt.linkage = 'internal'
+        self.flt_global_fmt.global_constant = True
+        self.flt_global_fmt.initializer = flt_c_fmt
+
     def printf(self, params):
         arg = params[0]
         printf = self.builtin['print'][0]
@@ -64,13 +70,18 @@ class Compiler:
                 before = arg
                 arg = self.builder.alloca(arg.type)
                 self.builder.store(before, arg)
+            elif isinstance(arg.type, ir.DoubleType):
+                fmt = self.flt_global_fmt
         else:
             if isinstance(arg, string):
                 fmt = self.str_global_fmt
+            elif isinstance(arg, Float):
+                fmt = self.flt_global_fmt
 
             arg = arg.ir_value
 
-            if not isinstance(arg.type, ir.IntType):
+            #if not isinstance(arg.type, ir.IntType):
+            if isinstance(arg.type, ir.ArrayType):
                 before = arg
                 arg = self.builder.alloca(arg.type)
                 self.builder.store(before, arg)
@@ -159,7 +170,7 @@ class Compiler:
             self.visit_SetArrNode,     # 13
             self.visit_GetArrNode,     # 14
             self.visit_ReturnNode,     # 15
-            self.visit_VarUpdateNode,  # 16
+            self.visit_VarUpdateNode,  # 16 |
             self.visit_float,          # 17
             self.visit_ObjectDefNode,  # 18
             self.visit_DotNode,        # 19
@@ -227,10 +238,20 @@ class Compiler:
             ptr = storage.ptr
             self.builder.store(new_val.ir_value, ptr)
             ctx.symbolTable.set_val(var_name, storage)
+        else:
+            return RuntimeError(f"UndefVarError: {var_name} is not defined")
 
         return new_val
 
-    def visit_float(self, node, ctx): pass
+    def visit_float(self, node, ctx):
+        entry = node.token.pos
+
+        val = node.token.value
+        p = node.token.pos
+
+        Type = ir.DoubleType()
+        return Float(64, value=val, ir_value=ir.Constant(Type, val))
+
     def visit_ObjectDefNode(self, node, ctx): pass
     def visit_DotNode(self, node, ctx): pass
 
@@ -379,7 +400,6 @@ class Compiler:
 
     def visit_number(self, node, ctx):
         entry = node.token.pos
-        child_context = Context("<number>", ctx, entry)
 
         val = node.token.value
         p = node.token.pos
@@ -445,7 +465,10 @@ class Compiler:
             else:
                 result = Number(0)
 
-        num = Integer(64, ir_value=result)
+        if isinstance(result.type, ir.IntType):
+            num = Integer(64, ir_value=result)
+        else:
+            num = Float(64, ir_value=result)
 
         return num
 

@@ -38,11 +38,16 @@ class RuntimeError(Error):
         p = self.pos
         ctx = self.context
 
-        while True:
-            if ctx.parent is None or p is None:
-                break
-            result += f"File: {p.fn}, line: {p.ln}, in {ctx.display_name}\n{result}"
-            p = ctx.parent_entry_pos
-            ctx = ctx.parent
+        #while True:
+        #    if ctx.parent is None or p is None:
+        #        break
+        #    result += f"File: {p.fn}, line: {p.ln}, in {ctx.display_name}\n{result}"
+        #    p = ctx.parent_entry_pos
+        #    ctx = ctx.parent
 
-        return f"Traceback:\n{result}"
+        #return f"Traceback:\n{result}"
+
+        if p is not None:
+            return f"File: {p.fn}, line: {p.ln}:\n"
+        else:
+            return ""

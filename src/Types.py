@@ -228,26 +228,26 @@ class Float(Number):
         self.bitsize = bitsize
         self.value = value
         self.ir_value = ir_value
-        self.ir_type = ir.IntType(bitsize)
+        self.ir_type = ir.DoubleType()
         self.ID = "FLOAT_TYPE"
         self.ptr = None
 
     def addc(self, other, builder):
-        return builder.fadd(self.value, other.value)
+        return builder.fadd(self.ir_value, other.ir_value)
 
     def subc(self, other, builder):
-        return builder.fsub(self.value, other.value)
+        return builder.fsub(self.ir_value, other.ir_value)
 
     def divc(self, other, builder):
-        return builder.fdiv(self.value, other.value)
+        return builder.fdiv(self.ir_value, other.ir_value)
 
     def mulc(self, other, builder):
-        return builder.fmul(self.value, other.value)
+        return builder.fmul(self.ir_value, other.ir_value)
 
     def powc(self, other, builder):
         val = 1
         for i in range(0, other.value):
-            val = val * builder.fmul(self.value, self.value)
+            val = val * builder.fmul(self.ir_value, self.ir_value)
         return val
 
     ## Interpreter code
