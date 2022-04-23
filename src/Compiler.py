@@ -171,7 +171,7 @@ class Compiler:
             self.visit_GetArrNode,     # 14
             self.visit_ReturnNode,     # 15
             self.visit_VarUpdateNode,  # 16 |
-            self.visit_float,          # 17
+            self.visit_float,          # 17 |
             self.visit_ObjectDefNode,  # 18
             self.visit_DotNode,        # 19
         ]
@@ -205,7 +205,37 @@ class Compiler:
 
         return value
 
-    def visit_IfNode(self, node, ctx): pass
+    def else_if_block(self, case, ctx, itr, node):
+        max_len = len(node.cases) - 1
+        condition_value = self.compile(case[0], ctx)
+        if isinstance(condition_value, Error):
+            return condition_value
+
+        with self.builder.if_else(condition_value.ir_value) as (true, otherwise):
+            with true:
+                self.compile(case[1], ctx)
+
+            if itr == max_len:
+                with otherwise:
+                    self.compile(node.else_case[0], ctx)
+            else:
+                with otherwise:
+                    self.else_if_block(node.cases[itr + 1], ctx, itr + 1, node)
+
+    def visit_IfNode(self, node, ctx):
+        cases = node.cases
+        else_case = node.else_case
+
+        condition_value = self.compile(cases[0][0], ctx)
+        if isinstance(condition_value, Error):
+            return condition_value
+
+        if else_case is None:
+            with self.builder.if_then(condition_value.ir_value):
+                return self.compile(cases[0][1], ctx)
+        else:
+            self.else_if_block(node.cases[0], ctx, 0, node)
+
     def visit_ForNode(self, node, ctx): pass
     def visit_WhileNode(self, node, ctx): pass
     def visit_SetArrNode(self, node, ctx): pass
@@ -447,21 +477,21 @@ class Compiler:
             elif name_cond == tk.TT_POW:
                 result = left.powc(right, self.builder)
             elif name_cond == tk.TT_EE:
-                result = left.comp_eq(right)
+                result = left.comp_eqc(right, self.builder)
             elif name_cond == tk.TT_NE:
-                result = left.comp_ne(right)
+                result = left.comp_nec(right, self.builder)
             elif name_cond == tk.TT_LT:
-                result = left.comp_lt(right)
+                result = left.comp_ltc(right, self.builder)
             elif name_cond == tk.TT_GT:
-                result = left.comp_gt(right)
+                result = left.comp_gtc(right, self.builder)
             elif name_cond == tk.TT_LOE:
-                result = left.comp_loe(right)
+                result = left.comp_loec(right, self.builder)
             elif name_cond == tk.TT_GOE:
-                result = left.comp_goe(right)
+                result = left.comp_goec(right, self.builder)
             elif name_cond == tk.TT_AND:
-                result = left.comp_and(right)
+                result = left.comp_andc(right, self.builder)
             elif name_cond == tk.TT_OR:
-                result = left.comp_or(right)
+                result = left.comp_orc(right, self.builder)
             else:
                 result = Number(0)
 

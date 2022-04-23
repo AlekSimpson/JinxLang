@@ -1,1 +1,9 @@
-print(45.6 + 0.1)
+num: Int = 8
+
+if num == 6 {
+    print("true true")
+}elif num == 7 {
+    print("num is definitely seven")
+}else {
+    print("false false")
+}

@@ -169,6 +169,33 @@ class Integer(Number):
             val = val * builder.fmul(self.ir_value, self.ir_value)
         return val
 
+    def comp_eqc(self, other, builder):
+        return builder.icmp_signed("==", self.ir_value, other.ir_value)
+
+    def comp_goec(self, other, builder):
+        return builder.icmp_signed(">=", self.ir_value, other.ir_value)
+
+    def comp_gtc(self, other, builder):
+        return builder.icmp_signed(">", self.ir_value, other.ir_value)
+
+    def comp_loec(self, other, builder):
+        return builder.icmp_signed("<=", self.ir_value, other.ir_value)
+
+    def comp_ltc(self, other, builder):
+        return builder.icmp_signed("<", self.ir_value, other.ir_value)
+
+    def comp_nec(self, other, builder):
+        return builder.icmp_signed("!=", self.ir_value, other.ir_value)
+
+    def comp_andc(self, other, builder):
+        return builder.and_(self.ir_value, other.ir_value)
+
+    def comp_orc(self, other, builder):
+        return builder.or_(self.ir_value, other.ir_value)
+
+    def not_opc(self, builder):
+        return builder.neg(self.ir_value)
+
     # Interpreter code
 
     def added(self, other):
@@ -208,18 +235,16 @@ class Bool(Number):
         super().__init__(value)
         self.description = "Bool"
         self.value = value
-        self.ir_value = ir_value 
+        self.ir_value = ir_value
         self.ir_type = ir.IntType(1)
         self.ID = "BOOL_TYPE"
         self.ptr = None
 
-        def print_self(self):
-            if self.value == 1:
-                return "true"
-            else:
-                return "false"
     def print_self(self):
-        return self.value
+        if self.value == 1:
+            return "true"
+        else:
+            return "false"
 
 class Float(Number):
     def __init__(self, bitsize, value=None, pos=None, ir_value=None):
