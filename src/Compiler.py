@@ -20,7 +20,7 @@ class Compiler:
         llvm.initialize_native_target()
         llvm.initialize_native_asmprinter()
         self.table = None
-        self.debug = False
+        self.debug = True
         self._config_llvm()
         self.init_string_formats()
 
@@ -160,7 +160,7 @@ class Compiler:
             self.visit_unary,          # 3 |
             self.AccessNode,           # 4 |
             self.visit_VarAssignNode,  # 5 |
-            self.visit_IfNode,         # 6
+            self.visit_IfNode,         # 6 |
             self.visit_ForNode,        # 7
             self.visit_WhileNode,      # 8
             self.visit_FuncDefNode,    # 9
@@ -237,7 +237,24 @@ class Compiler:
             self.else_if_block(node.cases[0], ctx, 0, node)
 
     def visit_ForNode(self, node, ctx): pass
-    def visit_WhileNode(self, node, ctx): pass
+
+    def visit_WhileNode(self, node, ctx):
+        itr = 0
+        condition = self.compile(node.conditionNode, ctx)
+        body = node.bodyNode
+
+        while_loop_entry = self.builder.append_basic_block("while_loop_entry"+str(itr + 1))
+
+        while_loop_otherwise = self.builder.append_basic_block("while_loop_otherwise"+str(itr))
+
+        self.builder.cbranch(condition.ir_value, while_loop_entry, while_loop_otherwise)
+
+        self.builder.position_at_start(while_loop_entry)
+        self.compile(body, ctx)
+        condition = self.compile(node.conditionNode, ctx)
+        self.builder.cbranch(condition.ir_value, while_loop_entry, while_loop_otherwise)
+        self.builder.position_at_start(while_loop_otherwise)
+
     def visit_SetArrNode(self, node, ctx): pass
     def visit_GetArrNode(self, node, ctx): pass
     def visit_ReturnNode(self, node, ctx): pass

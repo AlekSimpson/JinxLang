@@ -1,9 +1,7 @@
-num: Int = 8
+itr: Int = 9
 
-if num == 6 {
-    print("true true")
-}elif num == 7 {
-    print("num is definitely seven")
-}else {
-    print("false false")
+#itr = itr + 1
+
+while itr < 10 {
+    itr = itr + 1
 }
