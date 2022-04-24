@@ -1,7 +1,6 @@
-itr: Int = 9
-
-#itr = itr + 1
+itr: Int = 0 
 
 while itr < 10 {
-    itr = itr + 1
+  itr = itr + 1
+  print(itr)
 }

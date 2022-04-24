@@ -482,9 +482,10 @@ class Compiler:
         op_node = node.op
         name_cond = op_node.token.type_name
 
+        # NOTE: should clean this up with an array or something
         if left.ID == right.ID:
             if name_cond == tk.TT_PLUS:
-                result = left.addc(right, self.builder)
+               result = left.addc(right, self.builder)
             elif name_cond == tk.TT_MINUS:
                 result = left.subc(right, self.builder)
             elif name_cond == tk.TT_MUL:

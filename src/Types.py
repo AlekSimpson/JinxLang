@@ -152,7 +152,10 @@ class Integer(Number):
         self.ptr = None
 
     def addc(self, other, builder):
-        return builder.add(self.ir_value, other.ir_value)
+        x = self.ir_value
+        if self.ptr is not None:
+            x = builder.load(self.ptr)
+        return builder.add(x, other.ir_value)
 
     def subc(self, other, builder):
         return builder.sub(self.ir_value, other.ir_value)
