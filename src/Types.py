@@ -151,21 +151,24 @@ class Integer(Number):
         self.ID = "NUMBER_TYPE"
         self.ptr = None
 
-    def addc(self, other, builder):
-        x = self.ir_value
+    def get_value(self, builder):
         if self.ptr is not None:
-            x = builder.load(self.ptr)
-        return builder.add(x, other.ir_value)
+            return builder.load(self.ptr)
+        return self.ir_value
+
+    def addc(self, other, builder):
+        return builder.add(self.get_value(builder), other.get_value(builder))
 
     def subc(self, other, builder):
-        return builder.sub(self.ir_value, other.ir_value)
+        return builder.sub(self.get_value(builder), other.get_value(builder))
 
     def divc(self, other, builder):
-        return builder.sdiv(self.ir_value, other.ir_value)
+        return builder.sdiv(self.get_value(builder), other.get_value(builder))
 
     def mulc(self, other, builder):
-        return builder.mul(self.ir_value, other.ir_value)
+        return builder.mul(self.get_value(builder), other.get_value(builder))
 
+    # NOTE: compiled exponentiation is bugged I'm prety sure
     def powc(self, other, builder):
         val = 1
         for i in range(0, other.value):
@@ -173,31 +176,31 @@ class Integer(Number):
         return val
 
     def comp_eqc(self, other, builder):
-        return builder.icmp_signed("==", self.ir_value, other.ir_value)
+        return builder.icmp_signed("==", self.get_value(builder), other.get_value(builder))
 
     def comp_goec(self, other, builder):
-        return builder.icmp_signed(">=", self.ir_value, other.ir_value)
+        return builder.icmp_signed(">=", self.get_value(builder), other.get_value(builder))
 
     def comp_gtc(self, other, builder):
-        return builder.icmp_signed(">", self.ir_value, other.ir_value)
+        return builder.icmp_signed(">", self.get_value(builder), other.get_value(builder))
 
     def comp_loec(self, other, builder):
-        return builder.icmp_signed("<=", self.ir_value, other.ir_value)
+        return builder.icmp_signed("<=", self.get_value(builder), other.get_value(builder))
 
     def comp_ltc(self, other, builder):
-        return builder.icmp_signed("<", self.ir_value, other.ir_value)
+        return builder.icmp_signed("<", self.get_value(builder), other.get_value(builder))
 
     def comp_nec(self, other, builder):
-        return builder.icmp_signed("!=", self.ir_value, other.ir_value)
+        return builder.icmp_signed("!=", self.get_value(builder), other.get_value(builder))
 
     def comp_andc(self, other, builder):
-        return builder.and_(self.ir_value, other.ir_value)
+        return builder.and_(self.get_value(builder), other.get_value(builder))
 
     def comp_orc(self, other, builder):
-        return builder.or_(self.ir_value, other.ir_value)
+        return builder.or_(self.get_value(builder), other.get_value(builder))
 
     def not_opc(self, builder):
-        return builder.neg(self.ir_value)
+        return builder.neg(self.get_value(builder))
 
     # Interpreter code
 
@@ -243,6 +246,11 @@ class Bool(Number):
         self.ID = "BOOL_TYPE"
         self.ptr = None
 
+    def get_value(self, builder):
+        if self.ptr is not None:
+            return builder.load(self.ptr)
+        return self.ir_value
+
     def print_self(self):
         if self.value == 1:
             return "true"
@@ -259,6 +267,11 @@ class Float(Number):
         self.ir_type = ir.DoubleType()
         self.ID = "FLOAT_TYPE"
         self.ptr = None
+
+    def get_value(self, builder):
+        if self.ptr is not None:
+            return builder.load(self.ptr)
+        return self.ir_value
 
     def addc(self, other, builder):
         return builder.fadd(self.ir_value, other.ir_value)
@@ -324,6 +337,11 @@ class Array(Type):
         self.ptr = None
         self.description = f"{self.print_self()}"
 
+    def get_value(self, builder):
+        if self.ptr is not None:
+            return builder.load(self.ptr)
+        return self.ir_value
+
     def print_self(self):
         new_arr = []
 
@@ -359,6 +377,11 @@ class string(Real):
             length = 0
         self.ir_type = ir.ArrayType(ir.IntType(8), length)
         self.ptr = None
+
+    def get_value(self, builder):
+        if self.ptr is not None:
+            return builder.load(self.ptr)
+        return self.ir_value
 
     def added(self, other):
         other_val = other.str_value

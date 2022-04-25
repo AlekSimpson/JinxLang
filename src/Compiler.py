@@ -15,12 +15,11 @@ from ctypes import CFUNCTYPE
 
 class Compiler:
     def __init__(self):
-        self.binding = binding # <-------- might not need this actually
         llvm.initialize()
         llvm.initialize_native_target()
         llvm.initialize_native_asmprinter()
         self.table = None
-        self.debug = True
+        self.debug = False
         self._config_llvm()
         self.init_string_formats()
 

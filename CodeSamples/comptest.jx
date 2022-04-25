@@ -1,4 +1,4 @@
-itr: Int = 0 
+itr: Int = 5
 
 while itr < 10 {
   itr = itr + 1
