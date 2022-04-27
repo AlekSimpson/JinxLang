@@ -1,6 +1,7 @@
 from SymbolTable import SymbolTable
 from Error import *
 import tokens as tk
+from tokens import Token
 from Context import Context
 from Types import *
 from Position import Position
@@ -8,6 +9,8 @@ from GlobalTable import global_symbol_table
 from TypeKeywords import type_keywords, type_values
 from TypeValue import TypeValue
 from Interpreter import Function, BuiltinFunction
+from Node import BinOpNode, NumberNode, VarAssignNode, VarAccessNode, VarUpdateNode, VariableNode
+from tokens import *
 
 from llvmlite import ir, binding
 import llvmlite.binding as llvm
@@ -160,8 +163,8 @@ class Compiler:
             self.AccessNode,           # 4 |
             self.visit_VarAssignNode,  # 5 |
             self.visit_IfNode,         # 6 |
-            self.visit_ForNode,        # 7
-            self.visit_WhileNode,      # 8
+            self.visit_ForNode,        # 7 |
+            self.visit_WhileNode,      # 8 |
             self.visit_FuncDefNode,    # 9
             self.visit_CallNode,       # 10 |
             self.visit_StringNode,     # 11 |
@@ -235,7 +238,51 @@ class Compiler:
         else:
             self.else_if_block(node.cases[0], ctx, 0, node)
 
-    def visit_ForNode(self, node, ctx): pass
+    def create_iterator(self, node, startValue, ctx):
+        iterator = node.iterator
+        sVal = self.compile(startValue, ctx)
+        sValNode = NumberNode(Token(tk.MT_FACTOR, tk.TT_INT, sVal.value, type_dec=TypeValue(1, Integer(64))))
+        itr = VarAssignNode(Token(value=iterator.token.value), sValNode, type=TypeValue(1, Integer(64)))
+        self.compile(itr, ctx)
+
+        itr_access = VarAccessNode(Token(value=iterator.token.value))
+        op_node = VariableNode(Token(tk.MT_NONFAC, tk.TT_LOE, "<="))
+        condition_node = BinOpNode(itr_access, op_node, node.endValue)
+        condition = self.compile(condition_node, ctx)
+
+        return condition, condition_node
+
+    def append_inc_to_for_body(self, node, ctx):
+        body = node.bodyNode
+        itr = VarAccessNode(Token(value=node.iterator.token.value))
+        one = NumberNode(Token(tk.MT_FACTOR, tk.TT_INT, 1, type_dec=TypeValue(1, Integer(64))))
+        # increment instructions
+        op_node = VariableNode(Token(tk.MT_NONFAC, tk.TT_PLUS, "+"))
+        increment_node = BinOpNode(itr, op_node, one)
+        # update instructions
+        update = VarUpdateNode(node.iterator.token, increment_node)
+        body.element_nodes.append(update)
+
+    def visit_ForNode(self, node, ctx):
+        itr = 0
+        body = node.bodyNode
+        endValue = node.endValue
+        startValue = node.startValue
+        iterator = node.iterator
+        condition, condition_node = self.create_iterator(node, startValue, ctx)
+        self.append_inc_to_for_body(node, ctx)
+
+        for_loop_entry = self.builder.append_basic_block("for_loop_entry"+str(itr + 1))
+
+        for_loop_otherwise = self.builder.append_basic_block("for_loop_otherwise"+str(itr))
+
+        self.builder.cbranch(condition.ir_value, for_loop_entry, for_loop_otherwise)
+
+        self.builder.position_at_start(for_loop_entry)
+        self.compile(body, ctx)
+        condition = self.compile(condition_node, ctx)
+        self.builder.cbranch(condition.ir_value, for_loop_entry, for_loop_otherwise)
+        self.builder.position_at_start(for_loop_otherwise)
 
     def visit_WhileNode(self, node, ctx):
         itr = 0
