@@ -15,6 +15,7 @@
 * ~Add structures~ 
 * ~Add inheritance~ nvm inheritance is cringe
 * Write compiler
+** Fix bug where arrays can only hold strings that are all the same size
 * System library (to get inputs, outputs, etc and also some sort of bash interface)
 
 ## Known bugs

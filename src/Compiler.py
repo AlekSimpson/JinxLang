@@ -18,7 +18,7 @@ class Compiler:
         llvm.initialize_native_target()
         llvm.initialize_native_asmprinter()
         self.table = None
-        self.debug = False 
+        self.debug = False
         self._config_llvm()
         self.init_string_formats()
 
@@ -45,6 +45,11 @@ class Compiler:
         self.flt_global_fmt.linkage = 'internal'
         self.flt_global_fmt.global_constant = True
         self.flt_global_fmt.initializer = flt_c_fmt
+
+    def generate_new_context(self, name, parent_ctx, pos=None):
+        new_context = Context(name, parent_ctx, pos)
+        new_context.symbolTable = parent_ctx.symbolTable
+        return new_context
 
     def printf(self, params):
         arg = params[0]
@@ -373,7 +378,6 @@ class Compiler:
             ptr = ctx.symbolTable.get_val(node.token.value)
         return ptr
 
-    # NOTE: Not tested yet, nvm this shit definitely does not work yet
     def visit_FuncDefNode(self, node, ctx):
         name = node.token.value
         body_node = node.body_node
@@ -385,9 +389,9 @@ class Compiler:
             func_arg_names.append(n.value)
 
         for n in node.arg_type_tokens:
-            func_arg_types.append(n.type_dec.type_obj)
+            func_arg_types.append(n.type_dec.type_obj.ir_type)
 
-        return_type = node.return_type
+        return_type = node.returnType.type_dec.type_obj.ir_type
 
         fnty = ir.FunctionType(return_type, func_arg_types)
         func = ir.Function(self.module, fnty, name=name)
@@ -398,25 +402,35 @@ class Compiler:
         self.builder = ir.IRBuilder(block)
         params_ptr = []
 
+        # stores parameters in memory
         for i, typ in enumerate(func_arg_types):
             ptr = self.builder.alloca(typ)
             self.builder.store(func.args[i], ptr)
             params_ptr.append(ptr)
 
-        previous_variables = self.variables.copy()
+        # stores pointers in SymbolTable
+        new_ctx = self.generate_new_context(name, ctx)
         for i, x in enumerate(zip(func_arg_types, func_arg_names)):
             typ = func_arg_types[i]
             ptr = params_ptr[i]
+            arg_name = func_arg_names[i]
 
-            self.variables[x[1]] = ptr, typ
+            val = string(ptr=ptr)
+            if isinstance(typ, ir.IntType):
+                val = Integer(64, ptr=ptr)
+            elif isinstance(typ, ir.DoubleType):
+                val = Float(64, ptr=ptr)
 
-        self.variables[name] = func, return_type
+            new_ctx.symbolTable.set_val(arg_name, val)
 
-        self.compile(body_node, ctx)
+        ctx.symbolTable.set_val(name, Function(name, return_type, ir_value=func, ir_type=fnty))
+
+        self.compile(body_node, new_ctx)
 
         # Removing function's variables so that they cannot be accessed out of scope
-        self.variables = previous_variables
-        self.variables[name] = func, return_type
+        #self.variables = previous_variables
+        #self.variables[name] = func, return_type
+        self.builder.ret_void()
 
         self.builder = previous_builder
 
@@ -448,10 +462,12 @@ class Compiler:
         if val_cal in self.builtin:
             builtin_func = self.builtin[val_cal][1]
             ret = builtin_func(args)
-            ret_type = ir.IntType(32)
         else:
-            func, ret_type = ctx.symbolTable.get_val(val_cal)
-            ret = self.builder.call(func, args)
+            ir_args = []
+            for arg in args:
+                ir_args.append(arg.ir_value)
+            func = ctx.symbolTable.get_val(val_cal)
+            ret = self.builder.call(func.ir_value, ir_args)
 
         return ret
 

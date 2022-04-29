@@ -106,14 +106,15 @@ class BaseFunction(Type):
         return None
 
 class Function(BaseFunction):
-    def __init__(self, name=None, returnType=None, body_node=None, arg_nodes=None, arg_types=None, should_return_nil=False):
+    def __init__(self, name=None, returnType=None, body_node=None, arg_nodes=None, arg_types=None, should_return_nil=False, ir_value=None, ir_type=None):
         super().__init__(name)
         self.body_node = body_node
         self.arg_nodes = arg_nodes
         self.arg_types = arg_types
         self.returnType = returnType
         self.should_return_nil = should_return_nil
-        self.ir_value = None
+        self.ir_value = ir_value
+        self.ir_type = ir_type
 
     def execute(self, args):
         interpreter = Interpreter()

@@ -37,6 +37,7 @@ class Void:
         self.pos = pos
         self.context = None
         self.ptr = None
+        self.ir_type = ir.VoidType()
 
     def print_self(self):
         return "Void"
@@ -260,7 +261,7 @@ class Bool(Number):
             return "false"
 
 class Float(Number):
-    def __init__(self, bitsize, value=None, pos=None, ir_value=None):
+    def __init__(self, bitsize, value=None, pos=None, ir_value=None, ptr=None):
         super().__init__(value, pos)
         self.description = "Float"
         self.bitsize = bitsize
@@ -268,7 +269,7 @@ class Float(Number):
         self.ir_value = ir_value
         self.ir_type = ir.DoubleType()
         self.ID = "FLOAT_TYPE"
-        self.ptr = None
+        self.ptr = ptr
 
     def get_value(self, builder):
         if self.ptr is not None:
@@ -349,7 +350,7 @@ class Array(Type):
 
         for element in self.elements:
             if element is not None:
-                new_arr.append(element.value)
+                new_arr.append(element)
 
         return new_arr
 
@@ -367,7 +368,7 @@ class Array(Type):
         return None
 
 class string(Real):
-    def __init__(self, str_value=None, ir_value=None):
+    def __init__(self, str_value=None, ir_value=None, ptr=None):
         super().__init__(str_value)
         self.description = "String"
         self.str_value = str_value
@@ -378,7 +379,7 @@ class string(Real):
         else:
             length = 0
         self.ir_type = ir.ArrayType(ir.IntType(8), length)
-        self.ptr = None
+        self.ptr = ptr 
 
     def get_value(self, builder):
         if self.ptr is not None:

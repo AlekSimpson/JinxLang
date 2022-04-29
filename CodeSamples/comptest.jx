@@ -1,5 +1,12 @@
-#arr: Array{String} = ["100" "200" "404" "400" "500"]
-arr: Array{Float} = [1.2 2.2 3.2 4.2 5.2]
+method add(a:Int, b:Int):Void {
+  sum: Int = a + b
+  print(sum)
+}
 
-print(arr[2])
+method print_str(a:String): Void {
+  print(a)
+  print(a)
+}
 
+add(1, 2)
+print_str("testing...")
