@@ -18,13 +18,13 @@ from llvmlite import ir
 # String
 
 class Type:
-    def __init__(self, value=None, pos=None, description="AnyType", ir_value=None):
+    def __init__(self, value=None, pos=None, description="AnyType", ir_value=None, ptr=None):
         self.value = value
         self.ir_value = ir_value
         self.pos = pos
         self.context = None
         self.description = description
-        self.ptr = None
+        self.ptr = ptr
 
     def set_context(self, ctx):
         self.context = ctx

@@ -1,5 +1,5 @@
-arr: Array{String} = ["1" "2" "3" "4" "5"]
-#arr: Array{Int} = [1 2 3 4 5]
+#arr: Array{String} = ["100" "200" "404" "400" "500"]
+arr: Array{Float} = [1.2 2.2 3.2 4.2 5.2]
 
 print(arr[2])
 

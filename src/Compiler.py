@@ -50,11 +50,8 @@ class Compiler:
         arg = params[0]
         printf = self.builtin['print'][0]
 
-        print(f"THE ARG IS: {arg}")
-
         # Check if arg is a complex type, if so we need to print its string representation
         if isinstance(arg, Array):
-            print("DETECTING ARRAY TYPE")
             str_value = arg.description + "\0"
             c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)),
                             bytearray(str_value.encode("utf8")))
@@ -62,35 +59,29 @@ class Compiler:
             arg = string(str_value=str_value, ir_value=c_str_val)
 
         fmt = self.int_global_fmt
-        #if arg.ptr is not None:
-        print("OPTION 1")
-        arg = self.builder.load(arg.ptr)
+        if arg.ptr is not None:
+            arg = self.builder.load(arg.ptr)
 
-        if isinstance(arg.type, ir.ArrayType):
-            fmt = self.str_global_fmt
+            if isinstance(arg.type, ir.ArrayType):
+                fmt = self.str_global_fmt
 
-            before = arg
-            arg = self.builder.alloca(arg.type)
-            self.builder.store(before, arg)
-        elif isinstance(arg.type, ir.DoubleType):
-            fmt = self.flt_global_fmt
-    #else:
-        #    print("OPTION 2")
-        #    if isinstance(arg, string):
-        #        print("DETECTING STRING")
-        #        fmt = self.str_global_fmt
-        #    elif isinstance(arg, Float):
-        #        print("DETECTING FLOAT")
-        #        fmt = self.flt_global_fmt
+                before = arg
+                arg = self.builder.alloca(arg.type)
+                self.builder.store(before, arg)
+            elif isinstance(arg.type, ir.DoubleType):
+                fmt = self.flt_global_fmt
+        else:
+            if isinstance(arg, string):
+                fmt = self.str_global_fmt
+            elif isinstance(arg, Float):
+                fmt = self.flt_global_fmt
 
-        #    arg = arg.ir_value
-        #    print(f"UPDATED ARG IS {arg}")
+            arg = arg.ir_value
 
-        #    if isinstance(arg.type, ir.ArrayType):
-        #        print("DETECTING ARRAY TYPE")
-        #        before = arg
-        #        arg = self.builder.alloca(arg.type)
-        #        self.builder.store(before, arg)
+            if isinstance(arg.type, ir.ArrayType):
+                before = arg
+                arg = self.builder.alloca(arg.type)
+                self.builder.store(before, arg)
 
         voidptr_ty = ir.IntType(8).as_pointer()
         fmt_arg = self.builder.bitcast(fmt, voidptr_ty)
@@ -322,11 +313,15 @@ class Compiler:
         index = self.compile(node.index, ctx)
         if isinstance(index, Error):
             return index
-            
+
         retval = self.builder.extract_value(array.ir_value, index.value)
-        #print(f"RETVAL IS: {retval}")
-        #int = Integer(64, ir_value=retval)
-        val = Type(ir_value=retval)
+
+        val = string(ir_value=retval)
+        if isinstance(array.elements[0], Integer):
+            val = Integer(64, ir_value=retval)
+        elif isinstance(array.elements[0], Float):
+            val = Float(64, ir_value=retval)
+
         return val
 
     def visit_ReturnNode(self, node, ctx): pass
