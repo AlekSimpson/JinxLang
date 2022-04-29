@@ -18,11 +18,13 @@ from llvmlite import ir
 # String
 
 class Type:
-    def __init__(self, value=None, pos=None, description="AnyType"):
+    def __init__(self, value=None, pos=None, description="AnyType", ir_value=None):
         self.value = value
+        self.ir_value = ir_value
         self.pos = pos
         self.context = None
         self.description = description
+        self.ptr = None
 
     def set_context(self, ctx):
         self.context = ctx
@@ -141,7 +143,7 @@ class Number(Real):
         return self.value
 
 class Integer(Number):
-    def __init__(self, bitsize, value=None, pos=None, ir_value=None):
+    def __init__(self, bitsize, value=None, pos=None, ir_value=None, ptr=None):
         super().__init__(value, pos)
         self.description = "Integer"
         self.bitsize = bitsize
@@ -149,7 +151,7 @@ class Integer(Number):
         self.ir_value = ir_value
         self.ir_type = ir.IntType(bitsize)
         self.ID = "NUMBER_TYPE"
-        self.ptr = None
+        self.ptr = ptr
 
     def get_value(self, builder):
         if self.ptr is not None:

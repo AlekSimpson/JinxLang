@@ -1,18 +1,14 @@
-from SymbolTable import SymbolTable
 from Error import *
 import tokens as tk
 from tokens import Token
-from Context import Context
 from Types import *
 from Position import Position
-from GlobalTable import global_symbol_table
-from TypeKeywords import type_keywords, type_values
 from TypeValue import TypeValue
-from Interpreter import Function, BuiltinFunction
+from Interpreter import Function
 from Node import BinOpNode, NumberNode, VarAssignNode, VarAccessNode, VarUpdateNode, VariableNode
 from tokens import *
 
-from llvmlite import ir, binding
+from llvmlite import ir
 import llvmlite.binding as llvm
 from ctypes import CFUNCTYPE
 
@@ -22,7 +18,7 @@ class Compiler:
         llvm.initialize_native_target()
         llvm.initialize_native_asmprinter()
         self.table = None
-        self.debug = False
+        self.debug = False 
         self._config_llvm()
         self.init_string_formats()
 
@@ -54,8 +50,11 @@ class Compiler:
         arg = params[0]
         printf = self.builtin['print'][0]
 
+        print(f"THE ARG IS: {arg}")
+
         # Check if arg is a complex type, if so we need to print its string representation
         if isinstance(arg, Array):
+            print("DETECTING ARRAY TYPE")
             str_value = arg.description + "\0"
             c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)),
                             bytearray(str_value.encode("utf8")))
@@ -63,30 +62,35 @@ class Compiler:
             arg = string(str_value=str_value, ir_value=c_str_val)
 
         fmt = self.int_global_fmt
-        if arg.ptr is not None:
-            arg = self.builder.load(arg.ptr)
+        #if arg.ptr is not None:
+        print("OPTION 1")
+        arg = self.builder.load(arg.ptr)
 
-            if isinstance(arg.type, ir.ArrayType):
-                fmt = self.str_global_fmt
+        if isinstance(arg.type, ir.ArrayType):
+            fmt = self.str_global_fmt
 
-                before = arg
-                arg = self.builder.alloca(arg.type)
-                self.builder.store(before, arg)
-            elif isinstance(arg.type, ir.DoubleType):
-                fmt = self.flt_global_fmt
-        else:
-            if isinstance(arg, string):
-                fmt = self.str_global_fmt
-            elif isinstance(arg, Float):
-                fmt = self.flt_global_fmt
+            before = arg
+            arg = self.builder.alloca(arg.type)
+            self.builder.store(before, arg)
+        elif isinstance(arg.type, ir.DoubleType):
+            fmt = self.flt_global_fmt
+    #else:
+        #    print("OPTION 2")
+        #    if isinstance(arg, string):
+        #        print("DETECTING STRING")
+        #        fmt = self.str_global_fmt
+        #    elif isinstance(arg, Float):
+        #        print("DETECTING FLOAT")
+        #        fmt = self.flt_global_fmt
 
-            arg = arg.ir_value
+        #    arg = arg.ir_value
+        #    print(f"UPDATED ARG IS {arg}")
 
-            #if not isinstance(arg.type, ir.IntType):
-            if isinstance(arg.type, ir.ArrayType):
-                before = arg
-                arg = self.builder.alloca(arg.type)
-                self.builder.store(before, arg)
+        #    if isinstance(arg.type, ir.ArrayType):
+        #        print("DETECTING ARRAY TYPE")
+        #        before = arg
+        #        arg = self.builder.alloca(arg.type)
+        #        self.builder.store(before, arg)
 
         voidptr_ty = ir.IntType(8).as_pointer()
         fmt_arg = self.builder.bitcast(fmt, voidptr_ty)
@@ -170,7 +174,7 @@ class Compiler:
             self.visit_StringNode,     # 11 |
             self.visit_ListNode,       # 12 |
             self.visit_SetArrNode,     # 13
-            self.visit_GetArrNode,     # 14
+            self.visit_GetArrNode,     # 14 |
             self.visit_ReturnNode,     # 15
             self.visit_VarUpdateNode,  # 16 |
             self.visit_float,          # 17 |
@@ -252,7 +256,7 @@ class Compiler:
 
         return condition, condition_node
 
-    def append_inc_to_for_body(self, node, ctx):
+    def append_inc_to_for_body(self, node):
         body = node.bodyNode
         itr = VarAccessNode(Token(value=node.iterator.token.value))
         one = NumberNode(Token(tk.MT_FACTOR, tk.TT_INT, 1, type_dec=TypeValue(1, Integer(64))))
@@ -266,11 +270,11 @@ class Compiler:
     def visit_ForNode(self, node, ctx):
         itr = 0
         body = node.bodyNode
-        endValue = node.endValue
         startValue = node.startValue
-        iterator = node.iterator
         condition, condition_node = self.create_iterator(node, startValue, ctx)
-        self.append_inc_to_for_body(node, ctx)
+        if isinstance(condition, Error):
+            return condition
+        self.append_inc_to_for_body(node)
 
         for_loop_entry = self.builder.append_basic_block("for_loop_entry"+str(itr + 1))
 
@@ -281,12 +285,16 @@ class Compiler:
         self.builder.position_at_start(for_loop_entry)
         self.compile(body, ctx)
         condition = self.compile(condition_node, ctx)
+        if isinstance(condition, Error):
+            return condition
         self.builder.cbranch(condition.ir_value, for_loop_entry, for_loop_otherwise)
         self.builder.position_at_start(for_loop_otherwise)
 
     def visit_WhileNode(self, node, ctx):
         itr = 0
         condition = self.compile(node.conditionNode, ctx)
+        if isinstance(condition, Error):
+            return condition
         body = node.bodyNode
 
         while_loop_entry = self.builder.append_basic_block("while_loop_entry"+str(itr + 1))
@@ -298,11 +306,29 @@ class Compiler:
         self.builder.position_at_start(while_loop_entry)
         self.compile(body, ctx)
         condition = self.compile(node.conditionNode, ctx)
+        if isinstance(condition, Error):
+            return condition
         self.builder.cbranch(condition.ir_value, while_loop_entry, while_loop_otherwise)
         self.builder.position_at_start(while_loop_otherwise)
 
     def visit_SetArrNode(self, node, ctx): pass
-    def visit_GetArrNode(self, node, ctx): pass
+
+    def visit_GetArrNode(self, node, ctx): 
+        # should return pointer to array 
+        array = self.compile(node.array, ctx)
+        if isinstance(array, Error):
+            return array
+
+        index = self.compile(node.index, ctx)
+        if isinstance(index, Error):
+            return index
+            
+        retval = self.builder.extract_value(array.ir_value, index.value)
+        #print(f"RETVAL IS: {retval}")
+        #int = Integer(64, ir_value=retval)
+        val = Type(ir_value=retval)
+        return val
+
     def visit_ReturnNode(self, node, ctx): pass
 
     def types_match(self, a, b, ctx):
@@ -337,10 +363,7 @@ class Compiler:
         return new_val
 
     def visit_float(self, node, ctx):
-        entry = node.token.pos
-
         val = node.token.value
-        p = node.token.pos
 
         Type = ir.DoubleType()
         return Float(64, value=val, ir_value=ir.Constant(Type, val))
@@ -457,7 +480,7 @@ class Compiler:
         c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)),
                         bytearray(str_value.encode("utf8")))
 
-        str = string(str_value=node.token.value, ir_value=c_str_val)
+        str = string(str_value=str_value, ir_value=c_str_val)
         return str
 
     def visit_ListNode(self, node, ctx):
@@ -492,10 +515,7 @@ class Compiler:
         return arr
 
     def visit_number(self, node, ctx):
-        entry = node.token.pos
-
         val = node.token.value
-        p = node.token.pos
 
         Type = ir.IntType(64)
         return Integer(64, value=val, ir_value=ir.Constant(Type, val))
@@ -513,7 +533,6 @@ class Compiler:
 
     def visit_binop(self, node, ctx):
         result = None
-        error = None
 
         left_vst = self.compile(node.lhs, ctx)
         if isinstance(left_vst, Error):
