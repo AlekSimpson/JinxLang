@@ -4,7 +4,7 @@ from tokens import Token
 from Types import *
 from Position import Position
 from TypeValue import TypeValue
-from Interpreter import Function
+from Interpreter import Function, FunctionIrPackage
 from Node import BinOpNode, NumberNode, VarAssignNode, VarAccessNode, VarUpdateNode, VariableNode
 from tokens import *
 
@@ -45,6 +45,12 @@ class Compiler:
         self.flt_global_fmt.linkage = 'internal'
         self.flt_global_fmt.global_constant = True
         self.flt_global_fmt.initializer = flt_c_fmt
+
+        #self.str_type = ir.LiteralStructType([ir.IntType(8), ir.IntType(8).as_pointer()])
+        self.char_type = ir.IntType(8)
+        self.str_type = ir.IdentifiedStructType(ir.global_context, "String")
+        self.str_ptr_type = ir.PointerType(self.str_type)
+        self.str_type.set_body(self.char_type, self.str_ptr_type)
 
     def generate_new_context(self, name, parent_ctx, pos=None):
         new_context = Context(name, parent_ctx, pos)
@@ -132,6 +138,9 @@ class Compiler:
 
     def compile_ir_and_output(self, ir_):
         self.builder.ret_void()
+        # ===========================
+        print(str(ir_))
+        # ===========================
         engine = self.create_execution_engine()
         mod = self.compile_ir(engine, ir_)
         return mod
@@ -309,8 +318,8 @@ class Compiler:
 
     def visit_SetArrNode(self, node, ctx): pass
 
-    def visit_GetArrNode(self, node, ctx): 
-        # should return pointer to array 
+    def visit_GetArrNode(self, node, ctx):
+        # should return pointer to array
         array = self.compile(node.array, ctx)
         if isinstance(array, Error):
             return array
@@ -416,6 +425,7 @@ class Compiler:
             arg_name = func_arg_names[i]
 
             val = string(ptr=ptr)
+            test = self.builder.load(ptr)
             if isinstance(typ, ir.IntType):
                 val = Integer(64, ptr=ptr)
             elif isinstance(typ, ir.DoubleType):
@@ -423,15 +433,11 @@ class Compiler:
 
             new_ctx.symbolTable.set_val(arg_name, val)
 
-        ctx.symbolTable.set_val(name, Function(name, return_type, ir_value=func, ir_type=fnty))
+        ir_pack = FunctionIrPackage(new_ctx, func_arg_types, func_arg_names, params_ptr)
+        ctx.symbolTable.set_val(name, Function(name, return_type, ir_value=func, ir_type=fnty, ir_pack=ir_pack))
 
         self.compile(body_node, new_ctx)
-
-        # Removing function's variables so that they cannot be accessed out of scope
-        #self.variables = previous_variables
-        #self.variables[name] = func, return_type
         self.builder.ret_void()
-
         self.builder = previous_builder
 
     def visit_CallNode(self, node, ctx):
@@ -467,18 +473,11 @@ class Compiler:
             for arg in args:
                 ir_args.append(arg.ir_value)
             func = ctx.symbolTable.get_val(val_cal)
+            #for arg in ir_args:
+            #    print(arg)
             ret = self.builder.call(func.ir_value, ir_args)
 
         return ret
-
-        #return_value = self.variables[val_cal]()
-
-        #func_return = func_value.returnType.type_dec.type_obj
-        #types_match = self.check_types_match(return_value, func_return, return_value.name, ctx, node)
-        #if types_match is not None:
-        #    return types_match
-
-        #return return_value
 
     def check_types_match(self, a, b, name, ctx, node):
         if a.ID != b.ID:
@@ -488,11 +487,32 @@ class Compiler:
 
     def visit_StringNode(self, node, ctx):
         str_value = node.token.value + "\0"
-        c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)),
-                        bytearray(str_value.encode("utf8")))
+        str_val_arr = list(str_value)
 
-        str = string(str_value=str_value, ir_value=c_str_val)
-        return str
+        collected_ptrs = []
+        collected_chars = []
+        for char in str_val_arr:
+            #val = ir.Constant(ir.IntType(8), bytearray(char.encode("utf8")))
+            val = ir.Constant(ir.IntType(8), ord(char))
+            collected_chars.append(val)
+
+            ptr = self.builder.alloca(self.str_type)
+            val = ir.Constant(self.str_type, [val, ptr])
+            self.builder.store(val, ptr)
+
+            collected_ptrs.append(ptr)
+
+        c_str_val = None
+        for i in range(len(collected_ptrs)):
+            if not i + 1 > len(collected_ptrs):
+                next_ptr = i + 1 if len(collected_ptrs) != 1 else 0
+                if i == 0 and len(collected_ptrs) != 1:
+                    # NOTE: Cannot pass Constant directly into function, need to pass its pointer into it 
+                    # All struct values should probably just be stored as pointers and not stored directly
+                    c_str_val = ir.Constant(self.str_type, [collected_chars[i], collected_ptrs[next_ptr]])
+
+        str_ = string(str_value=str_value, ir_value=c_str_val)
+        return str_
 
     def visit_ListNode(self, node, ctx):
         elements = []

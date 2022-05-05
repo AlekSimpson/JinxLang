@@ -105,8 +105,15 @@ class BaseFunction(Type):
 
         return None
 
+class FunctionIrPackage:
+    def __init__(self, context, arg_types, arg_names, param_ptrs):
+        self.context = context
+        self.arg_types = arg_types
+        self.arg_names = arg_names
+        self.param_ptrs = param_ptrs
+
 class Function(BaseFunction):
-    def __init__(self, name=None, returnType=None, body_node=None, arg_nodes=None, arg_types=None, should_return_nil=False, ir_value=None, ir_type=None):
+    def __init__(self, name=None, returnType=None, body_node=None, arg_nodes=None, arg_types=None, should_return_nil=False, ir_value=None, ir_type=None, ir_pack=None):
         super().__init__(name)
         self.body_node = body_node
         self.arg_nodes = arg_nodes
@@ -115,6 +122,7 @@ class Function(BaseFunction):
         self.should_return_nil = should_return_nil
         self.ir_value = ir_value
         self.ir_type = ir_type
+        self.ir_pack = ir_pack
 
     def execute(self, args):
         interpreter = Interpreter()

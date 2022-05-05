@@ -38,6 +38,7 @@ class Void:
         self.context = None
         self.ptr = None
         self.ir_type = ir.VoidType()
+        self.ir_value = ir.VoidType()
 
     def print_self(self):
         return "Void"
@@ -377,9 +378,15 @@ class string(Real):
         if str_value is not None:
             length = len(self.str_value)
         else:
-            length = 0
-        self.ir_type = ir.ArrayType(ir.IntType(8), length)
-        self.ptr = ptr 
+            length = 1
+        #self.ir_type = ir.ArrayType(ir.IntType(8), length)
+        #self.ir_type = ir.LiteralStructType([ir.IntType(8), ir.IntType(8).as_pointer()])
+        self.ptr = ptr
+
+        self.char_type = ir.IntType(8)
+        self.ir_type = ir.IdentifiedStructType(ir.global_context, "String")
+        self.str_ptr_type = ir.PointerType(self.ir_type)
+        self.ir_type.set_body([self.char_type, self.str_ptr_type])
 
     def get_value(self, builder):
         if self.ptr is not None:
