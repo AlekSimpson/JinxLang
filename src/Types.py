@@ -379,7 +379,7 @@ class string(Real):
             self.length = len(self.str_value)
         else:
             self.length = 3
-        #self.ir_type = ir.ArrayType(ir.IntType(8), self.length)
+
         self.ir_type = ir.PointerType(ir.IntType(64).as_pointer())
         self.ptr = ptr
 

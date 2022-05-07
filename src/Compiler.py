@@ -55,9 +55,6 @@ class Compiler:
         arg = params[0]
         printf = self.builtin['print'][0]
 
-        zero = ir.Constant(ir.IntType(8), 0)
-        #one = ir.Constant(ir.IntType(8), 1)
-
         # Check if arg is a complex type, if so we need to print its string representation
         if isinstance(arg, Array):
             str_value = arg.description + "\0"
@@ -69,17 +66,22 @@ class Compiler:
         fmt = self.int_global_fmt
         if arg.ptr is not None:
             arg = self.builder.load(arg.ptr)
-            arg = self.builder.load(arg)
-            #arg = self.builder.load(arg)
+            if arg.type == ir.PointerType(ir.IntType(64).as_pointer()):
+                arg = self.builder.load(arg)
 
-            #if isinstance(arg.type, ir.ArrayType):
-            fmt = self.str_global_fmt
+                fmt = self.str_global_fmt
 
-            before = arg
-            arg = self.builder.alloca(arg.type)
-            self.builder.store(before, arg)
-            ##elif isinstance(arg.type, ir.DoubleType):
-            #    fmt = self.flt_global_fmt
+                before = arg
+                arg = self.builder.alloca(arg.type)
+                self.builder.store(before, arg)
+            elif isinstance(arg.type, ir.ArrayType):
+                fmt = self.str_global_fmt
+
+                before = arg
+                arg = self.builder.alloca(arg.type)
+                self.builder.store(before, arg)
+            elif isinstance(arg.type, ir.DoubleType):
+                fmt = self.flt_global_fmt
         else:
             if isinstance(arg, string):
                 fmt = self.str_global_fmt
@@ -95,7 +97,6 @@ class Compiler:
 
         voidptr_ty = ir.IntType(8).as_pointer()
         fmt_arg = self.builder.bitcast(fmt, voidptr_ty)
-        print(arg.type)
         self.builder.call(printf, [fmt_arg, arg])
 
     # NOTE: End builtin functions
@@ -206,9 +207,15 @@ class Compiler:
             return value
 
         if var_name not in ctx.symbolTable.symbols:
-            ptr = self.builder.alloca(value.ir_value.type)
-            value.ptr = ptr
-            self.builder.store(value.ir_value, ptr)
+            # This allocates the string pointer so that we are with a reference to the string instead of directly with the string array
+            # Doing this because we need to be able to hide the size of the string/array so that we can pass it into functions and stuff like that
+            if not isinstance(value, string):
+                ptr = self.builder.alloca(value.ir_value.type)
+                value.ptr = ptr
+                self.builder.store(value.ir_value, ptr)
+            else:
+                ptr = self.builder.alloca(value.ptr.type)
+                self.builder.store(value.ptr, ptr)
             ctx.symbolTable.set_val(var_name, value)
 
         return value
@@ -409,12 +416,6 @@ class Compiler:
         self.builder = ir.IRBuilder(block)
         params_ptr = []
 
-        # NOTE: This condition is wrogn, need to check each arg for an array
-        for typ in node.arg_type_tokens:
-            if isinstance(typ.type_dec.type_obj, Array):
-                comp_args = False
-                break
-
         new_ctx = self.generate_new_context(name, ctx)
         # stores parameters in memory
         for i, typ in enumerate(func_arg_types):
@@ -452,10 +453,6 @@ class Compiler:
         if isinstance(value_to_call, Error):
             return value_to_call
 
-        func_value = Function()
-        if value_to_call is not None:
-            func_value = value_to_call
-
         val_cal = node.node_to_call.token.value
 
         # get args and their types
@@ -475,21 +472,13 @@ class Compiler:
         else:
             ir_args = []
             for arg in args:
-                ir_args.append(arg.ir_value)
+                if isinstance(arg, string):
+                    ir_args.append(arg.ptr)
+                else:
+                    ir_args.append(arg.ir_value)
+
             func = ctx.symbolTable.get_val(val_cal)
-
-            #if isinstance(args[0], string):
-            #    zero = ir.Constant(ir.IntType(8), 0)
-            #    gep_ = self.builder.gep(args[0].ptr, [zero, zero])
-            #    gep_ptr = self.builder.load(gep_)
-            #    #print(gep_ptr)
-            #    test_gep = self.builder.gep(gep_.pointer, [zero, ir.Constant(ir.IntType(64), 1)])
-            #    test_res = self.builder.load(test_gep)
-            #    #print("=========================")
-            #    #print(f"TEST RES: {test_res}")
-            #    #print("=========================")
-
-            ret = self.builder.call(func.ir_value, [args[0].ptr])
+            ret = self.builder.call(func.ir_value, ir_args)
 
         return ret
 
@@ -503,15 +492,19 @@ class Compiler:
         str_value = node.token.value + "\0"
         c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)), bytearray(str_value.encode("utf8")))
 
+        # Bitcast string array to int64 so that it can be passed into functions at any size
         fr_ptr = self.builder.alloca(ir.IntType(64).as_pointer())
         ptr = self.builder.alloca(c_str_val.type)
 
         self.builder.store(c_str_val, ptr)
 
+        # cast the array string pointer (c_str_val) to an int64 pointer
+        # this hides the length of the array but does not affect what is stored
         btcast = self.builder.bitcast(ptr, fr_ptr.type)
         btcast = self.builder.load(btcast)
         self.builder.store(btcast, fr_ptr)
 
+        # create string type
         str_ = string(str_value=str_value, ir_value=c_str_val, ptr=fr_ptr)
         return str_
 
