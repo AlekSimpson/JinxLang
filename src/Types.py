@@ -376,17 +376,12 @@ class string(Real):
         self.ID = "STRING_TYPE"
         self.ir_value = ir_value
         if str_value is not None:
-            length = len(self.str_value)
+            self.length = len(self.str_value)
         else:
-            length = 1
-        #self.ir_type = ir.ArrayType(ir.IntType(8), length)
-        #self.ir_type = ir.LiteralStructType([ir.IntType(8), ir.IntType(8).as_pointer()])
+            self.length = 3
+        #self.ir_type = ir.ArrayType(ir.IntType(8), self.length)
+        self.ir_type = ir.PointerType(ir.IntType(64).as_pointer())
         self.ptr = ptr
-
-        self.char_type = ir.IntType(8)
-        self.ir_type = ir.IdentifiedStructType(ir.global_context, "String")
-        self.str_ptr_type = ir.PointerType(self.ir_type)
-        self.ir_type.set_body([self.char_type, self.str_ptr_type])
 
     def get_value(self, builder):
         if self.ptr is not None:

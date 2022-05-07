@@ -1,9 +1,9 @@
-#method print_str(a:String): Void {
-#  print(a)
-#  print(a)
-#}
-#
-#print_str("testing...")
+method print_str(a:String): Void {
+  print(a)
+  print(a)
+}
+
+print_str("te")
 
 #method add(a: Int, b: Int): Void {
 #  sum: Int = a + b
@@ -11,5 +11,6 @@
 #}
 #
 #add(2, 2)
-
-stringVal: String = "test"
+#
+#stringVal: String = "test"
+#print(stringVal)
