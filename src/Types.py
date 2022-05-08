@@ -369,7 +369,7 @@ class Array(Type):
         return None
 
 class string(Real):
-    def __init__(self, str_value=None, ir_value=None, ptr=None):
+    def __init__(self, str_value=None, ir_value=None, ptr=None, bt_ptr=None):
         super().__init__(str_value)
         self.description = "String"
         self.str_value = str_value
@@ -382,6 +382,7 @@ class string(Real):
 
         self.ir_type = ir.PointerType(ir.IntType(64).as_pointer())
         self.ptr = ptr
+        self.bt_ptr = bt_ptr
 
     def get_value(self, builder):
         if self.ptr is not None:

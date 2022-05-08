@@ -66,6 +66,7 @@ class Compiler:
         fmt = self.int_global_fmt
         if arg.ptr is not None:
             arg = self.builder.load(arg.ptr)
+
             if arg.type == ir.PointerType(ir.IntType(64).as_pointer()):
                 arg = self.builder.load(arg)
 
@@ -467,13 +468,15 @@ class Compiler:
             i += 1
 
         if val_cal in self.builtin:
+            # Builtin Function
             builtin_func = self.builtin[val_cal][1]
             ret = builtin_func(args)
         else:
+            # Defined Function
             ir_args = []
             for arg in args:
                 if isinstance(arg, string):
-                    ir_args.append(arg.ptr)
+                    ir_args.append(arg.bt_ptr)
                 else:
                     ir_args.append(arg.ir_value)
 
@@ -493,19 +496,20 @@ class Compiler:
         c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)), bytearray(str_value.encode("utf8")))
 
         # Bitcast string array to int64 so that it can be passed into functions at any size
-        fr_ptr = self.builder.alloca(ir.IntType(64).as_pointer())
+        bt_ptr = self.builder.alloca(ir.IntType(64).as_pointer())
         ptr = self.builder.alloca(c_str_val.type)
+        copy = ptr
 
         self.builder.store(c_str_val, ptr)
 
         # cast the array string pointer (c_str_val) to an int64 pointer
         # this hides the length of the array but does not affect what is stored
-        btcast = self.builder.bitcast(ptr, fr_ptr.type)
+        btcast = self.builder.bitcast(ptr, bt_ptr.type)
         btcast = self.builder.load(btcast)
-        self.builder.store(btcast, fr_ptr)
+        self.builder.store(btcast, bt_ptr)
 
         # create string type
-        str_ = string(str_value=str_value, ir_value=c_str_val, ptr=fr_ptr)
+        str_ = string(str_value=str_value, ir_value=c_str_val, ptr=copy, bt_ptr=bt_ptr)
         return str_
 
     def visit_ListNode(self, node, ctx):

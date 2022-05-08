@@ -3,11 +3,13 @@ method print_str(a:String): Void {
 }
 
 method add(a: Int, b: Int): Void {
-  sum: Int = a + b
-  print(sum)
+  if a == 2 {
+    print(a + b)
+  }else {
+    print("no")
+  }
 }
 
-add(2, 2)
-
-stringVal: String = "test"
-print_str(stringVal)
+print_str("big test")
+print("big test")
+add(3, 5)
