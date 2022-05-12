@@ -21,6 +21,8 @@ while int_val < 10 {
   int_val = int_val + 1
 }
 
+print("===")
+
 for i in 1:20 {
   print(i)
 }

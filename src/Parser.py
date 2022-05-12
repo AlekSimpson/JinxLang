@@ -670,6 +670,8 @@ class Parser:
                 if isinstance(expr, Error):
                     return self.throw_error(expr.details)
                 return_node = ReturnNode(expr)
+            else:
+                return_node = ReturnNode()
             return return_node
 
         expr = self.expr()
