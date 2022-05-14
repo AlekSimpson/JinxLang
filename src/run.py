@@ -3,7 +3,7 @@ from Parser import Parser
 from Context import Context
 from GlobalTable import global_symbol_table
 from Types import Number
-from Interpreter import BuiltinFunction, Interpreter
+from Types import BuiltinFunction
 from Node import *
 from Error import *
 from Compiler import Compiler
@@ -43,11 +43,6 @@ def run(text, fn):
         return parse_check
 
     # Run program
-    #interpreter = Interpreter()
-    #ctx = Context("<program>")
-    #ctx.symbolTable = global_symbol_table
-    #result = interpreter.visit(nodes, ctx)
-
     compiler = Compiler()
     ctx = Context("<program>")
     ctx.symbolTable = global_symbol_table
@@ -58,6 +53,3 @@ def run(text, fn):
         result = compiler.compile_ir_and_output(compiler.module)
 
     return result
-
-# TODO:
-# Add for in loops (ex: for token in tokens) type thing

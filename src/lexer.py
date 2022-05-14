@@ -3,7 +3,7 @@ from Position import Position
 from tokens import *
 from Error import InvalidSyntaxError, IllegalCharError
 from Types import Float, Integer, string, Void, Array, Bool
-from Interpreter import Object
+from Types import Object
 from TypeValue import TypeValue
 from TypeKeywords import type_keywords, type_values
 

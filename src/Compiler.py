@@ -4,7 +4,7 @@ from tokens import Token
 from Types import *
 from Position import Position
 from TypeValue import TypeValue
-from Interpreter import Function, FunctionIrPackage
+from Types import Function, FunctionIrPackage
 from Node import BinOpNode, NumberNode, VarAssignNode, VarAccessNode, VarUpdateNode, VariableNode
 from tokens import *
 
