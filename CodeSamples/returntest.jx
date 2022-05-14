@@ -1,0 +1,9 @@
+method ret_str(a:Float): Float{
+    return a
+}
+
+test:Float = ret_str(3.1)
+print(test)
+
+#test: String = "teststring"
+#print(test)

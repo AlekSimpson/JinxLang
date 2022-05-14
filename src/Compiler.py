@@ -40,7 +40,7 @@ class Compiler:
         self.int_global_fmt.global_constant = True
         self.int_global_fmt.initializer = int_c_fmt
 
-        flt_c_fmt = ir.Constant(ir.ArrayType(ir.IntType(8), len("%.1f\n\0")), bytearray("%.1f\n\0".encode("utf8")))
+        flt_c_fmt = ir.Constant(ir.ArrayType(ir.IntType(8), len("%.2f\n\0")), bytearray("%.2f\n\0".encode("utf8")))
         self.flt_global_fmt = ir.GlobalVariable(self.module, flt_c_fmt.type, name="flt_str")
         self.flt_global_fmt.linkage = 'internal'
         self.flt_global_fmt.global_constant = True
@@ -173,7 +173,7 @@ class Compiler:
             self.visit_IfNode,         # 6 |
             self.visit_ForNode,        # 7 |
             self.visit_WhileNode,      # 8 |
-            self.visit_FuncDefNode,    # 9
+            self.visit_FuncDefNode,    # 9 |
             self.visit_CallNode,       # 10 |
             self.visit_StringNode,     # 11 |
             self.visit_ListNode,       # 12 |
@@ -212,8 +212,10 @@ class Compiler:
             # Doing this because we need to be able to hide the size of the string/array so that we can pass it into functions and stuff like that
             if not isinstance(value, string):
                 ptr = self.builder.alloca(value.ir_value.type)
+                #ptr = self.builder.alloca(ir.IntType(64))
                 value.ptr = ptr
                 self.builder.store(value.ir_value, ptr)
+                #self.builder.store(value, ptr)
             else:
                 ptr = self.builder.alloca(value.ptr.type)
                 self.builder.store(value.ptr, ptr)
@@ -343,7 +345,20 @@ class Compiler:
 
         return val
 
-    def visit_ReturnNode(self, node, ctx): pass
+    def visit_ReturnNode(self, node, ctx):
+        if node.node_to_return is None:
+            self.builder.ret_void()
+            return
+        else:
+            ret_val = self.compile(node.node_to_return, ctx)
+            if ret_val.ir_value is not None:
+                ret_val = ret_val.ir_value
+            elif ret_val.ptr is not None:
+                ret_val = self.builder.load(ret_val.ptr)
+            else:
+                return RuntimeError("Expected return value", ctx, Position())
+
+        self.builder.ret(ret_val)
 
     def types_match(self, a, b, ctx):
         if a.type != b.type:
@@ -393,7 +408,6 @@ class Compiler:
         return ptr
 
     def visit_FuncDefNode(self, node, ctx):
-        comp_args = True
         name = node.token.value
         body_node = node.body_node
 
@@ -442,7 +456,6 @@ class Compiler:
         ctx.symbolTable.set_val(name, Function(name, return_type, ir_value=func, ir_type=fnty, ir_pack=ir_pack))
 
         self.compile(body_node, new_ctx)
-        self.builder.ret_void()
 
         self.builder = previous_builder
 
@@ -483,7 +496,8 @@ class Compiler:
             func = ctx.symbolTable.get_val(val_cal)
             ret = self.builder.call(func.ir_value, ir_args)
 
-        return ret
+        test = Integer(64, ir_value=ret)
+        return test
 
     def check_types_match(self, a, b, name, ctx, node):
         if a.ID != b.ID:
@@ -538,7 +552,8 @@ class Compiler:
         if isinstance(elements[0], Type):
             arr_ty = ir.ArrayType(elements[0].ir_type, len(ir_elements))
         arr_ir = ir.Constant(arr_ty, ir_elements)
-        arr = Array(elements, element_id, ir_value=arr_ir, ir_type=arr_ty)
+        #arr = Array(elements, element_id, ir_value=arr_ir, ir_type=arr_ty)
+        arr = Array(elements, ir_value=arr_ir, ir_type=arr_ty)
         arr.set_context(ctx)
 
         return arr
