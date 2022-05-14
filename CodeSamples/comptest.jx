@@ -1,0 +1,28 @@
+method print_str(a:String): Void {
+  print(a)
+}
+
+method add(a: Int, b: Int): Void {
+  if a == 2 {
+    print(a + b)
+  }else {
+    print("no")
+  }
+}
+
+print_str("big test")
+print("big test")
+add(3, 5)
+
+int_val: Int = 0
+
+while int_val < 10 {
+  print(int_val)
+  int_val = int_val + 1
+}
+
+print("===")
+
+for i in 1:20 {
+  print(i)
+}

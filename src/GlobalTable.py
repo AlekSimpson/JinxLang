@@ -1,4 +1,3 @@
-from SymbolTable import SymbolTable 
+from SymbolTable import SymbolTable
 
 global_symbol_table = SymbolTable()
-

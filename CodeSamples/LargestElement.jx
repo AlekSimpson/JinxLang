@@ -4,6 +4,7 @@ method getLargest(arr:Array{Int}):Int {
     currMax:Int = 0
 
     for i in 0:length(list) {
+        print(i)
         if arr[i] > currMax {
            currMax = arr[i]
         }

@@ -6,6 +6,7 @@ from Types import Number
 from Interpreter import BuiltinFunction, Interpreter
 from Node import *
 from Error import *
+from Compiler import Compiler
 
 global_symbol_table.set_val("nil", Number.nil)
 global_symbol_table.set_val("true", Number.true)
@@ -42,10 +43,19 @@ def run(text, fn):
         return parse_check
 
     # Run program
-    interpreter = Interpreter()
+    #interpreter = Interpreter()
+    #ctx = Context("<program>")
+    #ctx.symbolTable = global_symbol_table
+    #result = interpreter.visit(nodes, ctx)
+
+    compiler = Compiler()
     ctx = Context("<program>")
     ctx.symbolTable = global_symbol_table
-    result = interpreter.visit(nodes, ctx)
+    result = compiler.compile(nodes, ctx)
+
+    # NOTE: temporary conditional check here, should eventually create an LLVM binding for the Error types
+    if not isinstance(result, Error):
+        result = compiler.compile_ir_and_output(compiler.module)
 
     return result
 

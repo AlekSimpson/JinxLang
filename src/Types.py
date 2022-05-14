@@ -2,6 +2,7 @@ from Context import Context
 from Error import RuntimeError
 from Position import Position
 from SymbolTable import SymbolTable
+from llvmlite import ir
 
 # Type (Supertype for all)
 # Number
@@ -17,11 +18,13 @@ from SymbolTable import SymbolTable
 # String
 
 class Type:
-    def __init__(self, value=None, pos=None, description="AnyType"):
+    def __init__(self, value=None, pos=None, description="AnyType", ir_value=None, ptr=None):
         self.value = value
+        self.ir_value = ir_value
         self.pos = pos
         self.context = None
         self.description = description
+        self.ptr = ptr
 
     def set_context(self, ctx):
         self.context = ctx
@@ -33,6 +36,9 @@ class Void:
     def __init__(self, pos=None):
         self.pos = pos
         self.context = None
+        self.ptr = None
+        self.ir_type = ir.VoidType()
+        self.ir_value = ir.VoidType()
 
     def print_self(self):
         return "Void"
@@ -41,7 +47,6 @@ class Real(Type):
     def __init__(self, value=None, pos=None):
         super().__init__(value, pos, "Real")
 
-    ### NEED TO ADD CHECK FOR THE TYPE BEING THE SAME AND NOT JUST THE VALUE ###
     def comp_eq(self, other):
         new_num = Number(1 if self.value == other.value else 0)
         new_num.set_context(other.context)
@@ -140,12 +145,68 @@ class Number(Real):
         return self.value
 
 class Integer(Number):
-    def __init__(self, bitsize, value=None, pos=None):
+    def __init__(self, bitsize, value=None, pos=None, ir_value=None, ptr=None):
         super().__init__(value, pos)
         self.description = "Integer"
         self.bitsize = bitsize
         self.value = value
+        self.ir_value = ir_value
+        self.ir_type = ir.IntType(bitsize)
         self.ID = "NUMBER_TYPE"
+        self.ptr = ptr
+
+    def get_value(self, builder):
+        if self.ptr is not None:
+            return builder.load(self.ptr)
+        return self.ir_value
+
+    def addc(self, other, builder):
+        return builder.add(self.get_value(builder), other.get_value(builder))
+
+    def subc(self, other, builder):
+        return builder.sub(self.get_value(builder), other.get_value(builder))
+
+    def divc(self, other, builder):
+        return builder.sdiv(self.get_value(builder), other.get_value(builder))
+
+    def mulc(self, other, builder):
+        return builder.mul(self.get_value(builder), other.get_value(builder))
+
+    # NOTE: compiled exponentiation is bugged I'm prety sure
+    def powc(self, other, builder):
+        val = 1
+        for i in range(0, other.value):
+            val = val * builder.fmul(self.ir_value, self.ir_value)
+        return val
+
+    def comp_eqc(self, other, builder):
+        return builder.icmp_signed("==", self.get_value(builder), other.get_value(builder))
+
+    def comp_goec(self, other, builder):
+        return builder.icmp_signed(">=", self.get_value(builder), other.get_value(builder))
+
+    def comp_gtc(self, other, builder):
+        return builder.icmp_signed(">", self.get_value(builder), other.get_value(builder))
+
+    def comp_loec(self, other, builder):
+        return builder.icmp_signed("<=", self.get_value(builder), other.get_value(builder))
+
+    def comp_ltc(self, other, builder):
+        return builder.icmp_signed("<", self.get_value(builder), other.get_value(builder))
+
+    def comp_nec(self, other, builder):
+        return builder.icmp_signed("!=", self.get_value(builder), other.get_value(builder))
+
+    def comp_andc(self, other, builder):
+        return builder.and_(self.get_value(builder), other.get_value(builder))
+
+    def comp_orc(self, other, builder):
+        return builder.or_(self.get_value(builder), other.get_value(builder))
+
+    def not_opc(self, builder):
+        return builder.neg(self.get_value(builder))
+
+    # Interpreter code
 
     def added(self, other):
         new_num = Integer(64, self.value + other.value)
@@ -180,27 +241,61 @@ class Integer(Number):
         return self.value
 
 class Bool(Number):
-    def __init__(self, value):
+    def __init__(self, value, ir_value=None):
         super().__init__(value)
         self.description = "Bool"
         self.value = value
+        self.ir_value = ir_value
+        self.ir_type = ir.IntType(1)
         self.ID = "BOOL_TYPE"
+        self.ptr = None
 
-        def print_self(self):
-            if self.value == 1:
-                return "true"
-            else:
-                return "false"
+    def get_value(self, builder):
+        if self.ptr is not None:
+            return builder.load(self.ptr)
+        return self.ir_value
+
     def print_self(self):
-        return self.value
+        if self.value == 1:
+            return "true"
+        else:
+            return "false"
 
 class Float(Number):
-    def __init__(self, bitsize, value=None, pos=None):
+    def __init__(self, bitsize, value=None, pos=None, ir_value=None, ptr=None):
         super().__init__(value, pos)
         self.description = "Float"
         self.bitsize = bitsize
         self.value = value
+        self.ir_value = ir_value
+        self.ir_type = ir.DoubleType()
         self.ID = "FLOAT_TYPE"
+        self.ptr = ptr
+
+    def get_value(self, builder):
+        if self.ptr is not None:
+            return builder.load(self.ptr)
+        return self.ir_value
+
+    def addc(self, other, builder):
+        return builder.fadd(self.ir_value, other.ir_value)
+
+    def subc(self, other, builder):
+        return builder.fsub(self.ir_value, other.ir_value)
+
+    def divc(self, other, builder):
+        return builder.fdiv(self.ir_value, other.ir_value)
+
+    def mulc(self, other, builder):
+        return builder.fmul(self.ir_value, other.ir_value)
+
+    def powc(self, other, builder):
+        val = 1
+        for i in range(0, other.value):
+            val = val * builder.fmul(self.ir_value, self.ir_value)
+        return val
+
+    ## Interpreter code
 
     def added(self, other):
         new_num = Float(64, self.value + other.value)
@@ -235,18 +330,28 @@ class Float(Number):
         return self.value
 
 class Array(Type):
-    def __init__(self, elements=[], element_id=None):
+    def __init__(self, elements=[], element_id=None, ir_value=None, ir_type=None):
         super().__init__(description="Array")
         self.elements = elements
         self.length = len(self.elements)
         self.ID = "ARRAY_TYPE"
         self.element_id = element_id
+        self.ir_value = ir_value
+        self.ir_type = ir_type
+        self.ptr = None
+        self.description = f"{self.print_self()}"
+
+    def get_value(self, builder):
+        if self.ptr is not None:
+            return builder.load(self.ptr)
+        return self.ir_value
 
     def print_self(self):
         new_arr = []
+
         for element in self.elements:
             if element is not None:
-                new_arr.append(element.value)
+                new_arr.append(element)
 
         return new_arr
 
@@ -264,11 +369,25 @@ class Array(Type):
         return None
 
 class string(Real):
-    def __init__(self, str_value=None):
+    def __init__(self, str_value=None, ir_value=None, ptr=None, bt_ptr=None):
         super().__init__(str_value)
         self.description = "String"
         self.str_value = str_value
         self.ID = "STRING_TYPE"
+        self.ir_value = ir_value
+        if str_value is not None:
+            self.length = len(self.str_value)
+        else:
+            self.length = 3
+
+        self.ir_type = ir.PointerType(ir.IntType(64).as_pointer())
+        self.ptr = ptr
+        self.bt_ptr = bt_ptr
+
+    def get_value(self, builder):
+        if self.ptr is not None:
+            return builder.load(self.ptr)
+        return self.ir_value
 
     def added(self, other):
         other_val = other.str_value
@@ -285,6 +404,6 @@ class string(Real):
         return str(self.str_value)
 
 
-Number.nil = Number(0)
-Number.true = Bool(1)
-Number.false = Bool(0)
+Number.nil = Integer(bitsize=1, value=0, ir_value=ir.Constant(ir.IntType(1), 0))
+Number.true = Bool(1, ir_value=ir.Constant(ir.IntType(1), 1))
+Number.false = Bool(0, ir_value=ir.Constant(ir.IntType(1), 0))

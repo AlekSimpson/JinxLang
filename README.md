@@ -14,7 +14,7 @@
 * ~Add unit tests for unary operations~
 * ~Add structures~ 
 * ~Add inheritance~ nvm inheritance is cringe
-* Write compiler
+* ~Write compiler~
 * System library (to get inputs, outputs, etc and also some sort of bash interface)
 
 ## Known bugs

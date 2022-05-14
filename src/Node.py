@@ -1,4 +1,5 @@
 import tokens as tk
+from Types import Void
 from tokens import Token
 
 class NumberNode:
@@ -9,7 +10,6 @@ class NumberNode:
 
     def as_string(self):
         return f"{self.description}: {self.token.as_string()}"
-
 
 class VarAccessNode:
     def __init__(self, token):
@@ -244,9 +244,9 @@ class ListNode:
 
 
 class ReturnNode:
-    def __init__(self, node_to_return):
+    def __init__(self, node_to_return=None):
         self.node_to_return = node_to_return
-        self.token = node_to_return.token
+        self.token = node_to_return.token if node_to_return is not None else Token()
         self.description = "ReturnNode"
         self.classType = 15
 

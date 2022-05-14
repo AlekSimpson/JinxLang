@@ -7,6 +7,7 @@ from Position import Position
 from GlobalTable import global_symbol_table
 from TypeKeywords import type_keywords, type_values
 from TypeValue import TypeValue
+#from llvmlite import ir, binding
 
 class Object(Type):
     def __init__(self, name, body_node=None, attr_names=None, attr_types=None):
@@ -51,12 +52,12 @@ class Object(Type):
         if isinstance(body, Error):
             return body
 
-        return TestObject(self.name, self.context)
+        return ConcreteObject(self.name, self.context)
 
     def print_self(self):
         return f"Object: {self.name}"
 
-class TestObject:
+class ConcreteObject:
     def __init__(self, name, obj_context):
         self.name = name
         self.context = obj_context
@@ -104,14 +105,25 @@ class BaseFunction(Type):
 
         return None
 
+class FunctionIrPackage:
+    def __init__(self, context, arg_types, arg_names, param_ptrs, builder):
+        self.context = context
+        self.arg_types = arg_types
+        self.arg_names = arg_names
+        self.param_ptrs = param_ptrs
+        self.builder = builder
+
 class Function(BaseFunction):
-    def __init__(self, name=None, returnType=None, body_node=None, arg_nodes=None, arg_types=None, should_return_nil=False):
+    def __init__(self, name=None, returnType=None, body_node=None, arg_nodes=None, arg_types=None, should_return_nil=False, ir_value=None, ir_type=None, ir_pack=None):
         super().__init__(name)
         self.body_node = body_node
         self.arg_nodes = arg_nodes
         self.arg_types = arg_types
         self.returnType = returnType
         self.should_return_nil = should_return_nil
+        self.ir_value = ir_value
+        self.ir_type = ir_type
+        self.ir_pack = ir_pack
 
     def execute(self, args):
         interpreter = Interpreter()
@@ -143,9 +155,10 @@ class Function(BaseFunction):
 
 
 class BuiltinFunction(BaseFunction):
-    def __init__(self, name_id):
+    def __init__(self, name_id, ir_value=None):
         super().__init__(name_id)
         self.name_id = name_id
+        self.ir_value = ir_value 
 
     def isNum(self, value):
         return_val = True
@@ -163,8 +176,6 @@ class BuiltinFunction(BaseFunction):
     # checks for variables and makes sure passed in arguments are valid
     def process_parameter(self, parameter, exec_ctx):
         return_value = parameter
-
-        #print(f"VALUE: {parameter.value}")
 
         if parameter.value in global_symbol_table.symbols:
             val = global_symbol_table.get_val(parameter.value)
@@ -426,7 +437,7 @@ class Interpreter:
         table = ctx.symbolTable
 
         while i < end_value:
-            table.set_val(iterator_name, Number(0))
+            table.set_val(iterator_name, Number(i))
             i += 1
 
             body_vst = self.visit(node.bodyNode, ctx)
