@@ -144,18 +144,6 @@ class DotNode:
     def as_string(self):
         return f"{self.description}: {self.rhs.as_string()}"
 
-#class ObjectCallNode:
-#    def __init__(self, node_to_call, arg_nodes, token=None):
-#        self.token = token
-#        self.node_to_call = node_to_call
-#        self.arg_nodes = arg_nodes
-#        self.description = "ObjectCallNode"
-#        self.classType = 19
-#
-#    def as_string(self):
-#        return f"{self.description}: {self.token.as_string()}"
-
-
 class CallNode:
     def __init__(self, node_to_call, arg_nodes, returnType=None, token=None):
         if token is None:

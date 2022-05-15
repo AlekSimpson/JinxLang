@@ -120,12 +120,6 @@ class Compiler:
 
     def compile_ir(self, engine, llvm_ir):
         ir_ = str(llvm_ir)
-
-        if self.debug:
-            print("==================================")
-            print(ir_)
-            print("==================================")
-
         mod = llvm.parse_assembly(ir_)
         mod.verify()
 
@@ -140,6 +134,12 @@ class Compiler:
 
     def compile_ir_and_output(self, ir_):
         self.builder.ret_void()
+
+        if self.debug:
+            print("==================================")
+            print(str(ir_))
+            print("==================================")
+
         engine = self.create_execution_engine()
         mod = self.compile_ir(engine, ir_)
         return mod
@@ -179,7 +179,7 @@ class Compiler:
             self.visit_ListNode,       # 12 |
             self.visit_SetArrNode,     # 13
             self.visit_GetArrNode,     # 14 |
-            self.visit_ReturnNode,     # 15
+            self.visit_ReturnNode,     # 15 |
             self.visit_VarUpdateNode,  # 16 |
             self.visit_float,          # 17 |
             self.visit_ObjectDefNode,  # 18
@@ -212,10 +212,8 @@ class Compiler:
             # Doing this because we need to be able to hide the size of the string/array so that we can pass it into functions and stuff like that
             if not isinstance(value, string):
                 ptr = self.builder.alloca(value.ir_value.type)
-                #ptr = self.builder.alloca(ir.IntType(64))
                 value.ptr = ptr
                 self.builder.store(value.ir_value, ptr)
-                #self.builder.store(value, ptr)
             else:
                 ptr = self.builder.alloca(value.ptr.type)
                 self.builder.store(value.ptr, ptr)
@@ -397,7 +395,27 @@ class Compiler:
         Type = ir.DoubleType()
         return Float(64, value=val, ir_value=ir.Constant(Type, val))
 
-    def visit_ObjectDefNode(self, node, ctx): pass
+    def visit_ObjectDefNode(self, node, ctx):
+        obj_name = node.name.value
+        body_node = node.body_node
+
+        obj_arg_names = []
+        obj_arg_types = []
+
+        for n in node.attribute_name_tokens:
+            obj_arg_names.append(n.value)
+
+        for n in node.attribute_type_tokens:
+            obj_arg_types.append(n.type_dec.type_obj.ir_type)
+
+        objty = ir.IdentifiedStructType(ir.global_context, obj_name)
+        objty.set_body(obj_arg_types)
+
+        object = Object(obj_name, body_node, obj_arg_names, obj_arg_types, ir_value=objty)
+        ctx.symbolTable.set_val(obj_name, object)
+
+        return object
+
     def visit_DotNode(self, node, ctx): pass
 
     def visit_VarAccessNode(self, node, ctx):
