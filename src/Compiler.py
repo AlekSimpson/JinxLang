@@ -51,6 +51,60 @@ class Compiler:
         new_context.symbolTable = parent_ctx.symbolTable
         return new_context
 
+
+    # MARK: This function initializes Jinx Structures
+    def initialize_object(self, object, values, parent_ctx):
+        new_ctx = self.generate_new_context(object.name, parent_ctx)
+
+        if len(values) > len(object.attr_names):
+            return RuntimeError(f"Given amount of parameters exceeds object {object.name}'s initialization parameters", Position(), new_ctx)
+        elif len(values) < len(object.attr_names):
+            return RuntimeError(f"Given amount of parameters does not meet object {object.name}'s amount of initialization parameters", Position(), new_ctx)
+
+        block = self.builder.append_basic_block(f'{object.name}_entry')
+        previous_builder = self.builder
+
+        self.builder = ir.IRBuilder(block)
+        params_ptr = []
+
+        ir_args = []
+        i = 0
+        for val in values:
+            # Store ir values in memory
+            ptr = self.builder.alloca(val.ir_type)
+            self.builder.store(val.ir_value, ptr)
+            params_ptr.append(ptr)
+
+            # store pointers in symbbolTable
+            typ = val.ir_type
+
+            type_value = string(ptr=ptr)
+            if isinstance(typ, ir.IntType):
+                type_value = Integer(64, ptr=ptr)
+            elif isinstance(typ, ir.DoubleType):
+                type_value = Float(64, ptr=ptr)
+
+            new_ctx.symbolTable.set_val(object.attr_names[i], type_value)
+
+            # create ir args to make object ir_value
+            ir_args.append(val.ir_value)
+            i += 1
+
+        # initialize object ir_value
+        obj_irval = ir.Constant(ir.IdentifiedStructType(ir.global_context, object.name), [ir_args])
+
+        conc_obj = ConcreteObject(object.name, new_ctx, object.attr_types, object.attr_names, params_ptr, self.builder, obj_irval)
+
+        parent_ctx.symbolTable.set_val(object.name, conc_obj)
+
+        # Compile body node under object context
+        self.compile(object.body_node, new_ctx)
+
+        # move builder back to top level
+        self.builder = previous_builder
+
+        return conc_obj
+
     def printf(self, params):
         arg = params[0]
         printf = self.builtin['print'][0]
@@ -512,10 +566,14 @@ class Compiler:
                     ir_args.append(arg.ir_value)
 
             func = ctx.symbolTable.get_val(val_cal)
-            ret = self.builder.call(func.ir_value, ir_args)
 
-        test = Integer(64, ir_value=ret)
-        return test
+            if not isinstance(val_cal, Object):
+                ret = self.builder.call(func.ir_value, ir_args)
+            else:
+                pass
+
+        convToValue = Integer(64, ir_value=ret)
+        return convToValue
 
     def check_types_match(self, a, b, name, ctx, node):
         if a.ID != b.ID:
