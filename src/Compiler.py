@@ -67,31 +67,21 @@ class Compiler:
         self.builder = ir.IRBuilder(block)
         params_ptr = []
 
-        ir_args = []
-        i = 0
+        params = []
         for val in values:
-            # Store ir values in memory
-            ptr = self.builder.alloca(val.ir_type)
-            self.builder.store(val.ir_value, ptr)
-            params_ptr.append(ptr)
-
-            # store pointers in symbbolTable
-            typ = val.ir_type
-
-            type_value = string(ptr=ptr)
-            if isinstance(typ, ir.IntType):
-                type_value = Integer(64, ptr=ptr)
-            elif isinstance(typ, ir.DoubleType):
-                type_value = Float(64, ptr=ptr)
-
-            new_ctx.symbolTable.set_val(object.attr_names[i], type_value)
-
-            # create ir args to make object ir_value
-            ir_args.append(val.ir_value)
-            i += 1
+            params.append(val.ir_value)
 
         # initialize object ir_value
-        obj_irval = ir.Constant(ir.IdentifiedStructType(ir.global_context, object.name), [ir_args])
+        obj_irval = ir.Constant(object.ir_value, params)
+
+        i = 0
+        for name in object.attr_names:
+            zero = ir.Constant(ir.IntType(64), 0)
+            index = ir.Constant(ir.IntType(64), i)
+            #ptr = self.builder.gep(obj_irval, [zero, index])
+            ptr = self.builder.extract_value(obj_irval, index)
+            new_ctx.symbolTable.set_val(name, ptr)
+            i += 1
 
         conc_obj = ConcreteObject(object.name, new_ctx, object.attr_types, object.attr_names, params_ptr, self.builder, obj_irval)
 
@@ -462,7 +452,8 @@ class Compiler:
         for n in node.attribute_type_tokens:
             obj_arg_types.append(n.type_dec.type_obj.ir_type)
 
-        objty = ir.IdentifiedStructType(ir.global_context, obj_name)
+        #objty = ir.IdentifiedStructType(ir.global_context, obj_name)
+        objty = ir.global_context.get_identified_type(obj_name)
         objty.set_body(obj_arg_types)
 
         object = Object(obj_name, body_node, obj_arg_names, obj_arg_types, ir_value=objty)
@@ -567,10 +558,11 @@ class Compiler:
 
             func = ctx.symbolTable.get_val(val_cal)
 
-            if not isinstance(val_cal, Object):
+            if not isinstance(func, Object):
                 ret = self.builder.call(func.ir_value, ir_args)
             else:
-                pass
+                conc_obj = self.initialize_object(func, args, ctx)
+                return conc_obj
 
         convToValue = Integer(64, ir_value=ret)
         return convToValue
