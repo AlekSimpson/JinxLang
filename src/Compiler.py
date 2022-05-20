@@ -47,14 +47,14 @@ class Compiler:
         self.flt_global_fmt.initializer = flt_c_fmt
 
     def generate_new_context(self, name, parent_ctx, pos=None):
-        new_context = Context(name, parent_ctx, pos)
+        new_context = Context(name, parent_ctx, None)
         new_context.symbolTable = parent_ctx.symbolTable
         return new_context
 
-
     # MARK: This function initializes Jinx Structures
     def initialize_object(self, object, values, parent_ctx):
-        new_ctx = self.generate_new_context(object.name, parent_ctx)
+        #new_ctx = self.generate_new_context(object.name, parent_ctx)
+        new_ctx = self.generate_new_context("bob", parent_ctx)
 
         if len(values) > len(object.attr_names):
             return RuntimeError(f"Given amount of parameters exceeds object {object.name}'s initialization parameters", Position(), new_ctx)
@@ -73,13 +73,15 @@ class Compiler:
 
         # initialize object ir_value
         obj_irval = ir.Constant(object.ir_value, params)
+        obj_ptr = self.builder.alloca(obj_irval.type)
+
+        self.builder.store(obj_irval, obj_ptr)
 
         i = 0
         for name in object.attr_names:
-            zero = ir.Constant(ir.IntType(64), 0)
-            index = ir.Constant(ir.IntType(64), i)
-            #ptr = self.builder.gep(obj_irval, [zero, index])
-            ptr = self.builder.extract_value(obj_irval, index)
+            zero = ir.Constant(ir.IntType(32), 0)
+            index = ir.Constant(ir.IntType(32), i)
+            ptr = self.builder.gep(obj_ptr, [zero, index])
             new_ctx.symbolTable.set_val(name, ptr)
             i += 1
 
@@ -90,6 +92,8 @@ class Compiler:
         # Compile body node under object context
         self.compile(object.body_node, new_ctx)
 
+        self.builder.ret_void()
+
         # move builder back to top level
         self.builder = previous_builder
 
@@ -98,6 +102,13 @@ class Compiler:
     def printf(self, params):
         arg = params[0]
         printf = self.builtin['print'][0]
+
+        print(f"ARG:")
+        print(f"name       : {arg.name}")
+        print(f"ctx        : {arg.context.display_name}")
+        print(f"ID         : {arg.ID}")
+        print(f"description: {arg.description}")
+        print(f"value      : {arg.value}")
 
         # Check if arg is a complex type, if so we need to print its string representation
         if isinstance(arg, Array):
@@ -200,6 +211,13 @@ class Compiler:
         if node is None:
             return
 
+        print("==========================")
+        print(f"Context: {context.display_name}, Node: {node.as_string()}")
+        for val in context.symbolTable.symbols:
+            if val != "age":
+                print(f"{val} : {context.symbolTable.symbols[val].print_self()}")
+        print("==========================")
+
         func_index = node.classType
         if self.debug:
             print(f"[{func_index}] - {node.as_string()}")
@@ -261,6 +279,7 @@ class Compiler:
             else:
                 ptr = self.builder.alloca(value.ptr.type)
                 self.builder.store(value.ptr, ptr)
+            print(f"VAR NAME: {var_name}")
             ctx.symbolTable.set_val(var_name, value)
 
         return value
@@ -454,12 +473,12 @@ class Compiler:
 
         #objty = ir.IdentifiedStructType(ir.global_context, obj_name)
         objty = ir.global_context.get_identified_type(obj_name)
-        objty.set_body(obj_arg_types)
+        objty.set_body(*obj_arg_types)
 
         object = Object(obj_name, body_node, obj_arg_names, obj_arg_types, ir_value=objty)
         ctx.symbolTable.set_val(obj_name, object)
 
-        return object
+        #return object
 
     def visit_DotNode(self, node, ctx): pass
 

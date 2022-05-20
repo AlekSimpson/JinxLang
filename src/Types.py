@@ -441,7 +441,7 @@ class Object(Type):
         return None
 
     def print_self(self):
-        return f"Object: {self.name}"
+        return f"Abstract Object: {self.name}"
 
 class ConcreteObject:
     def __init__(self, name, obj_context, arg_types, arg_names, param_ptrs,
@@ -459,7 +459,7 @@ class ConcreteObject:
         self.ir_value = ir_value
 
     def print_self(self):
-        return f"Object: {self.name}"
+        return f"Concrete Object: {self.name}"
 
 class BaseFunction(Type):
     def __init__(self, name):
