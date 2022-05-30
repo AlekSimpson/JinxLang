@@ -21,7 +21,6 @@ from Error import *
 
 # NOTE: Opaque types are like abstract types in julia
 
-
 class Type:
     def __init__(self, value=None, pos=None, description="AnyType", ir_value=None, ptr=None):
         self.value = value

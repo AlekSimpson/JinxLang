@@ -11,6 +11,13 @@
 #print(student.person.age)
 
 
-object Person(age: Int)
-bob: Person = Person(45)
+object Person(age: Int, name: String)
+bob: Person = Person(1010101, "test")
 print(bob)
+
+#method test(str: String):Void {
+#    print("Test")
+#    return
+#}
+#
+#test("big test")
