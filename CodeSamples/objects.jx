@@ -13,7 +13,7 @@
 
 object Person(age: Int, name: String)
 bob: Person = Person(404, "test")
-print(bob)
+print(bob.name)
 
 #method test(str: String):Void {
 #    print("Test")

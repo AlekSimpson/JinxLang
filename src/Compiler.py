@@ -216,25 +216,25 @@ class Compiler:
         result = None
 
         visit_map = [
-            self.visit_binop,          # 0 |
-            self.visit_number,         # 1 |
-            "VariableNode",            # 2 |
-            self.visit_unary,          # 3 |
-            self.AccessNode,           # 4 |
-            self.visit_VarAssignNode,  # 5 |
-            self.visit_IfNode,         # 6 |
-            self.visit_ForNode,        # 7 |
-            self.visit_WhileNode,      # 8 |
-            self.visit_FuncDefNode,    # 9 |
+            self.visit_binop,          # 0  |
+            self.visit_number,         # 1  |
+            "VariableNode",            # 2  |
+            self.visit_unary,          # 3  |
+            self.AccessNode,           # 4  |
+            self.visit_VarAssignNode,  # 5  |
+            self.visit_IfNode,         # 6  |
+            self.visit_ForNode,        # 7  |
+            self.visit_WhileNode,      # 8  |
+            self.visit_FuncDefNode,    # 9  |
             self.visit_CallNode,       # 10 |
             self.visit_StringNode,     # 11 |
             self.visit_ListNode,       # 12 |
-            self.visit_SetArrNode,     # 13
+            self.visit_SetArrNode,     # 13 x
             self.visit_GetArrNode,     # 14 |
             self.visit_ReturnNode,     # 15 |
             self.visit_VarUpdateNode,  # 16 |
             self.visit_float,          # 17 |
-            self.visit_ObjectDefNode,  # 18
+            self.visit_ObjectDefNode,  # 18 |
             self.visit_DotNode,        # 19
         ]
 
@@ -460,16 +460,19 @@ class Compiler:
         for n in node.attribute_type_tokens:
             obj_arg_types.append(n.type_dec.type_obj.ir_type)
 
-        #objty = ir.IdentifiedStructType(ir.global_context, obj_name)
         objty = ir.global_context.get_identified_type(obj_name)
         objty.set_body(*obj_arg_types)
 
         object = Object(obj_name, body_node, obj_arg_names, obj_arg_types, ir_value=objty)
         ctx.symbolTable.set_val(obj_name, object)
 
-        #return object
-
-    def visit_DotNode(self, node, ctx): pass
+    def visit_DotNode(self, node, ctx):
+        obj = self.compile(node.lhs[0], ctx)
+        zero = ir.Constant(ir.IntType(32), 0)
+        get_index = ir.Constant(ir.IntType(32), 1)
+        obj_ir = self.compile(obj.ir_value, ctx)
+        attr = obj_ir.gep([zero, get_index])
+        return attr
 
     def visit_VarAccessNode(self, node, ctx):
         if node.token.value in self.builtin:
