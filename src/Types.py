@@ -444,7 +444,7 @@ class Object(Type):
 
 class ConcreteObject:
     def __init__(self, name, obj_context, arg_types, arg_names, param_ptrs,
-                 builder, ir_value):
+                 builder, ir_value, ptr):
         self.name = name
         self.context = obj_context
         self.ID  = self.name + "_TYPE"
@@ -456,6 +456,7 @@ class ConcreteObject:
         self.param_ptrs = param_ptrs
         self.builder = builder
         self.ir_value = ir_value
+        self.ptr = ptr
 
     def print_self(self):
         return f"Concrete Object: {self.name}"

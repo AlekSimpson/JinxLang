@@ -4,7 +4,7 @@ from tokens import Token
 from Types import *
 from Position import Position
 from TypeValue import TypeValue
-from Types import Function, FunctionIrPackage
+from Types import Function, FunctionIrPackage, Type
 from Node import *
 from tokens import *
 
@@ -84,7 +84,7 @@ class Compiler:
             new_ctx.symbolTable.set_val(name, ptr)
             i += 1
 
-        conc_obj = ConcreteObject(object.name, new_ctx, object.attr_types, object.attr_names, params_ptr, self.builder, obj_irval)
+        conc_obj = ConcreteObject(object.name, new_ctx, object.attr_types, object.attr_names, params_ptr, self.builder, obj_irval, ptr=obj_ptr)
 
         parent_ctx.symbolTable.set_val(object.name, conc_obj)
 
@@ -201,7 +201,7 @@ class Compiler:
             return node
         return None
 
-    def compile(self, node, context):
+    def compile(self, node, context, debug=False):
         err_check = self.check_for_error(node)
         if err_check is not None:
             return err_check
@@ -209,7 +209,7 @@ class Compiler:
             return
 
         func_index = node.classType
-        if self.debug:
+        if self.debug or debug:
             print(f"[{func_index}] - {node.as_string()}")
 
         self.table = context.symbolTable.symbols
@@ -470,9 +470,10 @@ class Compiler:
         obj = self.compile(node.lhs[0], ctx)
         zero = ir.Constant(ir.IntType(32), 0)
         get_index = ir.Constant(ir.IntType(32), 1)
-        obj_ir = self.compile(obj.ir_value, ctx)
-        attr = obj_ir.gep([zero, get_index])
-        return attr
+
+        attr = self.builder.gep(obj.ptr, [zero, get_index])
+        val = Type(ptr=attr)
+        return val
 
     def visit_VarAccessNode(self, node, ctx):
         if node.token.value in self.builtin:

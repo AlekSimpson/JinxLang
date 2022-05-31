@@ -12,8 +12,10 @@
 
 
 object Person(age: Int, name: String)
-bob: Person = Person(404, "test")
+bob: Person = Person(404, "bob")
+#alice: Person = Person(404, "alice")
 print(bob.name)
+#print(alice.name)
 
 #method test(str: String):Void {
 #    print("Test")
