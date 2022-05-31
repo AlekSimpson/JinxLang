@@ -5,7 +5,7 @@ from Types import *
 from Position import Position
 from TypeValue import TypeValue
 from Types import Function, FunctionIrPackage
-from Node import BinOpNode, NumberNode, VarAssignNode, VarAccessNode, VarUpdateNode, VariableNode
+from Node import *
 from tokens import *
 
 from llvmlite import ir
@@ -53,8 +53,7 @@ class Compiler:
 
     # MARK: This function initializes Jinx Structures
     def initialize_object(self, object, values, parent_ctx):
-        #new_ctx = self.generate_new_context(object.name, parent_ctx)
-        new_ctx = self.generate_new_context("bob", parent_ctx)
+        new_ctx = self.generate_new_context(object.name, parent_ctx)
 
         if len(values) > len(object.attr_names):
             return RuntimeError(f"Given amount of parameters exceeds object {object.name}'s initialization parameters", Position(), new_ctx)
@@ -103,14 +102,6 @@ class Compiler:
         arg = params[0]
         printf = self.builtin['print'][0]
 
-        #print(f"ARG:")
-        #print(f"name        : {arg.name}")
-        #print(f"ctx         : {arg.context.display_name}")
-        #print(f"ID          : {arg.ID}")
-        #print(f"description : {arg.description}")
-        #print(f"value       : {arg.value}")
-        #print(f"ir value    : {arg.ir_value}")
-
         # Check if arg is a complex type, if so we need to print its string representation
         if isinstance(arg, Array):
             str_value = arg.description + "\0"
@@ -118,15 +109,17 @@ class Compiler:
                             bytearray(str_value.encode("utf8")))
 
             arg = string(str_value=str_value, ir_value=c_str_val)
+        elif isinstance(arg, ConcreteObject):
+            str_value = arg.name + "\0"
+            c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)),
+                           bytearray(str_value.encode("utf8")))
+            arg = string(str_value=str_value, ir_value=c_str_val)
 
         fmt = self.int_global_fmt
         if arg.ptr is not None:
-            print("FOUND PTR")
             arg = self.builder.load(arg.ptr)
-            print(arg.type)
 
             if arg.type == ir.PointerType(ir.IntType(64).as_pointer()):
-                print("i64 POINTER")
                 arg = self.builder.load(arg)
 
                 fmt = self.str_global_fmt
@@ -135,34 +128,25 @@ class Compiler:
                 arg = self.builder.alloca(arg.type)
                 self.builder.store(before, arg)
             elif isinstance(arg.type, ir.ArrayType):
-                print("ARRAY TYPE")
                 fmt = self.str_global_fmt
 
                 before = arg
                 arg = self.builder.alloca(arg.type)
                 self.builder.store(before, arg)
             elif isinstance(arg.type, ir.DoubleType):
-                print("DOUBLE TYPE")
                 fmt = self.flt_global_fmt
         else:
-            print("DID NOT FIND PTR")
             if isinstance(arg, string):
-                print("STRING FORMAT")
                 fmt = self.str_global_fmt
             elif isinstance(arg, Float):
-                print("FLOAT FORMAT")
                 fmt = self.flt_global_fmt
 
             arg = arg.ir_value
-            print(f"ARG IR IS {arg.ir_value}")
 
             if isinstance(arg.type, ir.ArrayType):
-                print("FORMATTING FOR ARRAY TYPE")
                 before = arg
                 arg = self.builder.alloca(arg.type)
                 self.builder.store(before, arg)
-
-        print("PRINTING")
 
         voidptr_ty = ir.IntType(8).as_pointer()
         fmt_arg = self.builder.bitcast(fmt, voidptr_ty)
@@ -223,13 +207,6 @@ class Compiler:
             return err_check
         if node is None:
             return
-
-        #print("==========================")
-        #print(f"Context: {context.display_name}, Node: {node.as_string()}")
-        #for val in context.symbolTable.symbols:
-        #    if val != "age":
-        #        print(f"{val} : {context.symbolTable.symbols[val].print_self()}")
-        #print("==========================")
 
         func_index = node.classType
         if self.debug:
@@ -480,7 +457,6 @@ class Compiler:
         for n in node.attribute_name_tokens:
             obj_arg_names.append(n.value)
 
-        obj_arg_types.append(ir.PointerType(ir.IntType(64).as_pointer()))
         for n in node.attribute_type_tokens:
             obj_arg_types.append(n.type_dec.type_obj.ir_type)
 

@@ -12,7 +12,7 @@
 
 
 object Person(age: Int, name: String)
-bob: Person = Person(1010101, "test")
+bob: Person = Person(404, "test")
 print(bob)
 
 #method test(str: String):Void {
