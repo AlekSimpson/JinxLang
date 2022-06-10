@@ -11,15 +11,11 @@
 #print(student.person.age)
 
 
-object Person(age: Int, name: String)
-bob: Person = Person(404, "bob")
-#alice: Person = Person(404, "alice")
-print(bob.name)
-#print(alice.name)
+object Test(value: String)
+object Person(test:Test)
+bob: Person = Person(Test("testvalue"))
 
-#method test(str: String):Void {
-#    print("Test")
-#    return
-#}
-#
-#test("big test")
+# NOTE:: This is outputting '116' which is the ascii value for 't', -
+# it is probably only printing the first letter of "testvalue", -
+# do not know why, it should technically printing the 'Test' object id string instead
+print(bob.test.value)

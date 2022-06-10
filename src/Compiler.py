@@ -46,25 +46,26 @@ class Compiler:
         self.flt_global_fmt.global_constant = True
         self.flt_global_fmt.initializer = flt_c_fmt
 
-    def generate_new_context(self, name, parent_ctx, pos=None):
+    def generate_new_context(self, name, parent_ctx=None):
         new_context = Context(name, parent_ctx, None)
         new_context.symbolTable = parent_ctx.symbolTable
         return new_context
 
     # MARK: This function initializes Jinx Structures
     def initialize_object(self, object, values, parent_ctx):
-        new_ctx = self.generate_new_context(object.name, parent_ctx)
-
         if len(values) > len(object.attr_names):
-            return RuntimeError(f"Given amount of parameters exceeds object {object.name}'s initialization parameters", Position(), new_ctx)
+            return RuntimeError(f"Given amount of parameters exceeds object {object.name}'s initialization parameters", Position(), parent_ctx)
         elif len(values) < len(object.attr_names):
-            return RuntimeError(f"Given amount of parameters does not meet object {object.name}'s amount of initialization parameters", Position(), new_ctx)
+            return RuntimeError(f"Given amount of parameters does not meet object {object.name}'s amount of initialization parameters", Position(), parent_ctx)
+
+        #conc_obj = Object(object.name, attr_names=object.attr_names, params_ptrs=params_ptr,| builder=self.builder, ir_value=obj_irval, ptr=obj_ptr)
+        concrete_obj = Object(object.name, attr_names=object.attr_names)
 
         block = self.builder.append_basic_block(f'{object.name}_entry')
         previous_builder = self.builder
 
         self.builder = ir.IRBuilder(block)
-        params_ptr = []
+        concrete_obj.builder = self.builder
 
         params = []
         for val in values:
@@ -81,22 +82,23 @@ class Compiler:
             zero = ir.Constant(ir.IntType(32), 0)
             index = ir.Constant(ir.IntType(32), i)
             ptr = self.builder.gep(obj_ptr, [zero, index])
-            new_ctx.symbolTable.set_val(name, ptr)
+            concrete_obj.context.symbolTable.set_val(name, ptr)
             i += 1
 
-        conc_obj = ConcreteObject(object.name, new_ctx, object.attr_types, object.attr_names, params_ptr, self.builder, obj_irval, ptr=obj_ptr)
+        concrete_obj.ir_value = obj_irval
+        concrete_obj.ptr = ptr
 
-        parent_ctx.symbolTable.set_val(object.name, conc_obj)
+        parent_ctx.symbolTable.set_val(object.name, concrete_obj)
 
         # Compile body node under object context
-        self.compile(object.body_node, new_ctx)
+        self.compile(object.body_node, object.context)
 
         self.builder.ret_void()
 
         # move builder back to top level
         self.builder = previous_builder
 
-        return conc_obj
+        return concrete_obj
 
     def printf(self, params):
         arg = params[0]
@@ -109,7 +111,7 @@ class Compiler:
                             bytearray(str_value.encode("utf8")))
 
             arg = string(str_value=str_value, ir_value=c_str_val)
-        elif isinstance(arg, ConcreteObject):
+        elif isinstance(arg, Object):
             str_value = arg.name + "\0"
             c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)),
                            bytearray(str_value.encode("utf8")))
@@ -468,11 +470,24 @@ class Compiler:
 
     def visit_DotNode(self, node, ctx):
         obj = self.compile(node.lhs[0], ctx)
+        # NOTE:: Ok so property access is implemented on the front end,
+        # but this might not work farther down the rode, might have to make an
+        # llvm implementation with a hash table or something
         zero = ir.Constant(ir.IntType(32), 0)
-        get_index = ir.Constant(ir.IntType(32), 1)
 
-        attr = self.builder.gep(obj.ptr, [zero, get_index])
-        val = Type(ptr=attr)
+        last_attr = obj.ptr
+        for i in range(len(node.lhs)):
+            if i < len(node.lhs) - 1:
+                idx = obj.attr_table[node.lhs[i + 1].token.value]
+            else:
+                idx = obj.attr_table[node.rhs.token.value]
+
+            ir_index = ir.Constant(ir.IntType(32), idx)
+            attr = self.builder.gep(last_attr, [zero, ir_index])
+            last_attr = attr
+
+        val = Type(ptr=last_attr)
+
         return val
 
     def visit_VarAccessNode(self, node, ctx):
@@ -570,11 +585,11 @@ class Compiler:
 
             func = ctx.symbolTable.get_val(val_cal)
 
-            if not isinstance(func, Object):
-                ret = self.builder.call(func.ir_value, ir_args)
-            else:
+            if isinstance(func, Object):
                 conc_obj = self.initialize_object(func, args, ctx)
                 return conc_obj
+            else: # its a function
+                ret = self.builder.call(func.ir_value, ir_args)
 
         # NOTE:: This probably shouldn't be blindly converted to an Int but I can change it later
         convToValue = Integer(64, ir_value=ret)

@@ -415,51 +415,35 @@ Number.false = Bool(0, ir_value=ir.Constant(ir.IntType(1), 0))
 ## Functions and Objects
 
 class Object(Type):
-    def __init__(self, name, body_node=None, attr_names=None, attr_types=None, ir_value=None):
+    def __init__(self, name, body_node=None, attr_names=None, attr_types=None, ir_value=None, params_ptrs=None,
+                 builder=None, ptr=None):
         self.name = name
         self.body_node = body_node
         self.attr_names = attr_names
-        self.context = Context()
+        self.context = self.generate_new_context()
         self.attr_types = attr_types
         self.ID = self.name + "_TYPE"
-        self.value = self.name
-        self.description = self.name
         self.ir_value = ir_value
         self.ir_type = self.ir_value
+        self.builder = builder
+        self.ptr = ptr
 
-    # NOTE: Might not need
-    def generate_new_context(self, parent_ctx):
-        new_ctx = Context(self.name, None, Position())
-        new_ctx.symbolTable = parent_ctx.symbolTable
-        self.context = new_ctx
-        return new_ctx
+        self.params_ptrs = params_ptrs
+        i = 0
+        self.attr_table = {}
+        if self.attr_names is not None:
+            for n in self.attr_names:
+                self.attr_table[n] = i
+                i = i + 1
 
-    def check_types_match(self, a, b):
-        if a.ID != b.ID:
-            return RuntimeError("Cannot assign type {a.description} to parameter type {b.description}, in object {self.name}, initialization", Position(), self.context)
-        return None
+    def generate_new_context(self, parent_ctx=None, pos=None):
+        new_context = Context(self.name, parent_ctx, None)
+        #new_context.symbolTable = parent_ctx.symbolTable
+        new_context = Context()
+        return new_context
 
     def print_self(self):
         return f"Abstract Object: {self.name}"
-
-class ConcreteObject:
-    def __init__(self, name, obj_context, arg_types, arg_names, param_ptrs,
-                 builder, ir_value, ptr):
-        self.name = name
-        self.context = obj_context
-        self.ID  = self.name + "_TYPE"
-        self.description = self.name
-        self.value = self.name
-
-        self.arg_types = arg_types
-        self.arg_names = arg_names
-        self.param_ptrs = param_ptrs
-        self.builder = builder
-        self.ir_value = ir_value
-        self.ptr = ptr
-
-    def print_self(self):
-        return f"Concrete Object: {self.name}"
 
 class BaseFunction(Type):
     def __init__(self, name):
