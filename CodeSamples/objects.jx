@@ -10,12 +10,19 @@
 #print(student.person.name)
 #print(student.person.age)
 
-
-object Test(value: String)
-object Person(test:Test)
-bob: Person = Person(Test("testvalue"))
+#object Third(avalue: String, other: String)
+#object Test(value: Third)
+#object Person(test:Test)
+#bob: Person = Person(Test(Third("testvalue", "othervalueeeee")))
 
 # NOTE:: This is outputting '116' which is the ascii value for 't', -
 # it is probably only printing the first letter of "testvalue", -
 # do not know why, it should technically printing the 'Test' object id string instead
-print(bob.test.value)
+#print(bob.test.value.other)
+
+
+object Test(value: String)
+object Person(name: Test)
+bob: Person = Person(Test("testvalue")
+
+print(bob.name.value)

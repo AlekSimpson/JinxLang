@@ -427,6 +427,7 @@ class Object(Type):
         self.ir_type = self.ir_value
         self.builder = builder
         self.ptr = ptr
+        self.values = {}
 
         self.params_ptrs = params_ptrs
         i = 0

@@ -7,6 +7,7 @@ from TypeValue import TypeValue
 from Types import Function, FunctionIrPackage, Type
 from Node import *
 from tokens import *
+from Parser import DotNode
 
 from llvmlite import ir
 import llvmlite.binding as llvm
@@ -68,8 +69,11 @@ class Compiler:
         concrete_obj.builder = self.builder
 
         params = []
+        i = 0
         for val in values:
+            concrete_obj.values[concrete_obj.attr_names[i]] = val
             params.append(val.ir_value)
+            i = i + 1
 
         # initialize object ir_value
         obj_irval = ir.Constant.literal_struct(params)
@@ -161,8 +165,8 @@ class Compiler:
         self.module = ir.Module(name="main")
         func_type = ir.FunctionType(ir.VoidType(), [], False)
         self.base_func = ir.Function(self.module, func_type, name="main")
-        block = self.base_func.append_basic_block(name="entry")
-        self.builder = ir.IRBuilder(block)
+        self.block = self.base_func.append_basic_block(name="entry")
+        self.builder = ir.IRBuilder(self.block)
 
     def create_execution_engine(self):
         target = llvm.Target.from_default_triple()
@@ -468,26 +472,61 @@ class Compiler:
         object = Object(obj_name, body_node, obj_arg_names, obj_arg_types, ir_value=objty)
         ctx.symbolTable.set_val(obj_name, object)
 
+    #NOTE:: This is temporary, should be copied in the bootstrap compiler
+    #       it is necessary now because the Parser creates a SINGLE DotNode and that node holds the ENTIRE chain in a list
+    #       it should instead be a chain of DotNodes, each comprised of exactly one LHS slot and one RHS slot
+    def test_dotnodes(self, nodes):
+        list_ = nodes
+        list_.reverse()
+        new_node = DotNode(rhs=nodes[0])
+        first_node = None
+        i = 0
+
+        for node in list_:
+            #print("----------------ITERATING---------------")
+            #print(f"LHS IS: {new_node.lhs}")
+            if new_node.lhs == {}:
+                if node == list_[-1]:
+                    #print("NODE IS LAST NODE")
+                    new_node.lhs = node
+                else:
+                    #print("NODE IS NOT LAST NODE")
+                    new_node.lhs = DotNode(rhs=node)
+                    if i == 0:
+                        #print("SETTING FIRST NODE")
+                        first_node = new_node
+                    new_node = new_node.lhs
+            i = i + 1
+
+        #print(f"FIRST NODE: {first_node}")
+        return first_node
+
     def visit_DotNode(self, node, ctx):
-        obj = self.compile(node.lhs[0], ctx)
-        # NOTE:: Ok so property access is implemented on the front end,
-        # but this might not work farther down the rode, might have to make an
-        # llvm implementation with a hash table or something
+        print("ENTERING")
         zero = ir.Constant(ir.IntType(32), 0)
+        node_ = node
+        if isinstance(node.lhs, list):
+            node.lhs.append(node.rhs)
+            node_ = self.test_dotnodes(node.lhs)
 
-        last_attr = obj.ptr
-        for i in range(len(node.lhs)):
-            if i < len(node.lhs) - 1:
-                idx = obj.attr_table[node.lhs[i + 1].token.value]
-            else:
-                idx = obj.attr_table[node.rhs.token.value]
+        obj = self.compile(node_.lhs, ctx)
 
-            ir_index = ir.Constant(ir.IntType(32), idx)
-            attr = self.builder.gep(last_attr, [zero, ir_index])
-            last_attr = attr
 
-        val = Type(ptr=last_attr)
+        print(f"ATTR TABLE: {obj.name}")
+        idx = obj.attr_table[node_.rhs.token.value]
 
+        ir_idx = ir.Constant(ir.IntType(32), idx)
+
+        ptr = self.builder.gep(obj.ptr, [zero, ir_idx])
+
+        val = Object("BRUH", ptr=ptr)
+        test = obj.values[node_.rhs.token.value]
+        if not isinstance(test, Object):
+            print("GETTING HERE")
+            return val
+
+        val.attr_table = test.attr_table
+        val.values = test.values
         return val
 
     def visit_VarAccessNode(self, node, ctx):

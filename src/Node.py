@@ -134,10 +134,10 @@ class ObjectDefNode:
         return f"{self.description}: {self.name}"
 
 class DotNode:
-    def __init__(self, root_array, rhs, token=None):
+    def __init__(self, lhs={}, rhs=None, token=None):
         self.token = token
         self.rhs = rhs
-        self.lhs = root_array
+        self.lhs = lhs
         self.description = "DotNode"
         self.classType = 19
 
