@@ -478,31 +478,22 @@ class Compiler:
     def test_dotnodes(self, nodes):
         list_ = nodes
         list_.reverse()
-        new_node = DotNode(rhs=nodes[0])
-        first_node = None
-        i = 0
+        new_node = DotNode(rhs=list_[0])
+        del list_[0]
+        first_node = new_node
+        first_pass = True
 
         for node in list_:
-            #print("----------------ITERATING---------------")
-            #print(f"LHS IS: {new_node.lhs}")
-            if new_node.lhs == {}:
-                if node == list_[-1]:
-                    #print("NODE IS LAST NODE")
-                    new_node.lhs = node
-                else:
-                    #print("NODE IS NOT LAST NODE")
-                    new_node.lhs = DotNode(rhs=node)
-                    if i == 0:
-                        #print("SETTING FIRST NODE")
-                        first_node = new_node
-                    new_node = new_node.lhs
-            i = i + 1
+            if node == list_[-1]:
+                new_node.lhs = node
+                break
+            else:
+                new_node.lhs = DotNode(rhs=node)
+                new_node = new_node.lhs
 
-        #print(f"FIRST NODE: {first_node}")
         return first_node
 
     def visit_DotNode(self, node, ctx):
-        print("ENTERING")
         zero = ir.Constant(ir.IntType(32), 0)
         node_ = node
         if isinstance(node.lhs, list):
@@ -511,18 +502,15 @@ class Compiler:
 
         obj = self.compile(node_.lhs, ctx)
 
-
-        print(f"ATTR TABLE: {obj.name}")
         idx = obj.attr_table[node_.rhs.token.value]
 
         ir_idx = ir.Constant(ir.IntType(32), idx)
 
         ptr = self.builder.gep(obj.ptr, [zero, ir_idx])
 
-        val = Object("BRUH", ptr=ptr)
+        val = Type(ptr=ptr)
         test = obj.values[node_.rhs.token.value]
         if not isinstance(test, Object):
-            print("GETTING HERE")
             return val
 
         val.attr_table = test.attr_table

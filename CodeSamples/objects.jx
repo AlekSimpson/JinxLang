@@ -21,8 +21,9 @@
 #print(bob.test.value.other)
 
 
-object Test(value: String)
-object Person(name: Test)
-bob: Person = Person(Test("testvalue")
+object MegaTest(other: String)
+object Test(value: MegaTest)
+object Person(name: Test, normal: Int)
+bob: Person = Person(Test(MegaTest("AOKITWORKS???")), 404)
 
-print(bob.name.value)
+print(bob.normal)
