@@ -1,29 +1,6 @@
-#object Person(name: String) {
-#    age: Int = 18
-#}
-#
-#object Student(person: Person) {
-#    test: Int = 45
-#}
-#
-#student: Student = Student(Person("Bob"))
-#print(student.person.name)
-#print(student.person.age)
-
-#object Third(avalue: String, other: String)
-#object Test(value: Third)
-#object Person(test:Test)
-#bob: Person = Person(Test(Third("testvalue", "othervalueeeee")))
-
-# NOTE:: This is outputting '116' which is the ascii value for 't', -
-# it is probably only printing the first letter of "testvalue", -
-# do not know why, it should technically printing the 'Test' object id string instead
-#print(bob.test.value.other)
-
-
 object MegaTest(other: String)
 object Test(value: MegaTest)
 object Person(name: Test, normal: Int)
-bob: Person = Person(Test(MegaTest("AOKITWORKS???")), 404)
+bob: Person = Person(Test(MegaTest("OKITWORKS???")), 404)
 
-print(bob.normal)
+print(bob.name.value.other)

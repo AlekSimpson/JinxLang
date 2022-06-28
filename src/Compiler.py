@@ -14,14 +14,17 @@ import llvmlite.binding as llvm
 from ctypes import CFUNCTYPE
 
 class Compiler:
-    def __init__(self):
+    def __init__(self, unit_testing=False):
         llvm.initialize()
         llvm.initialize_native_target()
         llvm.initialize_native_asmprinter()
         self.table = None
         self.debug = False
+        self.unit_testing = unit_testing
+        #self.unit_testing = True
         self._config_llvm()
-        self.init_string_formats()
+        if not self.unit_testing:
+            self.init_string_formats()
 
         printf_ty = ir.FunctionType(ir.IntType(64), [ir.IntType(8).as_pointer()], var_arg=True)
         printf = ir.Function(self.module, printf_ty, name="printf")
@@ -198,6 +201,10 @@ class Compiler:
             print(str(ir_))
             print("==================================")
 
+        #print(str(ir_))
+        if self.unit_testing:
+            return str(ir_)
+
         engine = self.create_execution_engine()
         mod = self.compile_ir(engine, ir_)
         return mod
@@ -241,7 +248,7 @@ class Compiler:
             self.visit_VarUpdateNode,  # 16 |
             self.visit_float,          # 17 |
             self.visit_ObjectDefNode,  # 18 |
-            self.visit_DotNode,        # 19
+            self.visit_DotNode,        # 19 |
         ]
 
         if func_index < 0 or func_index > 19:
