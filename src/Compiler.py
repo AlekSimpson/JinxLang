@@ -547,6 +547,7 @@ class Compiler:
         return_type = node.returnType.type_dec.type_obj.ir_type
 
         fnty = ir.FunctionType(return_type, func_arg_types)
+        print(f"fnty: {fnty}")
         func = ir.Function(self.module, fnty, name=name)
 
         block = func.append_basic_block(f'{name}_entry')
@@ -623,6 +624,7 @@ class Compiler:
                 conc_obj = self.initialize_object(func, args, ctx)
                 return conc_obj
             else: # its a function
+                print(f"ARGS: {ir_args}")
                 ret = self.builder.call(func.ir_value, ir_args)
 
         # NOTE:: This probably shouldn't be blindly converted to an Int but I can change it later

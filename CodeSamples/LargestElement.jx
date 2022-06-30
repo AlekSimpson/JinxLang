@@ -1,7 +1,7 @@
 list:Array{Int} = [23 45 67 400 24 10 3]
 
-method getLargest(arr:Array{Int}):Int {
-    currMax:Int = 0
+method getLargest(arr:String):String {
+    currMax:String = "test"
 
     #for i in 0:6 {
     #    print(i)
@@ -13,5 +13,5 @@ method getLargest(arr:Array{Int}):Int {
     return currMax
 }
 
-largest:Int = getLargest(5)
+largest:String = getLargest(5)
 print(largest)

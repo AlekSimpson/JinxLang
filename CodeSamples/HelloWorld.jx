@@ -1,3 +1,10 @@
-for i in 1:10 {
-    print(i)
+method big(test: String): String {
+  return test
 }
+
+value: String = big("test")
+print(value)
+
+# Void return functions don't work
+# passing arrays into functions also doesn't work anymore
+# Need try bitcasting arrays just like how I bitcast strings, this might fix the issue
