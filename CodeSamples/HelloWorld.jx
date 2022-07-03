@@ -1,10 +1,18 @@
-method big(test: String): String {
-  return test
-}
-
-value: String = big("test")
-print(value)
+#method big(test: String): String {
+#  return test
+#}
+#
+#value: String = big("test")
+#print(value)
 
 # Void return functions don't work
 # passing arrays into functions also doesn't work anymore
 # Need try bitcasting arrays just like how I bitcast strings, this might fix the issue
+
+array: Array{Int} = [1 2 3 4]
+method big(test: Array{Int}): Int {
+    print(test)
+    return 5
+}
+
+val: Int = big(array)

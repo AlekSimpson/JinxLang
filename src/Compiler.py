@@ -111,8 +111,11 @@ class Compiler:
         arg = params[0]
         printf = self.builtin['print'][0]
 
+        print(f"ARG IS: {arg.ptr}")
+
         # Check if arg is a complex type, if so we need to print its string representation
         if isinstance(arg, Array):
+            print("GETTING HERE")
             str_value = arg.description + "\0"
             c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)),
                             bytearray(str_value.encode("utf8")))
@@ -547,7 +550,6 @@ class Compiler:
         return_type = node.returnType.type_dec.type_obj.ir_type
 
         fnty = ir.FunctionType(return_type, func_arg_types)
-        print(f"fnty: {fnty}")
         func = ir.Function(self.module, fnty, name=name)
 
         block = func.append_basic_block(f'{name}_entry')
@@ -608,6 +610,7 @@ class Compiler:
         if val_cal in self.builtin:
             # Builtin Function
             builtin_func = self.builtin[val_cal][1]
+            print(f"ARGS HERE IS: {args[0].bt_ptr}")
             ret = builtin_func(args)
         else:
             # Defined Function
@@ -615,6 +618,10 @@ class Compiler:
             for arg in args:
                 if isinstance(arg, string):
                     ir_args.append(arg.bt_ptr)
+                elif isinstance(arg, Array):
+                    zero = ir.Constant(ir.IntType(64), 0)
+                    p = self.builder.gep(arg.ptr, [zero, zero])
+                    ir_args.append(p)
                 else:
                     ir_args.append(arg.ir_value)
 
@@ -624,7 +631,6 @@ class Compiler:
                 conc_obj = self.initialize_object(func, args, ctx)
                 return conc_obj
             else: # its a function
-                print(f"ARGS: {ir_args}")
                 ret = self.builder.call(func.ir_value, ir_args)
 
         # NOTE:: This probably shouldn't be blindly converted to an Int but I can change it later
@@ -659,13 +665,15 @@ class Compiler:
         return str_
 
     def visit_ListNode(self, node, ctx):
+        zero = ir.Constant(ir.IntType(8), 0)
+        one = ir.Constant(ir.IntType(8), 1)
         elements = []
         ir_elements = []
 
         for element_node in node.element_nodes:
             el = self.compile(element_node, ctx)
             elements.append(el)
-            if isinstance(el, Type):
+            if node.actually_array:
                 ir_elements.append(el.ir_value)
 
             if isinstance(el, Error):
@@ -674,21 +682,19 @@ class Compiler:
             if element_node.classType == 15:
                 break
 
-            element_id = Void()
-            if len(elements) != 0:
-                type_dec = node.element_nodes[0].token.type_dec
-                if type_dec is not None:
-                    element_id = node.element_nodes[0].token.type_dec.type_obj
+        if node.actually_array:
+            arr_ty = ir.IntType(8)
+            if isinstance(elements[0], Type):
+                arr_ty = ir.ArrayType(elements[0].ir_type, len(ir_elements))
+            arr_ir = ir.Constant(arr_ty, ir_elements)
 
-        arr_ty = ir.IntType(8)
-        if isinstance(elements[0], Type):
-            arr_ty = ir.ArrayType(elements[0].ir_type, len(ir_elements))
-        arr_ir = ir.Constant(arr_ty, ir_elements)
-        #arr = Array(elements, element_id, ir_value=arr_ir, ir_type=arr_ty)
-        arr = Array(elements, ir_value=arr_ir, ir_type=arr_ty)
-        arr.set_context(ctx)
+            arr_ptr = self.builder.alloca(arr_ir.type)
+            self.builder.store(arr_ir, arr_ptr)
 
-        return arr
+            arr = Array(elements, ir_value=arr_ir, ptr=arr_ptr)
+            arr.set_context(ctx)
+
+            return arr
 
     def visit_number(self, node, ctx):
         val = node.token.value
