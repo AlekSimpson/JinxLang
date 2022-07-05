@@ -111,11 +111,8 @@ class Compiler:
         arg = params[0]
         printf = self.builtin['print'][0]
 
-        print(f"ARG IS: {arg.ptr}")
-
         # Check if arg is a complex type, if so we need to print its string representation
         if isinstance(arg, Array):
-            print("GETTING HERE")
             str_value = arg.description + "\0"
             c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)),
                             bytearray(str_value.encode("utf8")))
@@ -147,6 +144,8 @@ class Compiler:
                 self.builder.store(before, arg)
             elif isinstance(arg.type, ir.DoubleType):
                 fmt = self.flt_global_fmt
+            elif isinstance(arg.type, ir.PointerType):
+                arg = self.builder.load(arg)
         else:
             if isinstance(arg, string):
                 fmt = self.str_global_fmt
@@ -571,11 +570,13 @@ class Compiler:
             ptr = params_ptr[i]
             arg_name = func_arg_names[i]
 
-            val = string(ptr=ptr)
-            if isinstance(typ, ir.IntType):
-                val = Integer(64, ptr=ptr)
-            elif isinstance(typ, ir.DoubleType):
+            val = Integer(64, ptr=ptr)
+            if isinstance(typ, ir.DoubleType):
                 val = Float(64, ptr=ptr)
+            elif isinstance(typ, ir.PointerType):
+                val = Array(ptr=ptr)
+            elif typ == ir.PointerType(ir.IntType(64).as_pointer()):
+                val = string(ptr=ptr)
 
             new_ctx.symbolTable.set_val(arg_name, val)
 
@@ -587,6 +588,7 @@ class Compiler:
         self.builder = previous_builder
 
     def visit_CallNode(self, node, ctx):
+        print(f"CALLING------{node.node_to_call.token.value}")
         args = []
         types = []
 
@@ -602,6 +604,7 @@ class Compiler:
             new = arg_node.token.value
             new = self.compile(arg_node, ctx)
             typ = ir.IntType(64)
+            print(f"NEW IS: {new.ptr}")
 
             args.append(new)
             types.append(typ)
@@ -610,7 +613,7 @@ class Compiler:
         if val_cal in self.builtin:
             # Builtin Function
             builtin_func = self.builtin[val_cal][1]
-            print(f"ARGS HERE IS: {args[0].bt_ptr}")
+            print(f"ARGS IS: {args[0].ptr}")
             ret = builtin_func(args)
         else:
             # Defined Function
@@ -644,6 +647,7 @@ class Compiler:
         return None
 
     def visit_StringNode(self, node, ctx):
+        print("VISITING STRING")
         str_value = node.token.value + "\0"
         c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)), bytearray(str_value.encode("utf8")))
 
