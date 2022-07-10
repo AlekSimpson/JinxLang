@@ -19,7 +19,7 @@ class Compiler:
         llvm.initialize_native_target()
         llvm.initialize_native_asmprinter()
         self.table = None
-        self.debug = False
+        self.debug = True
         self.unit_testing = unit_testing
         #self.unit_testing = True
         self._config_llvm()
@@ -28,6 +28,11 @@ class Compiler:
 
         printf_ty = ir.FunctionType(ir.IntType(64), [ir.IntType(8).as_pointer()], var_arg=True)
         printf = ir.Function(self.module, printf_ty, name="printf")
+
+        self.array_type = ir.global_context.get_identified_type("Array")
+        #                           Pointer to array, size of array
+        arr_attrs = [ir.PointerType(ir.IntType(64)),  ir.IntType(64)]
+        self.array_type.set_body(*arr_attrs)
 
         self.builtin = {'print' : (printf, self.printf)}
 
@@ -588,7 +593,6 @@ class Compiler:
         self.builder = previous_builder
 
     def visit_CallNode(self, node, ctx):
-        print(f"CALLING------{node.node_to_call.token.value}")
         args = []
         types = []
 
@@ -604,7 +608,6 @@ class Compiler:
             new = arg_node.token.value
             new = self.compile(arg_node, ctx)
             typ = ir.IntType(64)
-            print(f"NEW IS: {new.ptr}")
 
             args.append(new)
             types.append(typ)
@@ -613,7 +616,6 @@ class Compiler:
         if val_cal in self.builtin:
             # Builtin Function
             builtin_func = self.builtin[val_cal][1]
-            print(f"ARGS IS: {args[0].ptr}")
             ret = builtin_func(args)
         else:
             # Defined Function
@@ -622,9 +624,17 @@ class Compiler:
                 if isinstance(arg, string):
                     ir_args.append(arg.bt_ptr)
                 elif isinstance(arg, Array):
-                    zero = ir.Constant(ir.IntType(64), 0)
-                    p = self.builder.gep(arg.ptr, [zero, zero])
-                    ir_args.append(p)
+                    #zero = ir.Constant(ir.IntType(64), 0)
+                    #p = self.builder.gep(arg.ptr, [zero, zero])
+
+                    opaqueptr = self.builder.alloca(ir.IntType(64).as_pointer())
+
+                    btcast = self.builder.bitcast(arg.ptr, opaqueptr.type)
+                    btcast = self.builder.load(btcast)
+                    self.builder.store(btcast, opaqueptr)
+
+                    print(opaqueptr.type)
+                    ir_args.append(opaqueptr)
                 else:
                     ir_args.append(arg.ir_value)
 
@@ -647,7 +657,6 @@ class Compiler:
         return None
 
     def visit_StringNode(self, node, ctx):
-        print("VISITING STRING")
         str_value = node.token.value + "\0"
         c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)), bytearray(str_value.encode("utf8")))
 
@@ -694,6 +703,8 @@ class Compiler:
 
             arr_ptr = self.builder.alloca(arr_ir.type)
             self.builder.store(arr_ir, arr_ptr)
+
+
 
             arr = Array(elements, ir_value=arr_ir, ptr=arr_ptr)
             arr.set_context(ctx)
