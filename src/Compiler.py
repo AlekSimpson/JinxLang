@@ -31,7 +31,7 @@ class Compiler:
 
         self.array_type = ir.global_context.get_identified_type("Array")
         #                           Pointer to array, size of array
-        arr_attrs = [ir.PointerType(ir.IntType(64)),  ir.IntType(64)]
+        arr_attrs = [ir.IntType(64)]
         self.array_type.set_body(*arr_attrs)
 
         self.builtin = {'print' : (printf, self.printf)}
@@ -704,7 +704,15 @@ class Compiler:
             arr_ptr = self.builder.alloca(arr_ir.type)
             self.builder.store(arr_ir, arr_ptr)
 
+            test_cast = self.builder.ptrtoint(arr_ptr, ir.IntType(64))
 
+            attrs = [test_cast, ir.Constant(ir.IntType(64), len(ir_elements))]
+
+            #self.array_type.set_body(*attrs)
+            zero = ir.Constant(ir.IntType(32), 0)
+            test_ir_arr = self.builder.alloca(self.array_type)
+            test_gep = self.builder.gep(test_ir_arr, [zero, zero])
+            self.builder.store(test_cast, test_gep)
 
             arr = Array(elements, ir_value=arr_ir, ptr=arr_ptr)
             arr.set_context(ctx)
