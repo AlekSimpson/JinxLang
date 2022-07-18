@@ -334,17 +334,16 @@ class Float(Number):
         return self.value
 
 class Array(Type):
-    def __init__(self, elements=[], element_id=None, ir_value=None, ptr=None, prototype=None):
+    def __init__(self, elements=[], element_id=None, ir_value=None, ptr=None):
         super().__init__(description="Array")
         self.elements = elements
         self.length = len(self.elements)
         self.ID = "ARRAY_TYPE"
         self.element_id = element_id
         self.ir_value = ir_value
-        self.ir_type = ir.PointerType(ir.IntType(64).as_pointer())
+        self.ir_type = "Array"
         self.ptr = ptr
-        self.description = f"{self.print_self()}"
-        self.prototype = None
+        self.testval = "default"
 
     def get_value(self, builder):
         if self.ptr is not None:

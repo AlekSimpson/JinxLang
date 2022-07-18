@@ -10,6 +10,7 @@
 # Need try bitcasting arrays just like how I bitcast strings, this might fix the issue
 
 array: Array{Int} = [1 2 3 4]
+print(array)
 #method big(test: Array{Int}): Int {
 #    print(test)
 #    return 5
