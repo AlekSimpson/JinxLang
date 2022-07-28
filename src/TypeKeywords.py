@@ -23,6 +23,9 @@ type_keywords = [
     "UInt8",
 ]
 
+arr = Array()
+arr.testval = "bruh"
+
 type_values = [
     TypeValue(1, Integer(64)),
     TypeValue(1, Integer(64)),
@@ -37,7 +40,7 @@ type_values = [
     TypeValue(11, string()),
     TypeValue(1, Bool(1)),
     TypeValue(3, Void()),
-    TypeValue(12, Array()),
+    TypeValue(12, arr),
     TypeValue(1, Integer(64)),
     TypeValue(1, Integer(64)),
     TypeValue(1, Integer(32)),

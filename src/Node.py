@@ -221,9 +221,10 @@ class UnaryNode:
 
 
 class ListNode:
-    def __init__(self, element_nodes):
+    def __init__(self, element_nodes, actually_array=False):
         self.element_nodes = element_nodes
         self.token = Token(type_name="ARRAY")
+        self.actually_array = actually_array
         self.description = "ListNode"
         self.classType = 12
 
