@@ -13,13 +13,16 @@
 #val: Int = array[1]
 #print(val)
 
-array: Array{Int} = [1 2 3 4]
-method big(test: Array{Int}): Int {
-    print(test[1])
-    return 5
-}
+#array: Array{Int} = [1 2 3 4]
+#method big(test: Array{Int}): Int {
+#    print(test[1])
+#    return 5
+#}
+#
+#big(array)
+#
+#arraytwo: Array{Int} = [7 89 3 4]
+#print(arraytwo[1])
 
-big(array)
-
-arraytwo: Array{Int} = [7 89 3 4]
-print(arraytwo[1])
+stringval: String = "bruhmoment"
+print(stringval)

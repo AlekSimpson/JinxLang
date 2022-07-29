@@ -29,9 +29,12 @@ class Compiler:
         printf = ir.Function(self.module, printf_ty, name="printf")
 
         self.array_type = ir.global_context.get_identified_type("Array")
-        #                           Pointer to array, size of array
         arr_attrs = [ir.IntType(64).as_pointer()]
         self.array_type.set_body(*arr_attrs)
+
+        self.string_type = ir.global_context.get_identified_type("String")
+        string_attrs = [ir.IntType(8).as_pointer()]
+        self.string_type.set_body(*string_attrs)
 
         self.builtin = {'print' : (printf, self.printf)}
 
@@ -113,7 +116,7 @@ class Compiler:
     def printf(self, params):
         arg = params[0]
         printf = self.builtin['print'][0]
-
+        zero = ir.Constant(ir.IntType(32), 0)
         # Check if arg is a complex type, if so we need to print its string representation
         if isinstance(arg, Object):
             str_value = arg.name + "\0"
@@ -125,23 +128,22 @@ class Compiler:
         if arg.ptr is not None:
             arg = arg.ptr
 
-            if arg.type != ir.PointerType(self.array_type):
-                arg = self.builder.load(arg)
+            #if arg.type != ir.PointerType(self.array_type):
+            #    print("ZERO")
+            #    arg = self.builder.load(arg)
 
             if arg.type == ir.PointerType(self.array_type):
                 #NOTE:: Only prints first element of array but should print more
-                zero = ir.Constant(ir.IntType(32), 0)
+
                 # get array attribute of array
                 arg = self.builder.gep(arg, [zero, zero])
                 # load array attribute
                 arg = self.builder.load(arg)
-
+                # get first element of array
                 arg = self.builder.gep(arg, [ir.Constant(ir.IntType(64), 0)])
-
                 ## load array
                 arg = self.builder.load(arg)
             elif arg.type == ir.PointerType(ir.IntType(64).as_pointer()):
-                print("TWO")
                 arg = self.builder.load(arg)
 
                 fmt = self.str_global_fmt
@@ -149,15 +151,12 @@ class Compiler:
                 before = arg
                 arg = self.builder.alloca(arg.type)
                 self.builder.store(before, arg)
-            elif isinstance(arg.type, ir.ArrayType):
-                print("THREE")
+            elif arg.type == ir.PointerType(self.string_type):
                 fmt = self.str_global_fmt
 
-                before = arg
-                arg = self.builder.alloca(arg.type)
-                self.builder.store(before, arg)
+                arg = self.builder.gep(arg, [zero, zero])
+                arg = self.builder.load(arg)
             elif isinstance(arg.type, ir.DoubleType):
-                print("FOUR")
                 fmt = self.flt_global_fmt
         else:
             if isinstance(arg, string):
@@ -672,25 +671,43 @@ class Compiler:
             return RuntimeError(f"Cannot assign value of {a.description} to type {b.description} {name}", ctx, pos)
         return None
 
+    #def visit_StringNode(self, node, ctx):
+    #    str_value = node.token.value + "\0"
+    #    c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)), bytearray(str_value.encode("utf8")))
+
+    #    # Bitcast string array to int64 so that it can be passed into functions at any size
+    #    bt_ptr = self.builder.alloca(ir.IntType(64).as_pointer())
+    #    ptr = self.builder.alloca(c_str_val.type)
+    #    copy = ptr
+
+    #    self.builder.store(c_str_val, ptr)
+
+    #    # cast the array string pointer (c_str_val) to an int64 pointer
+    #    # this hides the length of the array but does not affect what is stored
+    #    btcast = self.builder.bitcast(ptr, bt_ptr.type)
+    #    btcast = self.builder.load(btcast)
+    #    self.builder.store(btcast, bt_ptr)
+
+    #    # create string type
+    #    str_ = string(str_value=str_value, ir_value=c_str_val, ptr=copy, bt_ptr=bt_ptr)
+    #    return str_
+
     def visit_StringNode(self, node, ctx):
         str_value = node.token.value + "\0"
         c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)), bytearray(str_value.encode("utf8")))
+        zero = ir.Constant(ir.IntType(32), 0)
 
-        # Bitcast string array to int64 so that it can be passed into functions at any size
-        bt_ptr = self.builder.alloca(ir.IntType(64).as_pointer())
-        ptr = self.builder.alloca(c_str_val.type)
-        copy = ptr
+        c_str_ptr = self.builder.alloca(c_str_val.type)
+        self.builder.store(c_str_val, c_str_ptr)
 
-        self.builder.store(c_str_val, ptr)
+        str_first_el = self.builder.gep(c_str_ptr, [zero, zero])
 
-        # cast the array string pointer (c_str_val) to an int64 pointer
-        # this hides the length of the array but does not affect what is stored
-        btcast = self.builder.bitcast(ptr, bt_ptr.type)
-        btcast = self.builder.load(btcast)
-        self.builder.store(btcast, bt_ptr)
+        str_ptr = self.builder.alloca(self.string_type)
+        str_attr = self.builder.gep(str_ptr, [zero, zero])
+        self.builder.store(str_first_el, str_attr)
 
         # create string type
-        str_ = string(str_value=str_value, ir_value=c_str_val, ptr=copy, bt_ptr=bt_ptr)
+        str_ = string(str_value=str_value, ir_value=c_str_val, ptr=str_ptr, bt_ptr=str_ptr)
         return str_
 
     def visit_ListNode(self, node, ctx):
@@ -719,17 +736,13 @@ class Compiler:
             arr_ptr = self.builder.alloca(arr_ir.type)
             self.builder.store(arr_ir, arr_ptr)
 
-            pointer_cast = self.builder.gep(arr_ptr, [zero, zero])
-            #print(f"TEST PTR: {test_ptr.type}")
-
-            #pointer_cast = self.builder.ptrtoint(arr_ptr, ir.IntType(64))
+            first_arr_el = self.builder.gep(arr_ptr, [zero, zero])
 
             ir_arr = self.builder.alloca(self.array_type)
             gep = self.builder.gep(ir_arr, [zero, zero])
-            self.builder.store(pointer_cast, gep)
+            self.builder.store(first_arr_el, gep)
 
             arr = Array(elements, ir_value=ir_arr, ptr=gep)
-            arr.testval = "assigned"
             arr.set_context(ctx)
 
             return arr
