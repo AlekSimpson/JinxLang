@@ -343,7 +343,6 @@ class Array(Type):
         self.ir_value = ir_value
         self.ir_type = "Array"
         self.ptr = ptr
-        self.testval = "default"
 
     def get_value(self, builder):
         if self.ptr is not None:
@@ -384,7 +383,8 @@ class string(Real):
         else:
             self.length = 3
 
-        self.ir_type = ir.PointerType(ir.IntType(64).as_pointer())
+        #self.ir_type = ir.PointerType(ir.IntType(64).as_pointer())
+        self.ir_type = "String"
         self.ptr = ptr
         self.bt_ptr = bt_ptr
 

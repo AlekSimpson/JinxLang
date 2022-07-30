@@ -641,12 +641,6 @@ class Compiler:
         else:
             func = ctx.symbolTable.get_val(val_cal)
 
-            for arg in args:
-                if isinstance(arg, Array):
-                    #arg_name = node.arg_nodes[0].token.value
-                    #print(f"NAME IN CALL: {arg_name}")
-                    func.ir_pack.context.symbolTable.set_val("test", arg)
-
             # Defined Function
             ir_args = []
             for arg in args:
@@ -728,9 +722,13 @@ class Compiler:
                 break
 
         if node.actually_array:
-            arr_ty = ir.IntType(8)
-            if isinstance(elements[0], Type):
-                arr_ty = ir.ArrayType(elements[0].ir_type, len(ir_elements))
+            #arr_ty = ir.IntType(8)
+            #if isinstance(elements[0], Type):
+            #    # NOTE: ISSUE HERE
+            typ = elements[0].ir_type
+            if isinstance(elements[0].ir_type, str):
+                typ = ir.global_context.get_identified_type(typ).as_pointer()
+            arr_ty = ir.ArrayType(typ, len(ir_elements))
             arr_ir = ir.Constant(arr_ty, ir_elements)
 
             arr_ptr = self.builder.alloca(arr_ir.type)
