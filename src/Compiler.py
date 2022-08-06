@@ -19,7 +19,7 @@ class Compiler:
         llvm.initialize_native_target()
         llvm.initialize_native_asmprinter()
         self.table = None
-        self.debug = False
+        self.debug = True
         self.unit_testing = unit_testing
         self._config_llvm()
         if not self.unit_testing:
@@ -27,6 +27,8 @@ class Compiler:
 
         printf_ty = ir.FunctionType(ir.IntType(64), [ir.IntType(8).as_pointer()], var_arg=True)
         printf = ir.Function(self.module, printf_ty, name="printf")
+
+        self.test_type = ir.global_context.get_identified_type("TestType")
 
         self.array_type = ir.global_context.get_identified_type("Array")
         arr_attrs = [ir.IntType(64).as_pointer()]
@@ -590,22 +592,6 @@ class Compiler:
             new_ctx.symbolTable.set_val(arg_name, val)
             i = i + 1
 
-        ### NOTE:: Need to make these get set to Type() values and then in call node find the corresponding array values and add their lengths to them in call node
-        #for i, x in enumerate(zip(func_arg_types, func_arg_names)):
-        #    typ = func_arg_types[i]
-        #    #ptr = params_ptr[i]
-        #    ptr = self.builder.alloca(typ)
-        #    arg_name = func_arg_names[i]
-
-        #    val = Type(ptr=ptr)
-        #    #val = Integer(64, ptr=ptr)
-        #    #if isinstance(typ, ir.DoubleType):
-        #    #    val = Float(64, ptr=ptr)
-        #    #elif typ == ir.PointerType(ir.IntType(64).as_pointer()):
-        #    #    val = string(ptr=ptr)
-
-        #    new_ctx.symbolTable.set_val(arg_name, val)
-
         ir_pack = FunctionIrPackage(new_ctx, func_arg_types, func_arg_names, params_ptr, self.builder)
         ctx.symbolTable.set_val(name, Function(name, return_type, ir_value=func, ir_type=fnty, ir_pack=ir_pack))
 
@@ -665,27 +651,6 @@ class Compiler:
             return RuntimeError(f"Cannot assign value of {a.description} to type {b.description} {name}", ctx, pos)
         return None
 
-    #def visit_StringNode(self, node, ctx):
-    #    str_value = node.token.value + "\0"
-    #    c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)), bytearray(str_value.encode("utf8")))
-
-    #    # Bitcast string array to int64 so that it can be passed into functions at any size
-    #    bt_ptr = self.builder.alloca(ir.IntType(64).as_pointer())
-    #    ptr = self.builder.alloca(c_str_val.type)
-    #    copy = ptr
-
-    #    self.builder.store(c_str_val, ptr)
-
-    #    # cast the array string pointer (c_str_val) to an int64 pointer
-    #    # this hides the length of the array but does not affect what is stored
-    #    btcast = self.builder.bitcast(ptr, bt_ptr.type)
-    #    btcast = self.builder.load(btcast)
-    #    self.builder.store(btcast, bt_ptr)
-
-    #    # create string type
-    #    str_ = string(str_value=str_value, ir_value=c_str_val, ptr=copy, bt_ptr=bt_ptr)
-    #    return str_
-
     def visit_StringNode(self, node, ctx):
         str_value = node.token.value + "\0"
         c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)), bytearray(str_value.encode("utf8")))
@@ -722,11 +687,10 @@ class Compiler:
                 break
 
         if node.actually_array:
-            #arr_ty = ir.IntType(8)
-            #if isinstance(elements[0], Type):
-            #    # NOTE: ISSUE HERE
+            complextype = False
             typ = elements[0].ir_type
             if isinstance(elements[0].ir_type, str):
+                complextype = True
                 typ = ir.global_context.get_identified_type(typ).as_pointer()
             arr_ty = ir.ArrayType(typ, len(ir_elements))
             arr_ir = ir.Constant(arr_ty, ir_elements)
@@ -735,6 +699,8 @@ class Compiler:
             self.builder.store(arr_ir, arr_ptr)
 
             first_arr_el = self.builder.gep(arr_ptr, [zero, zero])
+            if complextype:
+                first_arr_el = self.builder.bitcast(first_arr_el, ir.IntType(64).as_pointer())
 
             ir_arr = self.builder.alloca(self.array_type)
             gep = self.builder.gep(ir_arr, [zero, zero])

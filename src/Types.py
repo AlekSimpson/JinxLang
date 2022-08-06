@@ -378,10 +378,10 @@ class string(Real):
         self.str_value = str_value
         self.ID = "STRING_TYPE"
         self.ir_value = ir_value
-        if str_value is not None:
-            self.length = len(self.str_value)
-        else:
-            self.length = 3
+        #if str_value is not None:
+        #    self.length = len(self.str_value)
+        #else:
+        #    self.length = 3
 
         #self.ir_type = ir.PointerType(ir.IntType(64).as_pointer())
         self.ir_type = "String"

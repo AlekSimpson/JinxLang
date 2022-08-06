@@ -6,8 +6,6 @@
 #print(value)
 
 # Void return functions don't work
-# passing arrays into functions also doesn't work anymore
-# Need try bitcasting arrays just like how I bitcast strings, this might fix the issue
 
 #NOTE: Doesn't work because of top level thing in printf commented out
 #array: Array{Int} = [1 2 3 4]
@@ -27,4 +25,9 @@
 #arraytwo: Array{Int} = [7 89 3 4]
 #print(arraytwo[1])
 
-testarray: Array{String} = ["a" "b" "c"]
+
+method big():String {
+    return "test"
+}
+
+print(big())
