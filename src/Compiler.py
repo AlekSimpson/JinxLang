@@ -130,10 +130,6 @@ class Compiler:
         if arg.ptr is not None:
             arg = arg.ptr
 
-            #if arg.type != ir.PointerType(self.array_type):
-            #    print("ZERO")
-            #    arg = self.builder.load(arg)
-
             if arg.type == ir.PointerType(self.array_type):
                 #NOTE:: Only prints first element of array but should print more
 
@@ -145,14 +141,16 @@ class Compiler:
                 arg = self.builder.gep(arg, [ir.Constant(ir.IntType(64), 0)])
                 ## load array
                 arg = self.builder.load(arg)
-            elif arg.type == ir.PointerType(ir.IntType(64).as_pointer()):
+            elif arg.type == ir.PointerType(ir.IntType(64)):
                 arg = self.builder.load(arg)
+            #elif arg.type == ir.PointerType(ir.IntType(64).as_pointer()):
+            #    arg = self.builder.load(arg)
 
-                fmt = self.str_global_fmt
+            #    fmt = self.str_global_fmt
 
-                before = arg
-                arg = self.builder.alloca(arg.type)
-                self.builder.store(before, arg)
+            #    before = arg
+            #    arg = self.builder.alloca(arg.type)
+            #    self.builder.store(before, arg)
             elif arg.type == ir.PointerType(self.string_type):
                 fmt = self.str_global_fmt
 
