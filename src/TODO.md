@@ -7,6 +7,8 @@ Better scopes:
 ** Should be one DotNode that leads to n-number of DotNodes, each comprised of one LHS and RHS
 ** This makes it easier to emit the IR code
 
+* should add linked list data type to store complex types inside of arrays
+
 * Name ideas
 ** Breeze
 
