@@ -1,11 +1,12 @@
-object Person(name: String) {
-    age: Int = 18
-}
+#object MegaTest(other: String)
+#object Test(value: MegaTest)
+#object Person(name: Test, normal: Int)
+#bob: Person = Person(Test(MegaTest("OKITWORKS???")), 404)
+#
+#print(bob.name.value.other)
 
-object Student(person: Person) {
-    test: Int = 45
-}
 
-student: Student = Student(Person("Bob"))
-print(student.person.name)
-print(student.person.age)
+object Person(name: String)
+bob: Person = Person("Bob")
+
+print(bob)

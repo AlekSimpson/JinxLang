@@ -4,26 +4,39 @@ from tokens import Token
 from Types import *
 from Position import Position
 from TypeValue import TypeValue
-from Types import Function, FunctionIrPackage
-from Node import BinOpNode, NumberNode, VarAssignNode, VarAccessNode, VarUpdateNode, VariableNode
+from Types import Function, FunctionIrPackage, Type
+from Node import *
 from tokens import *
+from Parser import DotNode
 
 from llvmlite import ir
 import llvmlite.binding as llvm
 from ctypes import CFUNCTYPE
 
 class Compiler:
-    def __init__(self):
+    def __init__(self, unit_testing=False):
         llvm.initialize()
         llvm.initialize_native_target()
         llvm.initialize_native_asmprinter()
         self.table = None
-        self.debug = False
+        self.debug = True
+        self.unit_testing = unit_testing
         self._config_llvm()
-        self.init_string_formats()
+        if not self.unit_testing:
+            self.init_string_formats()
 
         printf_ty = ir.FunctionType(ir.IntType(64), [ir.IntType(8).as_pointer()], var_arg=True)
         printf = ir.Function(self.module, printf_ty, name="printf")
+
+        self.test_type = ir.global_context.get_identified_type("TestType")
+
+        self.array_type = ir.global_context.get_identified_type("Array")
+        arr_attrs = [ir.IntType(64).as_pointer()]
+        self.array_type.set_body(*arr_attrs)
+
+        self.string_type = ir.global_context.get_identified_type("String")
+        string_attrs = [ir.IntType(8).as_pointer()]
+        self.string_type.set_body(*string_attrs)
 
         self.builtin = {'print' : (printf, self.printf)}
 
@@ -46,28 +59,93 @@ class Compiler:
         self.flt_global_fmt.global_constant = True
         self.flt_global_fmt.initializer = flt_c_fmt
 
-    def generate_new_context(self, name, parent_ctx, pos=None):
-        new_context = Context(name, parent_ctx, pos)
+    def generate_new_context(self, name, parent_ctx=None):
+        new_context = Context(name, parent_ctx, None)
         new_context.symbolTable = parent_ctx.symbolTable
         return new_context
+
+    # MARK: This function initializes Jinx Structures
+    def initialize_object(self, object, values, parent_ctx):
+        if len(values) > len(object.attr_names):
+            return RuntimeError(f"Given amount of parameters exceeds object {object.name}'s initialization parameters", Position(), parent_ctx)
+        elif len(values) < len(object.attr_names):
+            return RuntimeError(f"Given amount of parameters does not meet object {object.name}'s amount of initialization parameters", Position(), parent_ctx)
+
+        concrete_obj = Object(object.name, attr_names=object.attr_names)
+
+        block = self.builder.append_basic_block(f'{object.name}_entry')
+        previous_builder = self.builder
+
+        self.builder = ir.IRBuilder(block)
+        concrete_obj.builder = self.builder
+
+        params = []
+        i = 0
+        for val in values:
+            concrete_obj.values[concrete_obj.attr_names[i]] = val
+            params.append(val.ir_value)
+            i = i + 1
+
+        # initialize object ir_value
+        obj_irval = ir.Constant.literal_struct(params)
+        obj_ptr = self.builder.alloca(obj_irval.type)
+
+        self.builder.store(obj_irval, obj_ptr)
+
+        i = 0
+        for name in object.attr_names:
+            zero = ir.Constant(ir.IntType(32), 0)
+            index = ir.Constant(ir.IntType(32), i)
+            ptr = self.builder.gep(obj_ptr, [zero, index])
+            concrete_obj.context.symbolTable.set_val(name, ptr)
+            i += 1
+
+        concrete_obj.ir_value = obj_irval
+        concrete_obj.ptr = ptr
+
+        parent_ctx.symbolTable.set_val(object.name, concrete_obj)
+
+        # Compile body node under object context
+        self.compile(object.body_node, object.context)
+
+        self.builder.ret_void()
+
+        # move builder back to top level
+        self.builder = previous_builder
+
+        return concrete_obj
 
     def printf(self, params):
         arg = params[0]
         printf = self.builtin['print'][0]
-
+        zero = ir.Constant(ir.IntType(32), 0)
         # Check if arg is a complex type, if so we need to print its string representation
-        if isinstance(arg, Array):
-            str_value = arg.description + "\0"
+        if isinstance(arg, Object):
+            str_value = arg.name + "\0"
             c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)),
-                            bytearray(str_value.encode("utf8")))
-
+                           bytearray(str_value.encode("utf8")))
             arg = string(str_value=str_value, ir_value=c_str_val)
 
         fmt = self.int_global_fmt
         if arg.ptr is not None:
-            arg = self.builder.load(arg.ptr)
+            arg = arg.ptr
 
-            if arg.type == ir.PointerType(ir.IntType(64).as_pointer()):
+            #if arg.type != ir.PointerType(self.array_type):
+            #    print("ZERO")
+            #    arg = self.builder.load(arg)
+
+            if arg.type == ir.PointerType(self.array_type):
+                #NOTE:: Only prints first element of array but should print more
+
+                # get array attribute of array
+                arg = self.builder.gep(arg, [zero, zero])
+                # load array attribute
+                arg = self.builder.load(arg)
+                # get first element of array
+                arg = self.builder.gep(arg, [ir.Constant(ir.IntType(64), 0)])
+                ## load array
+                arg = self.builder.load(arg)
+            elif arg.type == ir.PointerType(ir.IntType(64).as_pointer()):
                 arg = self.builder.load(arg)
 
                 fmt = self.str_global_fmt
@@ -75,12 +153,11 @@ class Compiler:
                 before = arg
                 arg = self.builder.alloca(arg.type)
                 self.builder.store(before, arg)
-            elif isinstance(arg.type, ir.ArrayType):
+            elif arg.type == ir.PointerType(self.string_type):
                 fmt = self.str_global_fmt
 
-                before = arg
-                arg = self.builder.alloca(arg.type)
-                self.builder.store(before, arg)
+                arg = self.builder.gep(arg, [zero, zero])
+                arg = self.builder.load(arg)
             elif isinstance(arg.type, ir.DoubleType):
                 fmt = self.flt_global_fmt
         else:
@@ -107,8 +184,8 @@ class Compiler:
         self.module = ir.Module(name="main")
         func_type = ir.FunctionType(ir.VoidType(), [], False)
         self.base_func = ir.Function(self.module, func_type, name="main")
-        block = self.base_func.append_basic_block(name="entry")
-        self.builder = ir.IRBuilder(block)
+        self.block = self.base_func.append_basic_block(name="entry")
+        self.builder = ir.IRBuilder(self.block)
 
     def create_execution_engine(self):
         target = llvm.Target.from_default_triple()
@@ -120,12 +197,6 @@ class Compiler:
 
     def compile_ir(self, engine, llvm_ir):
         ir_ = str(llvm_ir)
-
-        if self.debug:
-            print("==================================")
-            print(ir_)
-            print("==================================")
-
         mod = llvm.parse_assembly(ir_)
         mod.verify()
 
@@ -140,6 +211,12 @@ class Compiler:
 
     def compile_ir_and_output(self, ir_):
         self.builder.ret_void()
+
+        if self.debug or self.unit_testing:
+            print("==================================")
+            print(str(ir_))
+            print("==================================")
+
         engine = self.create_execution_engine()
         mod = self.compile_ir(engine, ir_)
         return mod
@@ -149,7 +226,7 @@ class Compiler:
             return node
         return None
 
-    def compile(self, node, context):
+    def compile(self, node, context, debug=False):
         err_check = self.check_for_error(node)
         if err_check is not None:
             return err_check
@@ -157,33 +234,33 @@ class Compiler:
             return
 
         func_index = node.classType
-        if self.debug:
+        if self.debug or debug:
             print(f"[{func_index}] - {node.as_string()}")
 
         self.table = context.symbolTable.symbols
         result = None
 
         visit_map = [
-            self.visit_binop,          # 0 |
-            self.visit_number,         # 1 |
-            "VariableNode",            # 2 |
-            self.visit_unary,          # 3 |
-            self.AccessNode,           # 4 |
-            self.visit_VarAssignNode,  # 5 |
-            self.visit_IfNode,         # 6 |
-            self.visit_ForNode,        # 7 |
-            self.visit_WhileNode,      # 8 |
-            self.visit_FuncDefNode,    # 9 |
+            self.visit_binop,          # 0  |
+            self.visit_number,         # 1  |
+            "VariableNode",            # 2  |
+            self.visit_unary,          # 3  |
+            self.AccessNode,           # 4  |
+            self.visit_VarAssignNode,  # 5  |
+            self.visit_IfNode,         # 6  |
+            self.visit_ForNode,        # 7  |
+            self.visit_WhileNode,      # 8  |
+            self.visit_FuncDefNode,    # 9  |
             self.visit_CallNode,       # 10 |
             self.visit_StringNode,     # 11 |
             self.visit_ListNode,       # 12 |
-            self.visit_SetArrNode,     # 13
+            self.visit_SetArrNode,     # 13 x
             self.visit_GetArrNode,     # 14 |
-            self.visit_ReturnNode,     # 15
+            self.visit_ReturnNode,     # 15 |
             self.visit_VarUpdateNode,  # 16 |
             self.visit_float,          # 17 |
-            self.visit_ObjectDefNode,  # 18
-            self.visit_DotNode,        # 19
+            self.visit_ObjectDefNode,  # 18 |
+            self.visit_DotNode,        # 19 |
         ]
 
         if func_index < 0 or func_index > 19:
@@ -212,10 +289,8 @@ class Compiler:
             # Doing this because we need to be able to hide the size of the string/array so that we can pass it into functions and stuff like that
             if not isinstance(value, string):
                 ptr = self.builder.alloca(value.ir_value.type)
-                #ptr = self.builder.alloca(ir.IntType(64))
                 value.ptr = ptr
                 self.builder.store(value.ir_value, ptr)
-                #self.builder.store(value, ptr)
             else:
                 ptr = self.builder.alloca(value.ptr.type)
                 self.builder.store(value.ptr, ptr)
@@ -335,14 +410,24 @@ class Compiler:
         if isinstance(index, Error):
             return index
 
-        retval = self.builder.extract_value(array.ir_value, index.value)
+        # get needed index constants
+        zero = ir.Constant(ir.IntType(32), 0)
+        ir_index = ir.Constant(ir.IntType(32), index.value)
+        # load array pointer
+        arr_ptr = array.ptr
+        if arr_ptr.type != ir.PointerType(self.array_type):
+            arr_ptr = self.builder.load(array.ptr)
 
-        val = string(ir_value=retval)
-        if isinstance(array.elements[0], Integer):
-            val = Integer(64, ir_value=retval)
-        elif isinstance(array.elements[0], Float):
-            val = Float(64, ir_value=retval)
+        # get array attribute of Array
+        ir_array = self.builder.gep(arr_ptr, [zero, zero])
+        # load array attribute
+        ir_array = self.builder.load(ir_array)
+        # get the pointer to the desired index
+        ir_array = self.builder.gep(ir_array, [ir_index])
+        # Load value at index and return it
+        retval = self.builder.load(ir_array)
 
+        val = Type(ir_value=retval)
         return val
 
     def visit_ReturnNode(self, node, ctx):
@@ -397,8 +482,69 @@ class Compiler:
         Type = ir.DoubleType()
         return Float(64, value=val, ir_value=ir.Constant(Type, val))
 
-    def visit_ObjectDefNode(self, node, ctx): pass
-    def visit_DotNode(self, node, ctx): pass
+    def visit_ObjectDefNode(self, node, ctx):
+        obj_name = node.name.value
+        body_node = node.body_node
+
+        obj_arg_names = []
+        obj_arg_types = []
+
+        for n in node.attribute_name_tokens:
+            obj_arg_names.append(n.value)
+
+        for n in node.attribute_type_tokens:
+            obj_arg_types.append(n.type_dec.type_obj.ir_type)
+
+        objty = ir.global_context.get_identified_type(obj_name)
+        objty.set_body(*obj_arg_types)
+
+        object = Object(obj_name, body_node, obj_arg_names, obj_arg_types, ir_value=objty)
+        ctx.symbolTable.set_val(obj_name, object)
+
+    #NOTE:: This is temporary, should be copied in the bootstrap compiler
+    #       it is necessary now because the Parser creates a SINGLE DotNode and that node holds the ENTIRE chain in a list
+    #       it should instead be a chain of DotNodes, each comprised of exactly one LHS slot and one RHS slot
+    def find_dotnodes(self, nodes):
+        list_ = nodes
+        list_.reverse()
+        new_node = DotNode(rhs=list_[0])
+        del list_[0]
+        first_node = new_node
+        first_pass = True
+
+        for node in list_:
+            if node == list_[-1]:
+                new_node.lhs = node
+                break
+            else:
+                new_node.lhs = DotNode(rhs=node)
+                new_node = new_node.lhs
+
+        return first_node
+
+    def visit_DotNode(self, node, ctx):
+        zero = ir.Constant(ir.IntType(32), 0)
+        node_ = node
+        if isinstance(node.lhs, list):
+            node.lhs.append(node.rhs)
+            node_ = self.find_dotnodes(node.lhs)
+
+        obj = self.compile(node_.lhs, ctx)
+
+        idx = obj.attr_table[node_.rhs.token.value]
+
+        ir_idx = ir.Constant(ir.IntType(32), idx)
+
+        ptr = self.builder.gep(obj.ptr, [zero, ir_idx])
+
+        val = Type(ptr=ptr)
+        test = obj.values[node_.rhs.token.value]
+        if not isinstance(test, Object):
+            return val
+
+        val.attr_table = test.attr_table
+        val.values = test.values
+        return val
 
     def visit_VarAccessNode(self, node, ctx):
         if node.token.value in self.builtin:
@@ -418,7 +564,11 @@ class Compiler:
             func_arg_names.append(n.value)
 
         for n in node.arg_type_tokens:
-            func_arg_types.append(n.type_dec.type_obj.ir_type)
+            typ = n.type_dec.type_obj.ir_type
+            if isinstance(typ, str):
+                typ = ir.global_context.get_identified_type(typ).as_pointer()
+
+            func_arg_types.append(typ)
 
         return_type = node.returnType.type_dec.type_obj.ir_type
 
@@ -432,25 +582,15 @@ class Compiler:
         params_ptr = []
 
         new_ctx = self.generate_new_context(name, ctx)
-        # stores parameters in memory
-        for i, typ in enumerate(func_arg_types):
-            ptr = self.builder.alloca(typ)
-            self.builder.store(func.args[i], ptr)
-            params_ptr.append(ptr)
 
-        # stores pointers in SymbolTable
-        for i, x in enumerate(zip(func_arg_types, func_arg_names)):
-            typ = func_arg_types[i]
-            ptr = params_ptr[i]
+        ### stores pointers in SymbolTable
+        i = 0
+        for arg in func.args:
+            val = Type(ptr=arg)
             arg_name = func_arg_names[i]
 
-            val = string(ptr=ptr)
-            if isinstance(typ, ir.IntType):
-                val = Integer(64, ptr=ptr)
-            elif isinstance(typ, ir.DoubleType):
-                val = Float(64, ptr=ptr)
-
             new_ctx.symbolTable.set_val(arg_name, val)
+            i = i + 1
 
         ir_pack = FunctionIrPackage(new_ctx, func_arg_types, func_arg_names, params_ptr, self.builder)
         ctx.symbolTable.set_val(name, Function(name, return_type, ir_value=func, ir_type=fnty, ir_pack=ir_pack))
@@ -485,6 +625,8 @@ class Compiler:
             builtin_func = self.builtin[val_cal][1]
             ret = builtin_func(args)
         else:
+            func = ctx.symbolTable.get_val(val_cal)
+
             # Defined Function
             ir_args = []
             for arg in args:
@@ -493,11 +635,15 @@ class Compiler:
                 else:
                     ir_args.append(arg.ir_value)
 
-            func = ctx.symbolTable.get_val(val_cal)
-            ret = self.builder.call(func.ir_value, ir_args)
+            if isinstance(func, Object):
+                conc_obj = self.initialize_object(func, args, ctx)
+                return conc_obj
+            else: # its a function
+                ret = self.builder.call(func.ir_value, ir_args)
 
-        test = Integer(64, ir_value=ret)
-        return test
+        # NOTE:: This probably shouldn't be blindly converted to an Int but I can change it later
+        convToValue = Integer(64, ir_value=ret)
+        return convToValue
 
     def check_types_match(self, a, b, name, ctx, node):
         if a.ID != b.ID:
@@ -508,32 +654,30 @@ class Compiler:
     def visit_StringNode(self, node, ctx):
         str_value = node.token.value + "\0"
         c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)), bytearray(str_value.encode("utf8")))
+        zero = ir.Constant(ir.IntType(32), 0)
 
-        # Bitcast string array to int64 so that it can be passed into functions at any size
-        bt_ptr = self.builder.alloca(ir.IntType(64).as_pointer())
-        ptr = self.builder.alloca(c_str_val.type)
-        copy = ptr
+        c_str_ptr = self.builder.alloca(c_str_val.type)
+        self.builder.store(c_str_val, c_str_ptr)
 
-        self.builder.store(c_str_val, ptr)
+        str_first_el = self.builder.gep(c_str_ptr, [zero, zero])
 
-        # cast the array string pointer (c_str_val) to an int64 pointer
-        # this hides the length of the array but does not affect what is stored
-        btcast = self.builder.bitcast(ptr, bt_ptr.type)
-        btcast = self.builder.load(btcast)
-        self.builder.store(btcast, bt_ptr)
+        str_ptr = self.builder.alloca(self.string_type)
+        str_attr = self.builder.gep(str_ptr, [zero, zero])
+        self.builder.store(str_first_el, str_attr)
 
         # create string type
-        str_ = string(str_value=str_value, ir_value=c_str_val, ptr=copy, bt_ptr=bt_ptr)
+        str_ = string(str_value=str_value, ir_value=c_str_val, ptr=str_ptr, bt_ptr=str_ptr)
         return str_
 
     def visit_ListNode(self, node, ctx):
+        zero = ir.Constant(ir.IntType(32), 0)
         elements = []
         ir_elements = []
 
         for element_node in node.element_nodes:
             el = self.compile(element_node, ctx)
             elements.append(el)
-            if isinstance(el, Type):
+            if node.actually_array:
                 ir_elements.append(el.ir_value)
 
             if isinstance(el, Error):
@@ -542,21 +686,30 @@ class Compiler:
             if element_node.classType == 15:
                 break
 
-            element_id = Void()
-            if len(elements) != 0:
-                type_dec = node.element_nodes[0].token.type_dec
-                if type_dec is not None:
-                    element_id = node.element_nodes[0].token.type_dec.type_obj
+        if node.actually_array:
+            complextype = False
+            typ = elements[0].ir_type
+            if isinstance(elements[0].ir_type, str):
+                complextype = True
+                typ = ir.global_context.get_identified_type(typ).as_pointer()
+            arr_ty = ir.ArrayType(typ, len(ir_elements))
+            arr_ir = ir.Constant(arr_ty, ir_elements)
 
-        arr_ty = ir.IntType(8)
-        if isinstance(elements[0], Type):
-            arr_ty = ir.ArrayType(elements[0].ir_type, len(ir_elements))
-        arr_ir = ir.Constant(arr_ty, ir_elements)
-        #arr = Array(elements, element_id, ir_value=arr_ir, ir_type=arr_ty)
-        arr = Array(elements, ir_value=arr_ir, ir_type=arr_ty)
-        arr.set_context(ctx)
+            arr_ptr = self.builder.alloca(arr_ir.type)
+            self.builder.store(arr_ir, arr_ptr)
 
-        return arr
+            first_arr_el = self.builder.gep(arr_ptr, [zero, zero])
+            if complextype:
+                first_arr_el = self.builder.bitcast(first_arr_el, ir.IntType(64).as_pointer())
+
+            ir_arr = self.builder.alloca(self.array_type)
+            gep = self.builder.gep(ir_arr, [zero, zero])
+            self.builder.store(first_arr_el, gep)
+
+            arr = Array(elements, ir_value=ir_arr, ptr=gep)
+            arr.set_context(ctx)
+
+            return arr
 
     def visit_number(self, node, ctx):
         val = node.token.value

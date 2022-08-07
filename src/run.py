@@ -1,6 +1,7 @@
 from lexer import Lexer
 from Parser import Parser
 from Context import Context
+from SymbolTable import SymbolTable
 from GlobalTable import global_symbol_table
 from Types import Number
 from Types import BuiltinFunction
@@ -8,15 +9,15 @@ from Node import *
 from Error import *
 from Compiler import Compiler
 
-global_symbol_table.set_val("nil", Number.nil)
-global_symbol_table.set_val("true", Number.true)
-global_symbol_table.set_val("false", Number.false)
-global_symbol_table.set_val("print", BuiltinFunction.print)
-global_symbol_table.set_val("append", BuiltinFunction.append)
-global_symbol_table.set_val("run", BuiltinFunction.run)
-global_symbol_table.set_val("length", BuiltinFunction.length)
-global_symbol_table.set_val("remove", BuiltinFunction.remove)
-global_symbol_table.set_val("removeLast", BuiltinFunction.removeLast)
+#global_symbol_table.set_val("nil", Number.nil)
+#global_symbol_table.set_val("true", Number.true)
+#global_symbol_table.set_val("false", Number.false)
+#global_symbol_table.set_val("print", BuiltinFunction.print)
+#global_symbol_table.set_val("append", BuiltinFunction.append)
+#global_symbol_table.set_val("run", BuiltinFunction.run)
+#global_symbol_table.set_val("length", BuiltinFunction.length)
+#global_symbol_table.set_val("remove", BuiltinFunction.remove)
+#global_symbol_table.set_val("removeLast", BuiltinFunction.removeLast)
 
 def check_for_errors(payload):
     if isinstance(payload, Error):
@@ -27,7 +28,12 @@ def check_for_errors(payload):
                 return node
     return None
 
-def run(text, fn):
+def run(text, fn, unit_testing=False):
+    global_symbol_table.symbols = {}
+    global_symbol_table.set_val("true", Number.true)
+    global_symbol_table.set_val("false", Number.false)
+    global_symbol_table.set_val("print", BuiltinFunction.print)
+
     lexer = Lexer(text, fn)
     tokens, error = lexer.make_tokens()
 
@@ -43,7 +49,7 @@ def run(text, fn):
         return parse_check
 
     # Run program
-    compiler = Compiler()
+    compiler = Compiler(unit_testing=unit_testing)
     ctx = Context("<program>")
     ctx.symbolTable = global_symbol_table
     result = compiler.compile(nodes, ctx)

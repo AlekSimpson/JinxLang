@@ -48,6 +48,7 @@ class RuntimeError(Error):
         #return f"Traceback:\n{result}"
 
         if p is not None:
-            return f"File: {p.fn}, line: {p.ln}:\n"
+            #return f"File: {p.fn}, line: {p.ln}:\n"
+            return "bruh there was an error: "
         else:
             return ""

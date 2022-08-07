@@ -6,6 +6,7 @@ from Types import Float, Integer, string, Void, Array, Bool
 from Types import Object
 from TypeValue import TypeValue
 from TypeKeywords import type_keywords, type_values
+from llvmlite import ir
 
 keywords = ["if", "else", "elif", "for", "in", "while", "method", "return", "break", "continue", "object"]
 keywordTokens = [TT_IF, TT_ELSE, TT_ELIF, TT_FOR, TT_IN, TT_WHILE, TT_FUNC, TT_RETURN, TT_BREAK, TT_CONTINUE, TT_STRUCT]
@@ -104,7 +105,7 @@ class Lexer:
             if full_word == "object":
                 self.isNewType = True
             elif self.isNewType:
-                new_obj = Object(full_word)
+                new_obj = Object(full_word, ir_value=ir.global_context.get_identified_type(full_word))
                 type_keywords.append(full_word)
                 type_values.append(TypeValue(1, new_obj))
                 self.isNewType = False

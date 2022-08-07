@@ -134,27 +134,15 @@ class ObjectDefNode:
         return f"{self.description}: {self.name}"
 
 class DotNode:
-    def __init__(self, root_array, rhs, token=None):
+    def __init__(self, lhs={}, rhs=None, token=None):
         self.token = token
         self.rhs = rhs
-        self.lhs = root_array
+        self.lhs = lhs
         self.description = "DotNode"
         self.classType = 19
 
     def as_string(self):
         return f"{self.description}: {self.rhs.as_string()}"
-
-#class ObjectCallNode:
-#    def __init__(self, node_to_call, arg_nodes, token=None):
-#        self.token = token
-#        self.node_to_call = node_to_call
-#        self.arg_nodes = arg_nodes
-#        self.description = "ObjectCallNode"
-#        self.classType = 19
-#
-#    def as_string(self):
-#        return f"{self.description}: {self.token.as_string()}"
-
 
 class CallNode:
     def __init__(self, node_to_call, arg_nodes, returnType=None, token=None):
@@ -233,9 +221,10 @@ class UnaryNode:
 
 
 class ListNode:
-    def __init__(self, element_nodes):
+    def __init__(self, element_nodes, actually_array=False):
         self.element_nodes = element_nodes
         self.token = Token(type_name="ARRAY")
+        self.actually_array = actually_array
         self.description = "ListNode"
         self.classType = 12
 

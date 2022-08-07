@@ -212,7 +212,7 @@ class Parser:
                 return self.throw_error("Expected closing bracket in list declaration")
 
             self.advance()
-        return ListNode(element_nodes)
+        return ListNode(element_nodes, actually_array=True)
 
     def struct_def(self):
         if not(self.curr_token.type_name == "STRUCT"):

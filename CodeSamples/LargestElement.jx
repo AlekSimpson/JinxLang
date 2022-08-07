@@ -1,17 +1,17 @@
 list:Array{Int} = [23 45 67 400 24 10 3]
 
-method getLargest(arr:Array{Int}):Int {
-    currMax:Int = 0
+method getLargest(arr:String):String {
+    currMax:String = "test"
 
-    for i in 0:length(list) {
-        print(i)
-        if arr[i] > currMax {
-           currMax = arr[i]
-        }
-    }
+    #for i in 0:6 {
+    #    print(i)
+    #    if arr[i] > currMax {
+    #       currMax = arr[i]
+    #    }
+    #}
 
     return currMax
 }
 
-largest:Int = getLargest(list)
+largest:String = getLargest(5)
 print(largest)

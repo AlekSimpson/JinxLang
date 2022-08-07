@@ -35,9 +35,6 @@ else:
         print(err.as_string())
 
     result = run(script, filename)
-    ## TEMP CODE ##
-    #print(result)
-    ## END TEMP CODE ##
 
     if isinstance(result, Error):
         print(result.as_string())

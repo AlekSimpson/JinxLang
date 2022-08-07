@@ -1,16 +1,12 @@
 import sys
-from sys import platform
-
-if platform == "linux" or platform == "linux2":
-    sys.path.append("/home/alek/Desktop/projects/aqua/src/")
-elif platform == "darwin":
-    sys.path.append("/Users/aleksimpson/desktop/projects/aqua/src/")
-
-import run
-from Error import *
-from TestSetups import *
+from TestSetups import setups
 from termcolors import bcolors as bc
 
+try:
+    import run
+    from Error import Error
+except ImportError:
+    sys.path.append("/home/alek/Desktop/projects/JinxLang/src/")
 
 class Validator:
     def process_result(self, result):
@@ -65,10 +61,12 @@ class Validator:
         return package_results
 
     def execute_test(self, test):
-        output = run.run(test.sample, test.name)
-        result = self.process_result(output)
-        eval, msg = test.evaluate(result)
-        return [eval, msg]
+        output = run.run(test.sample, test.name, True)
+
+        print(repr(output))
+        #result = self.process_result(output)
+        eval_, msg = test.evaluate(output)
+        return [eval_, msg]
 
 
 validator = Validator()

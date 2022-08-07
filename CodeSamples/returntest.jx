@@ -1,9 +1,6 @@
-method ret_str(a:Float): Float{
-    return a
-}
+#method ret_str(a:Float): Float{
+#    testvar: String = "bruhmoment"
+#    return a
+#}
 
-test:Float = ret_str(3.1)
-print(test)
-
-#test: String = "teststring"
-#print(test)
+thing: Int = a + b
