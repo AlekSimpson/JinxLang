@@ -52,6 +52,7 @@ class Validator:
 
         if product == 1:
             print(f"{bc.OKGREEN}[\u2713] - {package[1]}\n{bc.ENDC}")
+            pass
         else:
             print(f"{bc.FAIL}[X] - {package[1]}:\n{bc.ENDC}")
             for m in msgs:
@@ -63,11 +64,8 @@ class Validator:
     def execute_test(self, test):
         output = run.run(test.sample, test.name, True)
 
-        print(repr(output))
-        #result = self.process_result(output)
         eval_, msg = test.evaluate(output)
         return [eval_, msg]
-
 
 validator = Validator()
 validator.run_tests()

@@ -29,6 +29,7 @@ def check_for_errors(payload):
     return None
 
 def run(text, fn, unit_testing=False):
+    print(f"SYM TABLE: {global_symbol_table.symbols}")
     global_symbol_table.symbols = {}
     global_symbol_table.set_val("true", Number.true)
     global_symbol_table.set_val("false", Number.false)

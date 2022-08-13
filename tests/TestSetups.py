@@ -19,7 +19,7 @@ class Test:
         if value != self.correct_value:
             return [
                 False,
-                f"{color.FAIL}[!!] {self.name}, with results:\n\t\t{value}\n{color.ENDC}",
+                f"{color.FAIL}[!!] {self.name}, with results:\n\t\t{value}\n{color.ENDC}"
             ]
         return [True, None]
 
@@ -32,7 +32,7 @@ class CrashTest(Test):
         if isinstance(value, RuntimeError):
             return [
                 False,
-                f"{color.FAIL}[!!] [self.name], with results:\n\t\t{value}\n{color.ENDC}",
+                f"{color.FAIL}[!!] [self.name], with results:\n\t\t{value}\n{color.ENDC}"
             ]
         return [True, None]
 
@@ -207,10 +207,10 @@ stdPackage = [stdlength, stdremove, stdremovelast]
 
 # Meta array to send to unit tests file
 setups = [
-    #[conditionalsPackage, "Conditionals"],
+    [conditionalsPackage, "Conditionals"],
     #[variablesPackage, "Variables"],
     #[arithmeticPackage, "Arithmetic"],
-    [loopsPackage, "Loops"],
+    #[loopsPackage, "Loops"],
     #[methodsPackage, "Methods"],
     #[arraysPackage, "Arrays"],
     #[stdPackage, "Standard Library"] ##NOTE: Will implement later, requires some other things first I think

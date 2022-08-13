@@ -19,7 +19,7 @@ class Compiler:
         llvm.initialize_native_target()
         llvm.initialize_native_asmprinter()
         self.table = None
-        self.debug = True
+        self.debug = False
         self.unit_testing = unit_testing
         self._config_llvm()
         if not self.unit_testing:
@@ -27,8 +27,6 @@ class Compiler:
 
         printf_ty = ir.FunctionType(ir.IntType(64), [ir.IntType(8).as_pointer()], var_arg=True)
         printf = ir.Function(self.module, printf_ty, name="printf")
-
-        self.test_type = ir.global_context.get_identified_type("TestType")
 
         self.array_type = ir.global_context.get_identified_type("Array")
         arr_attrs = [ir.IntType(64).as_pointer()]
