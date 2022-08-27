@@ -14,15 +14,7 @@
 #print("big test")
 #add(3, 5)
 
-int_val: Int = 0
+a: Int = 5
+b: Int = 5
 
-while int_val < 10 {
-  print(int_val)
-  int_val = int_val + 1
-}
-
-print("===")
-
-for i in 1:20 {
-  print(i)
-}
+print(a + b)

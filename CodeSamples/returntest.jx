@@ -1,6 +1,5 @@
-#method ret_str(a:Float): Float{
-#    testvar: String = "bruhmoment"
-#    return a
-#}
+method add(a: Int, b: Int): Int {
+    return a + b
+}
 
-thing: Int = a + b
+add(2, 2)

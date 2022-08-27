@@ -28,13 +28,18 @@ class Compiler:
         printf_ty = ir.FunctionType(ir.IntType(64), [ir.IntType(8).as_pointer()], var_arg=True)
         printf = ir.Function(self.module, printf_ty, name="printf")
 
-        self.array_type = ir.global_context.get_identified_type("Array")
-        arr_attrs = [ir.IntType(64).as_pointer()]
-        self.array_type.set_body(*arr_attrs)
-
-        self.string_type = ir.global_context.get_identified_type("String")
-        string_attrs = [ir.IntType(8).as_pointer()]
-        self.string_type.set_body(*string_attrs)
+        if "Array" not in ir.global_context.identified_types:
+            self.array_type = ir.global_context.get_identified_type("Array")
+            arr_attrs = [ir.IntType(64).as_pointer()]
+            self.array_type.set_body(*arr_attrs)
+        else:
+            self.array_type = ir.global_context.identified_types["Array"]
+        if "String" not in ir.global_context.identified_types:
+            self.string_type = ir.global_context.get_identified_type("String")
+            string_attrs = [ir.IntType(8).as_pointer()]
+            self.string_type.set_body(*string_attrs)
+        else:
+            self.string_type = ir.global_context.identified_types["String"]
 
         self.builtin = {'print' : (printf, self.printf)}
 
@@ -141,14 +146,6 @@ class Compiler:
                 arg = self.builder.load(arg)
             elif arg.type == ir.PointerType(ir.IntType(64)):
                 arg = self.builder.load(arg)
-            #elif arg.type == ir.PointerType(ir.IntType(64).as_pointer()):
-            #    arg = self.builder.load(arg)
-
-            #    fmt = self.str_global_fmt
-
-            #    before = arg
-            #    arg = self.builder.alloca(arg.type)
-            #    self.builder.store(before, arg)
             elif arg.type == ir.PointerType(self.string_type):
                 fmt = self.str_global_fmt
 
@@ -208,10 +205,12 @@ class Compiler:
     def compile_ir_and_output(self, ir_):
         self.builder.ret_void()
 
-        if self.debug or self.unit_testing:
+        if self.debug:
             print("==================================")
             print(str(ir_))
             print("==================================")
+        if self.unit_testing:
+            return str(ir_)
 
         engine = self.create_execution_engine()
         mod = self.compile_ir(engine, ir_)
@@ -348,7 +347,7 @@ class Compiler:
         increment_node = BinOpNode(itr, op_node, one)
         # update instructions
         update = VarUpdateNode(node.iterator.token, increment_node)
-        body.element_nodes.append(update)
+        #body.element_nodes.append(update)
 
     def visit_ForNode(self, node, ctx):
         itr = 0

@@ -4,6 +4,7 @@ from termcolors import bcolors as bc
 
 try:
     import run
+    from Compiler import Compiler
     from Error import Error
 except ImportError:
     sys.path.append("/home/alek/Desktop/projects/JinxLang/src/")
@@ -63,6 +64,9 @@ class Validator:
 
     def execute_test(self, test):
         output = run.run(test.sample, test.name, True)
+        #print("+++++++++++")
+        #print(repr(output))
+        #print("+++++++++++")
 
         eval_, msg = test.evaluate(output)
         return [eval_, msg]
