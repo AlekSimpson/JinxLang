@@ -740,6 +740,12 @@ class Compiler:
         name_cond = op_node.token.type_name
 
         # NOTE: should clean this up with an array or something
+        if left.ptr is not None:
+            if left.ptr.type == ir.IntType(64):
+                left = Integer(64, ir_value=left.ptr)
+        if right.ptr is not None:
+            if right.ptr.type == ir.IntType(64):
+                right = Integer(64, ir_value=right.ptr)
         if left.ID == right.ID:
             if name_cond == tk.TT_PLUS:
                result = left.addc(right, self.builder)

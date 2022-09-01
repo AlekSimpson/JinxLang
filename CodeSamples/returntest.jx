@@ -2,4 +2,5 @@ method add(a: Int, b: Int): Int {
     return a + b
 }
 
-add(2, 2)
+test:Int = add(2, 2)
+print(test)

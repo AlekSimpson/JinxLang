@@ -108,7 +108,7 @@ InlineMethodCall = Test("method test(): Int -> 1 + 1; test()", "Inline Method Ca
 NewlineMethodCall = Test("method test():Int {; return 1 + 1; }; test()", "Newline Method Calls", '; ModuleID = "main"\ntarget triple = "unknown-unknown-unknown"\ntarget datalayout = ""\n\n%"Array" = type {i64*}\n%"String" = type {i8*}\ndefine void @"main"() \n{\nentry:\n  %".2" = call i64 @"test"()\n  ret void\n}\n\ndeclare i64 @"printf"(i8* %".1", ...) \n\ndefine i64 @"test"() \n{\ntest_entry:\n  %".2" = add i64 1, 1\n  ret i64 %".2"\n}\n')
 
 # Method Arguements Tests
-MethodArguements = Test("method add(a:Int, b:Int):Int {; return a + b; }; add(2, 2)", "Method Arguements", '')
+MethodArguements = Test("method add(a:Int, b:Int):Int {; return a + b; }; add(2, 2)", "Method Arguements", '; ModuleID = "main"\ntarget triple = "unknown-unknown-unknown"\ntarget datalayout = ""\n\n%"Array" = type {i64*}\n%"String" = type {i8*}\ndefine void @"main"() \n{\nentry:\n  %".2" = call i64 @"add"(i64 2, i64 2)\n  ret void\n}\n\ndeclare i64 @"printf"(i8* %".1", ...) \n\ndefine i64 @"add"(i64 %".1", i64 %".2") \n{\nadd_entry:\n  %".4" = add i64 %".1", %".2"\n  ret i64 %".4"\n}\n')
 
 # Method Return Tests
 MethodReturnOne = Test("method test():Int {; return 1 + 1; }; test()", "Method Return Statements", '; ModuleID = "main"\ntarget triple = "unknown-unknown-unknown"\ntarget datalayout = ""\n\n%"Array" = type {i64*}\n%"String" = type {i8*}\ndefine void @"main"() \n{\nentry:\n  %".2" = call i64 @"test"()\n  ret void\n}\n\ndeclare i64 @"printf"(i8* %".1", ...) \n\ndefine i64 @"test"() \n{\ntest_entry:\n  %".2" = add i64 1, 1\n  ret i64 %".2"\n}\n')
@@ -192,14 +192,14 @@ loopsPackage = [
 ]
 
 methodsPackage = [
-    #InlineMethodDef,
-    #NewlineMethodDef,
-    #InlineMethodCall,
-    #NewlineMethodCall,
-    MethodArguements, # BUG
-    #MethodReturnOne,
-    #MethodReturnTwo,
-    #MethodReturnThree,
+    InlineMethodDef,
+    NewlineMethodDef,
+    InlineMethodCall,
+    NewlineMethodCall,
+    MethodArguements,
+    MethodReturnOne,
+    MethodReturnTwo,
+    MethodReturnThree,
 ]
 
 arraysPackage = [
@@ -214,11 +214,11 @@ stdPackage = [stdlength, stdremove, stdremovelast]
 
 # Meta array to send to unit tests file
 setups = [
-    #[conditionalsPackage, "Conditionals"],
-    #[variablesPackage, "Variables"],
-    #[arithmeticPackage, "Arithmetic"], #NOTE: MISSING FEATURES, LIKE EXPONENTS
-    #[loopsPackage, "Loops"],
-    [methodsPackage, "Methods"], # BUG
-    #[arraysPackage, "Arrays"],
+    [conditionalsPackage, "Conditionals"],
+    [variablesPackage, "Variables"],
+    [arithmeticPackage, "Arithmetic"], #NOTE: MISSING FEATURES, LIKE EXPONENTS
+    [loopsPackage, "Loops"],
+    [methodsPackage, "Methods"],
+    [arraysPackage, "Arrays"],
     #[stdPackage, "Standard Library"] ##NOTE: Will implement later, requires some other things first I think
 ]
