@@ -384,7 +384,7 @@ class string(Real):
         #    self.length = 3
 
         #self.ir_type = ir.PointerType(ir.IntType(64).as_pointer())
-        self.ir_type = "String"
+        self.ir_type = "%String"
         self.ptr = ptr
         self.bt_ptr = bt_ptr
 

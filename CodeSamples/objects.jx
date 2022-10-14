@@ -7,6 +7,6 @@
 
 
 object Person(name: String)
-bob: Person = Person("Bob")
+bob: Person = Person("test")
 
 print(bob)

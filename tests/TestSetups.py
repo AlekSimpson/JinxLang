@@ -154,10 +154,10 @@ variablesPackage = [
     VariableTestOne,
     VariableTestTwo,
     # NOTE: Crash tests need to be implemented still
-    #VariableErrorOne,
-    #VariableErrorTwo,
-    #VariableErrorThree,
-    #VariableErrorFour,
+    VariableErrorOne,
+    VariableErrorTwo,
+    VariableErrorThree,
+    VariableErrorFour,
     #
     VariableDecString,
     VariableRefString,
@@ -172,16 +172,12 @@ arithmeticPackage = [
     SubtractionTest,
     MultiplicationTest,
     DivisionTest,
-    #
     #ExponentialTest, #NOTE: Missing feature
-    #
     UnaryDeclaration,
     UnaryOperation,
     UnaryFloatDeclaration,
-    #
-    # MAYBE BUG(s)?
-    #UnaryFloatOperation,
-    #DivideByZero
+    #UnaryFloatOperation, # BUG
+    DivideByZero
 ]
 
 loopsPackage = [

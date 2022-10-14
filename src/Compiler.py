@@ -124,16 +124,20 @@ class Compiler:
         zero = ir.Constant(ir.IntType(32), 0)
         # Check if arg is a complex type, if so we need to print its string representation
         if isinstance(arg, Object):
+            print("TRIPPING OBJECT")
             str_value = arg.name + "\0"
             c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(str_value)),
                            bytearray(str_value.encode("utf8")))
             arg = string(str_value=str_value, ir_value=c_str_val)
 
+        print("CHECKPOINT ONE")
         fmt = self.int_global_fmt
         if arg.ptr is not None:
             arg = arg.ptr
-
+            print("CHECKPOINT TWO")
+            print(f"ARG TYPE {arg.type}")
             if arg.type == ir.PointerType(self.array_type):
+                print("CHECKPOINT THREE")
                 #NOTE:: Only prints first element of array but should print more
 
                 # get array attribute of array
@@ -145,23 +149,30 @@ class Compiler:
                 ## load array
                 arg = self.builder.load(arg)
             elif arg.type == ir.PointerType(ir.IntType(64)):
+                print("CHECKPOINT FOUR")
                 arg = self.builder.load(arg)
             elif arg.type == ir.PointerType(self.string_type):
+                print("CHECKPOINT FIVE")
                 fmt = self.str_global_fmt
 
                 arg = self.builder.gep(arg, [zero, zero])
                 arg = self.builder.load(arg)
             elif isinstance(arg.type, ir.DoubleType):
+                print("CHECKPOINT SIX")
                 fmt = self.flt_global_fmt
         else:
+            print("ELSE TAKEN")
             if isinstance(arg, string):
+                print("STRING FMT")
                 fmt = self.str_global_fmt
             elif isinstance(arg, Float):
+                print("FLOAT FMT")
                 fmt = self.flt_global_fmt
 
             arg = arg.ir_value
 
             if isinstance(arg.type, ir.ArrayType):
+                print("TRIPPING ARRAY TYPE")
                 before = arg
                 arg = self.builder.alloca(arg.type)
                 self.builder.store(before, arg)
@@ -488,6 +499,7 @@ class Compiler:
             obj_arg_names.append(n.value)
 
         for n in node.attribute_type_tokens:
+            #print(f"OBJ DEF NODE {n.type_dec.type_obj.ir_type}")
             obj_arg_types.append(n.type_dec.type_obj.ir_type)
 
         objty = ir.global_context.get_identified_type(obj_name)

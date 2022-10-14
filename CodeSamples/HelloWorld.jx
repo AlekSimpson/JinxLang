@@ -8,9 +8,6 @@
 # Void return functions don't work
 
 #NOTE: Doesn't work because of top level thing in printf commented out
-array: Array{Int} = [1 2 3 4]
-val: Int = array[1]
-print(val)
 
 #NOTE: Works
 #array: Array{Int} = [1 2 3 4]
@@ -31,3 +28,9 @@ print(val)
 #}
 #
 #big()
+
+method big(test:String): Int {
+  print(test)
+  return 0
+}
+big("test")
